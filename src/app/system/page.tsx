@@ -16,6 +16,7 @@ import {
   ScrollText,
   Compass,
   Crown,
+  Activity,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -43,7 +44,14 @@ const SECTIONS = [
     en: "How you choose · Dalio + WRAP",
     items: [
       { href: "/principles", cn: "原则库",   en: "Principles",   desc: "Dalio 风格原则集合 · 决策锚点",  icon: ScrollText },
-      { href: "/decisions",  cn: "决策日志", en: "Journal · EV", desc: "EV 计算器 + Pre/Post-mortem",   icon: Compass },
+      { href: "/decisions",  cn: "决策日志", en: "Journal · EV", desc: "EV 计算器 + Pre/Post-mortem + AI 教练",   icon: Compass },
+    ],
+  },
+  {
+    title: "数据 · Insight",
+    en: "See your rhythm",
+    items: [
+      { href: "/analytics", cn: "数据洞察", en: "Analytics", desc: "热力图 · 属性分布 · 心情趋势 · 决策评分", icon: Activity },
     ],
   },
   {
@@ -69,7 +77,7 @@ export default function SystemPage() {
         </div>
         <div className="mt-2 h-px bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/50 to-transparent" />
         <p className="mt-3 max-w-2xl font-display text-sm text-[var(--fg-muted)]">
-          十三个模块组成你的人生操作系统：执行 · 战略 · 决策 · 奖励四部分。
+          十四个模块组成你的人生操作系统：执行 · 战略 · 决策 · 数据 · 奖励五部分。
         </p>
       </div>
 

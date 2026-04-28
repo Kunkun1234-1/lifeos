@@ -1,31 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Check, Trash2 } from "lucide-react";
+import { Plus, Check, Trash2, List, Grid2x2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AreaSelect } from "@/components/area-select";
 import { useTasks, useCreateTask, useCompleteTask, useDeleteTask } from "@/hooks/queries";
+import type { TaskDTO } from "@/lib/types";
+
+type View = "list" | "matrix";
 
 export default function TasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<"all" | "TODO" | "DONE">("TODO");
+  const [view, setView] = useState<View>("list");
   const { data: tasks, isLoading } = useTasks(filter === "all" ? undefined : filter);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
           <p className="text-sm text-[var(--fg-muted)]">One-shot items with a clear finish line.</p>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
-          <Plus size={16} />
-          {showForm ? "Close" : "New Task"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-sm border border-[var(--border)]">
+            <button
+              onClick={() => setView("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors ${
+                view === "list" ? "bg-[var(--gold-tint)] text-[var(--gold-deep)]" : "text-[var(--fg-muted)] hover:bg-[var(--bg-raised)]"
+              }`}
+            >
+              <List size={12} /> 列表
+            </button>
+            <button
+              onClick={() => setView("matrix")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors ${
+                view === "matrix" ? "bg-[var(--gold-tint)] text-[var(--gold-deep)]" : "text-[var(--fg-muted)] hover:bg-[var(--bg-raised)]"
+              }`}
+            >
+              <Grid2x2 size={12} /> Eisenhower
+            </button>
+          </div>
+          <Button onClick={() => setShowForm((v) => !v)}>
+            <Plus size={16} />
+            {showForm ? "Close" : "New Task"}
+          </Button>
+        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -40,37 +64,159 @@ export default function TasksPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex gap-2">
-        {(["TODO", "DONE", "all"] as const).map((f) => (
-          <Button
-            key={f}
-            size="sm"
-            variant={filter === f ? "primary" : "ghost"}
-            onClick={() => setFilter(f)}
-          >
-            {f === "all" ? "All" : f === "TODO" ? "Open" : "Done"}
-          </Button>
-        ))}
-      </div>
+      {view === "list" && (
+        <div className="flex gap-2">
+          {(["TODO", "DONE", "all"] as const).map((f) => (
+            <Button
+              key={f}
+              size="sm"
+              variant={filter === f ? "primary" : "ghost"}
+              onClick={() => setFilter(f)}
+            >
+              {f === "all" ? "All" : f === "TODO" ? "Open" : "Done"}
+            </Button>
+          ))}
+        </div>
+      )}
 
-      <Card>
-        <CardContent className="pt-5">
-          {isLoading ? (
-            <div className="py-8 text-center text-sm text-[var(--fg-muted)]">Loading…</div>
-          ) : (tasks?.length ?? 0) === 0 ? (
-            <div className="py-8 text-center text-sm text-[var(--fg-muted)]">
-              No tasks. Create one above.
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {tasks!.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <div className="py-12 text-center text-sm text-[var(--fg-muted)]">Loading…</div>
+      ) : view === "matrix" ? (
+        <EisenhowerMatrix tasks={(tasks ?? []).filter((t) => t.status === "TODO")} />
+      ) : (
+        <Card>
+          <CardContent className="pt-5">
+            {(tasks?.length ?? 0) === 0 ? (
+              <div className="py-8 text-center text-sm text-[var(--fg-muted)]">
+                No tasks. Create one above.
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {tasks!.map((t) => (
+                  <TaskRow key={t.id} task={t} />
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
+  );
+}
+
+/* ---------- Eisenhower Matrix ---------- */
+
+type Quadrant = "Q1" | "Q2" | "Q3" | "Q4";
+
+function classify(t: TaskDTO): Quadrant {
+  const important = t.priority === 1;
+  const urgent = isUrgent(t.dueDate);
+  if (important && urgent) return "Q1";
+  if (important && !urgent) return "Q2";
+  if (!important && urgent) return "Q3";
+  return "Q4";
+}
+
+function isUrgent(dueDate: string | null): boolean {
+  if (!dueDate) return false;
+  const due = new Date(dueDate).getTime();
+  const now = Date.now();
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  return due - now <= threeDays;
+}
+
+const QUADRANT_META: Record<Quadrant, { cn: string; en: string; verb: string; tone: string; chip: string }> = {
+  Q1: { cn: "立即做", en: "Q1 · Crisis",   verb: "Do First",  tone: "border-[var(--danger)]/60 bg-[var(--danger)]/8", chip: "bg-[var(--danger)]/15 text-[var(--danger)]" },
+  Q2: { cn: "排时间", en: "Q2 · Strategy", verb: "Schedule",  tone: "border-[var(--gold)] bg-[var(--gold-tint)]/30",   chip: "bg-[var(--gold-tint)] text-[var(--gold-deep)]" },
+  Q3: { cn: "委托",   en: "Q3 · Noise",    verb: "Delegate",  tone: "border-[#3a6b8e]/40 bg-[#3a6b8e]/5",              chip: "bg-[#3a6b8e]/15 text-[#3a6b8e]" },
+  Q4: { cn: "舍弃",   en: "Q4 · Waste",    verb: "Eliminate", tone: "border-[var(--border)] bg-[var(--bg-page)]",      chip: "bg-[var(--bg-elevated)] text-[var(--fg-muted)]" },
+};
+
+function EisenhowerMatrix({ tasks }: { tasks: TaskDTO[] }) {
+  const grouped = useMemo(() => {
+    const buckets: Record<Quadrant, TaskDTO[]> = { Q1: [], Q2: [], Q3: [], Q4: [] };
+    for (const t of tasks) buckets[classify(t)].push(t);
+    return buckets;
+  }, [tasks]);
+
+  return (
+    <div>
+      {/* Axis labels */}
+      <div className="mb-2 grid grid-cols-[120px_1fr_1fr] gap-3 text-[10px] uppercase tracking-[0.22em] text-[var(--gold-deep)]">
+        <div></div>
+        <div className="text-center">▲ 紧急 · Urgent</div>
+        <div className="text-center">不紧急 · Not Urgent</div>
+      </div>
+      <div className="grid grid-cols-[120px_1fr_1fr] gap-3">
+        <div className="flex items-center justify-end pr-2 text-[10px] uppercase tracking-[0.22em] text-[var(--gold-deep)]">
+          重要 · Important ▶
+        </div>
+        <Quadrant tasks={grouped.Q1} q="Q1" />
+        <Quadrant tasks={grouped.Q2} q="Q2" />
+
+        <div className="flex items-center justify-end pr-2 text-[10px] uppercase tracking-[0.22em] text-[var(--fg-subtle)]">
+          不重要 · Not Important ▶
+        </div>
+        <Quadrant tasks={grouped.Q3} q="Q3" />
+        <Quadrant tasks={grouped.Q4} q="Q4" />
+      </div>
+      <p className="mt-3 text-center text-[10px] text-[var(--fg-subtle)]">
+        紧急 = 截止日期在 3 天内 (含逾期) · 重要 = 优先级 = High
+      </p>
+    </div>
+  );
+}
+
+function Quadrant({ tasks, q }: { tasks: TaskDTO[]; q: Quadrant }) {
+  const meta = QUADRANT_META[q];
+  return (
+    <div className={`min-h-[200px] rounded-sm border-2 p-3 ${meta.tone}`}>
+      <div className="mb-2 flex items-baseline justify-between">
+        <div>
+          <div className="font-display text-sm font-bold text-[var(--fg-strong)]">
+            {meta.cn} <span className="text-[10px] font-normal text-[var(--fg-muted)]">· {meta.verb}</span>
+          </div>
+          <div className="font-display-en text-[9px] uppercase tracking-[0.22em] text-[var(--fg-subtle)]">
+            {meta.en}
+          </div>
+        </div>
+        <span className={`rounded-sm px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${meta.chip}`}>
+          {tasks.length}
+        </span>
+      </div>
+      {tasks.length === 0 ? (
+        <p className="text-[12px] italic text-[var(--fg-subtle)]">— empty —</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {tasks.map((t) => (
+            <MatrixRow key={t.id} task={t} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MatrixRow({ task }: { task: TaskDTO }) {
+  const complete = useCompleteTask();
+  return (
+    <li className="flex items-center gap-2 rounded-sm border border-[var(--border)] bg-[var(--bg-card)]/80 p-2 text-[12px]">
+      <button
+        onClick={() => complete.mutate(task.id)}
+        disabled={complete.isPending}
+        className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] hover:border-[var(--gold)]"
+        title="Mark done"
+      >
+        <Check size={11} />
+      </button>
+      <span className="min-w-0 flex-1 truncate font-display text-[var(--fg-strong)]">{task.title}</span>
+      {task.dueDate && (
+        <span className="font-mono text-[10px] text-[var(--fg-subtle)]">
+          {new Date(task.dueDate).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" })}
+        </span>
+      )}
+      {task.area && <span className="text-[12px]">{task.area.icon}</span>}
+    </li>
   );
 }
 

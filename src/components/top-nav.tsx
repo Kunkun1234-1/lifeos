@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Trophy, Settings as SettingsIcon, HelpCircle, LayoutGrid, Mail, Bell } from "lucide-react";
-import { useUser } from "@/hooks/queries";
+import { Home, Trophy, Settings as SettingsIcon, HelpCircle, LayoutGrid, Mail, Bell, Zap } from "lucide-react";
+import { useUser, useResin } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,6 +24,7 @@ const NAV = [
 export function TopNav() {
   const path = usePathname();
   const { data: user } = useUser();
+  const { data: resin } = useResin();
 
   return (
     <header className="relative z-20 border-b border-[var(--border)]/70 bg-[var(--bg-page)]/80 backdrop-blur-sm">
@@ -103,8 +104,28 @@ export function TopNav() {
           </div>
         </nav>
 
-        {/* Right: mail + bell + avatar */}
+        {/* Right: resin + mail + bell + avatar */}
         <div className="flex shrink-0 items-center gap-3">
+          {resin && (
+            <div
+              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-card)]/70 px-3 py-1.5 text-[var(--fg-muted)]"
+              title={
+                resin.isFull
+                  ? "精力已满"
+                  : `精力 ${resin.current}/${resin.max} · 下次回 +1 还需 ${formatMs(resin.msToNextRegen ?? 0)} · 满需 ${formatMs(resin.msToFull ?? 0)}`
+              }
+            >
+              <Zap
+                size={14}
+                className={resin.isFull ? "text-[var(--gold)]" : "text-[var(--gold-deep)]"}
+                fill={resin.isFull ? "currentColor" : "none"}
+              />
+              <span className="font-mono text-[12px] font-bold text-[var(--fg-strong)]">
+                {resin.current}
+                <span className="text-[10px] text-[var(--fg-muted)]">/{resin.max}</span>
+              </span>
+            </div>
+          )}
           <button
             className="grid h-10 w-10 place-items-center rounded-full border border-[var(--border)] bg-[var(--bg-card)]/70 text-[var(--fg-muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold-deep)]"
             title="信箱"
@@ -152,6 +173,17 @@ export function TopNav() {
       </div>
     </header>
   );
+}
+
+function formatMs(ms: number): string {
+  if (ms <= 0) return "0s";
+  const sec = Math.floor(ms / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 function CompassStar({ size = 40 }: { size?: number }) {

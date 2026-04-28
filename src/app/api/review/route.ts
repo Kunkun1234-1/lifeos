@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { ReviewCreateSchema } from "@/lib/validators";
@@ -28,9 +29,16 @@ export async function POST(req: Request) {
   // Bucket by period based on review kind
   let periodStart: Date;
   let periodEnd: Date;
+  const now = new Date();
   if (data.kind === "weekly") {
     periodStart = ymdToDate(startOfWeekYMD(), false);
     periodEnd = ymdToDate(endOfWeekYMD(), true);
+  } else if (data.kind === "monthly") {
+    periodStart = startOfMonth(now);
+    periodEnd = endOfMonth(now);
+  } else if (data.kind === "quarterly") {
+    periodStart = startOfQuarter(now);
+    periodEnd = endOfQuarter(now);
   } else {
     const day = todayYMD();
     periodStart = ymdToDate(day, false);

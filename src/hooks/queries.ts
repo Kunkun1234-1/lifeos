@@ -44,6 +44,7 @@ export const qk = {
   principles: (archived?: boolean) => ["principles", { archived }] as const,
   decisions: (status?: string) => ["decisions", { status }] as const,
   titles: ["titles"] as const,
+  resin: ["resin"] as const,
 };
 
 // ---------- queries ----------
@@ -690,6 +691,24 @@ export const useTitles = () =>
   useQuery({
     queryKey: qk.titles,
     queryFn: () => api<TitlesSnapshot>("/api/titles"),
+  });
+
+export type ResinSnapshot = {
+  current: number;
+  max: number;
+  isFull: boolean;
+  msToNextRegen: number | null;
+  msToFull: number | null;
+  updatedAt: string;
+  costs: { decisionCoach: number; weeklyCoach: number; monthlyReview: number; quarterlyReview: number };
+};
+
+export const useResin = () =>
+  useQuery({
+    queryKey: qk.resin,
+    queryFn: () => api<ResinSnapshot>("/api/resin"),
+    // Refetch every minute to keep the meter alive
+    refetchInterval: 60_000,
   });
 
 export function useEquipTitle() {

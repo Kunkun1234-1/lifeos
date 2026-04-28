@@ -13,6 +13,7 @@ import {
   ScrollText,
   Sparkles,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,16 @@ import {
 } from "@/hooks/queries";
 import type { DecisionDTO, DecisionOption, PrincipleDTO } from "@/lib/types";
 import { computeEV } from "@/lib/decisions";
+import { api } from "@/lib/fetcher";
+
+type DecisionCoach = {
+  preMortem: string[];
+  devilsAdvocate: string;
+  suggestedPrincipleIds: string[];
+  suggestedPrinciples: { id: string; title: string; body: string; category: string }[];
+  tenTenTen: string;
+  ev_commentary: string;
+};
 
 const STAKES_LABEL: Record<DecisionDTO["stakes"], string> = {
   low: "低",
@@ -167,6 +178,10 @@ function NewDecisionForm({
   const [decideNow, setDecideNow] = useState(false);
   const [chosenIdx, setChosenIdx] = useState(0);
 
+  const [coach, setCoach] = useState<DecisionCoach | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState<string | null>(null);
+
   const evValues = opts.map((o) => computeEV(o));
   const bestIdx = evValues.indexOf(Math.max(...evValues));
 
@@ -177,6 +192,50 @@ function NewDecisionForm({
       else next.add(id);
       return next;
     });
+  };
+
+  const askCoach = async () => {
+    if (!title.trim() || !context.trim()) {
+      setCoachError("先填好标题和背景再问 AI");
+      return;
+    }
+    const validOpts = opts.filter((o) => o.label.trim());
+    if (validOpts.length < 2) {
+      setCoachError("至少要 2 个有名字的选项");
+      return;
+    }
+    setCoachLoading(true);
+    setCoachError(null);
+    try {
+      const res = await api<DecisionCoach>("/api/ai/decision-coach", {
+        method: "POST",
+        json: {
+          draft: {
+            title: title.trim(),
+            context: context.trim(),
+            stakes,
+            options: validOpts.map((o) => ({
+              label: o.label.trim(),
+              prob: o.prob,
+              payoff: o.payoff,
+              penalty: o.penalty,
+              notes: o.notes || null,
+            })),
+          },
+        },
+      });
+      setCoach(res);
+      // Auto-select the suggested principles
+      if (res.suggestedPrincipleIds.length > 0) {
+        setSelectedPrinciples(
+          (prev) => new Set([...prev, ...res.suggestedPrincipleIds])
+        );
+      }
+    } catch (e) {
+      setCoachError(e instanceof Error ? e.message : "AI 调用失败");
+    } finally {
+      setCoachLoading(false);
+    }
   };
 
   const submit = async () => {
@@ -289,6 +348,96 @@ function NewDecisionForm({
               </Button>
             )}
           </div>
+        </div>
+
+        {/* AI Coach panel */}
+        <div className="panel-ink ornate rounded-sm p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-display-en text-[10px] uppercase tracking-[0.22em] text-[var(--gold-pale)]">
+                AI Decision Coach · DeepSeek
+              </div>
+              <div className="mt-1 font-display text-[14px] font-bold text-[var(--fg-on-ink)]">
+                让 AI 看一眼这个决策的盲点
+              </div>
+            </div>
+            <Button size="sm" variant="primary" onClick={askCoach} disabled={coachLoading}>
+              {coachLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {coachLoading ? "思考中…" : coach ? "重新分析" : "召唤教练"}
+            </Button>
+          </div>
+          {coachError && (
+            <div className="mt-3 rounded-sm bg-[var(--danger)]/15 px-3 py-2 text-[12px] text-[var(--gold-pale)]">
+              {coachError}
+            </div>
+          )}
+          {coach && (
+            <div className="mt-4 grid gap-3 text-[13px] text-[var(--fg-on-ink)]">
+              <div>
+                <div className="font-display-en text-[10px] uppercase tracking-[0.18em] text-[var(--gold-pale)]">
+                  Devil&apos;s Advocate
+                </div>
+                <p className="mt-1 italic leading-relaxed">{coach.devilsAdvocate}</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-display-en text-[10px] uppercase tracking-[0.18em] text-[var(--gold-pale)]">
+                    Pre-mortem · 失败假设
+                  </span>
+                  <button
+                    onClick={() =>
+                      setPreMortem(coach.preMortem.map((s) => `· ${s}`).join("\n"))
+                    }
+                    className="ml-auto rounded-sm border border-[var(--gold)] bg-[var(--gold)]/10 px-2 py-0.5 text-[10px] text-[var(--gold-pale)] hover:bg-[var(--gold)]/20"
+                  >
+                    填入下方
+                  </button>
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {coach.preMortem.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-[var(--gold-pale)]">·</span>
+                      <span className="flex-1">{s}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-display-en text-[10px] uppercase tracking-[0.18em] text-[var(--gold-pale)]">
+                    10-10-10
+                  </span>
+                  <button
+                    onClick={() => setTenTenTen(coach.tenTenTen)}
+                    className="ml-auto rounded-sm border border-[var(--gold)] bg-[var(--gold)]/10 px-2 py-0.5 text-[10px] text-[var(--gold-pale)] hover:bg-[var(--gold)]/20"
+                  >
+                    填入下方
+                  </button>
+                </div>
+                <p className="mt-1 leading-relaxed">{coach.tenTenTen}</p>
+              </div>
+              <div>
+                <div className="font-display-en text-[10px] uppercase tracking-[0.18em] text-[var(--gold-pale)]">
+                  EV Commentary
+                </div>
+                <p className="mt-1 leading-relaxed">{coach.ev_commentary}</p>
+              </div>
+              {coach.suggestedPrinciples.length > 0 && (
+                <div>
+                  <div className="font-display-en text-[10px] uppercase tracking-[0.18em] text-[var(--gold-pale)]">
+                    建议引用 (已自动勾选下方原则)
+                  </div>
+                  <ul className="mt-1 space-y-1">
+                    {coach.suggestedPrinciples.map((p) => (
+                      <li key={p.id} className="text-[12px]">
+                        <b>{p.title}</b> — <span className="text-[var(--gold-pale)]/80">{p.body.slice(0, 100)}…</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* WRAP fields */}

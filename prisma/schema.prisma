@@ -42,6 +42,13 @@ model User {
   pullsSinceEpic    Int  @default(0)
   totalPulls        Int  @default(0)
 
+  // Resin / 精力 — Genshin's 5-layer rhythm gate. Caps at 200, regenerates 1
+  // per 8 minutes. Spent on AI Coach calls (decision/weekly/monthly).
+  // Persisted as the LAST settled value at `resinUpdatedAt`; current value is
+  // computed lazily by lib/resin.ts.
+  resin             Int      @default(200)
+  resinUpdatedAt    DateTime @default(now())
+
   areas        Area[]
   tasks        Task[]
   habits       Habit[]
