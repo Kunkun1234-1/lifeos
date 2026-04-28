@@ -49,6 +49,7 @@ export async function checkAchievements(userId: string): Promise<UnlockResult[]>
     principleCount,
     decisionCount,
     decisionReviewedCount,
+    noteCount,
   ] = await Promise.all([
     prisma.task.count({ where: { userId, status: "DONE" } }),
     prisma.habitTick.count({ where: { habit: { userId }, direction: "+" } }),
@@ -70,6 +71,7 @@ export async function checkAchievements(userId: string): Promise<UnlockResult[]>
     prisma.principle.count({ where: { userId, archived: false } }),
     prisma.decision.count({ where: { userId } }),
     prisma.decision.count({ where: { userId, status: "reviewed" } }),
+    prisma.note.count({ where: { userId, archived: false } }),
   ]);
 
   const { level } = deriveLevel(totalXp);
@@ -90,6 +92,7 @@ export async function checkAchievements(userId: string): Promise<UnlockResult[]>
     principle_count: principleCount,
     decision_count: decisionCount,
     decision_reviewed_count: decisionReviewedCount,
+    note_count: noteCount,
   };
 
   const newlyUnlocked: UnlockResult[] = [];
@@ -182,6 +185,7 @@ export async function getAchievementsSnapshot(userId: string) {
     principleCount,
     decisionCount,
     decisionReviewedCount,
+    noteCount,
   ] = await Promise.all([
     prisma.task.count({ where: { userId, status: "DONE" } }),
     prisma.habitTick.count({ where: { habit: { userId }, direction: "+" } }),
@@ -203,6 +207,7 @@ export async function getAchievementsSnapshot(userId: string) {
     prisma.principle.count({ where: { userId, archived: false } }),
     prisma.decision.count({ where: { userId } }),
     prisma.decision.count({ where: { userId, status: "reviewed" } }),
+    prisma.note.count({ where: { userId, archived: false } }),
   ]);
   const { level } = deriveLevel(totalXp);
   const metricMap: Record<string, number> = {
@@ -221,6 +226,7 @@ export async function getAchievementsSnapshot(userId: string) {
     principle_count: principleCount,
     decision_count: decisionCount,
     decision_reviewed_count: decisionReviewedCount,
+    note_count: noteCount,
   };
 
   return defs.map((d) => {

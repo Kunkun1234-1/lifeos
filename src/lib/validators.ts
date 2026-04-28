@@ -211,3 +211,30 @@ export const DecisionReviewSchema = z.object({
   lessons: z.string().max(2000).optional().nullable(),
   rating: z.number().int().min(1).max(10),
 });
+
+// ---------- Knowledge Base / Notes ----------
+export const NOTE_KINDS = ["note", "highlight", "quote", "link", "inspiration"] as const;
+
+// Treat empty string as `null` for optional URL — friendlier for PATCH-clear flows
+const optionalUrl = z.preprocess(
+  (v) => (v === "" || v === undefined ? null : v),
+  z.string().url().max(500).nullable()
+);
+
+export const NoteCreateSchema = z.object({
+  kind: z.enum(NOTE_KINDS).default("note"),
+  title: z.string().min(1).max(200),
+  body: z.string().max(10_000).default(""),
+  sourceUrl: optionalUrl,
+  sourceTitle: z.string().max(200).optional().nullable(),
+  author: z.string().max(120).optional().nullable(),
+  tags: z.array(z.string().min(1).max(40)).max(12).default([]),
+  areaId: z.string().optional().nullable(),
+  projectId: z.string().optional().nullable(),
+  goalId: z.string().optional().nullable(),
+  pinned: z.boolean().default(false),
+});
+
+export const NoteUpdateSchema = NoteCreateSchema.partial().extend({
+  archived: z.boolean().optional(),
+});

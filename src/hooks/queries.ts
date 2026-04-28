@@ -23,6 +23,7 @@ import type {
   PrincipleDTO,
   DecisionDTO,
   TitlesSnapshot,
+  NoteDTO,
 } from "@/lib/types";
 import { useRewardsStore } from "@/stores/rewards";
 
@@ -45,6 +46,7 @@ export const qk = {
   decisions: (status?: string) => ["decisions", { status }] as const,
   titles: ["titles"] as const,
   resin: ["resin"] as const,
+  notes: (filters?: Record<string, string | undefined>) => ["notes", filters ?? {}] as const,
 };
 
 // ---------- queries ----------
@@ -710,6 +712,73 @@ export const useResin = () =>
     // Refetch every minute to keep the meter alive
     refetchInterval: 60_000,
   });
+
+export type NoteFilters = {
+  kind?: string;
+  tag?: string;
+  areaId?: string;
+  projectId?: string;
+  goalId?: string;
+  q?: string;
+  archived?: "1" | "0";
+};
+
+export const useNotes = (filters: NoteFilters = {}) =>
+  useQuery({
+    queryKey: qk.notes(filters),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(filters)) {
+        if (v !== undefined && v !== "") params.set(k, v);
+      }
+      const qs = params.toString();
+      return api<NoteDTO[]>(`/api/notes${qs ? `?${qs}` : ""}`);
+    },
+  });
+
+export function useCreateNote() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<{ note: NoteDTO; reward: RewardResult }>("/api/notes", {
+        method: "POST",
+        json: body,
+      }),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: 0,
+          fate: 0,
+          areaKey: data.reward.areaKey,
+          label: "📓 Note",
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["notes"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+    },
+  });
+}
+
+export function useUpdateNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api(`/api/notes/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
+  });
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/notes/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
+  });
+}
 
 export function useEquipTitle() {
   const qc = useQueryClient();

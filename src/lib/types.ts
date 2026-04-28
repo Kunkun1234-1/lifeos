@@ -294,6 +294,29 @@ export type TitlesSnapshot = {
   totalCount: number;
 };
 
+export type NoteKind = "note" | "highlight" | "quote" | "link" | "inspiration";
+
+export type NoteDTO = {
+  id: string;
+  kind: NoteKind;
+  title: string;
+  body: string;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  author: string | null;
+  tags: string[];
+  pinned: boolean;
+  archived: boolean;
+  areaId: string | null;
+  area: { id: string; name: string; icon: string; color: string } | null;
+  projectId: string | null;
+  project: { id: string; title: string } | null;
+  goalId: string | null;
+  goal: { id: string; objective: string } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type DecisionDTO = {
   id: string;
   title: string;

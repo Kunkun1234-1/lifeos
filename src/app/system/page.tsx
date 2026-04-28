@@ -17,6 +17,7 @@ import {
   Compass,
   Crown,
   Activity,
+  Library,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -48,6 +49,13 @@ const SECTIONS = [
     ],
   },
   {
+    title: "知识 · Knowledge",
+    en: "Second brain · PARA-R",
+    items: [
+      { href: "/notes", cn: "知识库", en: "Notes · 5 kinds", desc: "笔记 · 高亮 · 语录 · 链接 · 灵感 (+15 XP)", icon: Library },
+    ],
+  },
+  {
     title: "数据 · Insight",
     en: "See your rhythm",
     items: [
@@ -60,7 +68,7 @@ const SECTIONS = [
     items: [
       { href: "/rewards",      cn: "商店",     en: "Rewards",      desc: "Mora/Gems 兑换真实奖品",     icon: Gift },
       { href: "/gacha",        cn: "祈愿",     en: "Wish · Gacha", desc: "Fate 抽卡 · 软/硬保底",       icon: Sparkles },
-      { href: "/achievements", cn: "成就",     en: "Achievements", desc: "29 项徽章 · 自动解锁",         icon: Trophy },
+      { href: "/achievements", cn: "成就",     en: "Achievements", desc: "32 项徽章 · 自动解锁",         icon: Trophy },
       { href: "/titles",       cn: "称号",     en: "Titles",       desc: "20 称号 · 装备显示在导航",      icon: Crown },
       { href: "/battle-pass",  cn: "战令",     en: "Battle Pass",  desc: "本周 9 任务 · 20 级奖励轨",   icon: Award },
     ],
@@ -77,7 +85,7 @@ export default function SystemPage() {
         </div>
         <div className="mt-2 h-px bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/50 to-transparent" />
         <p className="mt-3 max-w-2xl font-display text-sm text-[var(--fg-muted)]">
-          十四个模块组成你的人生操作系统：执行 · 战略 · 决策 · 数据 · 奖励五部分。
+          十五个模块组成你的人生操作系统：执行 · 战略 · 决策 · 知识 · 数据 · 奖励六部分。
         </p>
       </div>
 

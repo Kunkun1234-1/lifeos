@@ -30,6 +30,7 @@ const DEFAULT_AREAS = [
  *     principle_count       — # active principles in library
  *     decision_count        — total decisions logged
  *     decision_reviewed_count — # decisions with post-mortem complete
+ *     note_count            — # active notes in Knowledge Base
  */
 const ACHIEVEMENTS = [
   // ---------- Bronze ----------
@@ -72,6 +73,11 @@ const ACHIEVEMENTS = [
   { key: "first_postmortem",  name: "回望初心",     description: "完成第 1 次决策复盘 (Post-mortem)", tier: "silver",    category: "milestone",  trigger: "decision_reviewed_count:1",  emoji: "🔍", rewardGold: 60, rewardGems: 1, rewardFate: 2 },
   { key: "postmortem_10",     name: "经验沉淀",     description: "累计完成 10 次决策复盘",         tier: "gold",      category: "cumulative", trigger: "decision_reviewed_count:10", emoji: "🪞", rewardGold: 300, rewardGems: 3, rewardFate: 3 },
   { key: "dalio_disciple",    name: "Dalio 门徒",   description: "累计 30 次决策复盘 · 你已建立自己的算法", tier: "legendary", category: "cumulative", trigger: "decision_reviewed_count:30", emoji: "🌌", rewardGold: 1200, rewardGems: 15, rewardFate: 8 },
+
+  // ---------- Knowledge Base ----------
+  { key: "first_note",        name: "落字成金",     description: "写下第 1 条笔记",                tier: "bronze",    category: "milestone",  trigger: "note_count:1",            emoji: "📓", rewardGold: 15, rewardFate: 1 },
+  { key: "notes_25",          name: "学者初成",     description: "知识库累计 25 条",                tier: "silver",    category: "cumulative", trigger: "note_count:25",           emoji: "📚", rewardGold: 100, rewardGems: 1, rewardFate: 2 },
+  { key: "notes_100",         name: "第二大脑",     description: "知识库累计 100 条 · 你的大脑有了双备份",   tier: "gold",      category: "cumulative", trigger: "note_count:100",          emoji: "🧠", rewardGold: 400, rewardGems: 4, rewardFate: 3 },
 ];
 
 /**
