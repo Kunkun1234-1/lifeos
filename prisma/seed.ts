@@ -116,6 +116,96 @@ const TITLES = [
 ];
 
 /**
+ * Equipment / Avatar Frames — global catalog. v1 ships frame slot only.
+ * Sources:
+ *   seed         — granted to every user on first signup (basic frame)
+ *   achievement  — unlocked by safeCheck cascade (mirrors Title cascade)
+ *   event        — unlocked when an Event's bonus completes
+ */
+const EQUIPMENT = [
+  // Common — everyone starts with these
+  { key: "frame_default",    name: "默认相框",   description: "新玩家初始相框",                          tier: "common",    slot: "frame", source: "seed",        sourceKey: null,                   emoji: "○", style: JSON.stringify({ gradient: ["#b68838", "#d4a94d"], strokeWidth: 1 }) },
+  { key: "frame_parchment",  name: "米纸边",     description: "薄金边 + 米纸纹理 · 内置赠送",                tier: "common",    slot: "frame", source: "seed",        sourceKey: null,                   emoji: "▢", style: JSON.stringify({ gradient: ["#e8c977", "#b68838"], strokeWidth: 2 }) },
+
+  // Rare — unlocked by silver-tier achievements
+  { key: "frame_streaker",   name: "七连之环",   description: "连续 7 天日程解锁",                     tier: "rare",      slot: "frame", source: "achievement", sourceKey: "streak_7",             emoji: "🔥", style: JSON.stringify({ gradient: ["#c5554a", "#f0a05a"], strokeWidth: 2, glow: "#c5554a" }) },
+  { key: "frame_apprentice", name: "学徒之环",   description: "等级 5 解锁",                          tier: "rare",      slot: "frame", source: "achievement", sourceKey: "level_5",              emoji: "⭐", style: JSON.stringify({ gradient: ["#3a6b8e", "#a8d0e6"], strokeWidth: 2 }) },
+
+  // Epic — unlocked by gold achievements
+  { key: "frame_iron",       name: "铁人之环",   description: "连续 30 天日程解锁",                    tier: "epic",      slot: "frame", source: "achievement", sourceKey: "streak_30",            emoji: "🌟", style: JSON.stringify({ gradient: ["#8a6820", "#d4a94d"], strokeWidth: 3, ornament: "diamond", glow: "#d4a94d" }) },
+  { key: "frame_strategist", name: "战略家纹章", description: "完成第 1 个 OKR 目标解锁",              tier: "epic",      slot: "frame", source: "achievement", sourceKey: "first_goal",           emoji: "🎯", style: JSON.stringify({ gradient: ["#4c8a74", "#a3d9c0"], strokeWidth: 3, ornament: "stars" }) },
+  { key: "frame_sage",       name: "智者书脊",   description: "原则库累计 15 条解锁",                  tier: "epic",      slot: "frame", source: "achievement", sourceKey: "principles_15",        emoji: "📚", style: JSON.stringify({ gradient: ["#9b6bc1", "#d4b9f0"], strokeWidth: 3, ornament: "ring" }) },
+
+  // Legendary — top-tier; one is event-locked
+  { key: "frame_centurion",  name: "百日加冕",   description: "连续 100 天日程解锁",                  tier: "legendary", slot: "frame", source: "achievement", sourceKey: "streak_100",           emoji: "👑", style: JSON.stringify({ gradient: ["#d4a94d", "#fff5c4"], strokeWidth: 4, ornament: "spark", glow: "#fff5c4" }) },
+  { key: "frame_dalio",      name: "Dalio 之纹", description: "30 次决策复盘解锁",                    tier: "legendary", slot: "frame", source: "achievement", sourceKey: "dalio_disciple",       emoji: "🌌", style: JSON.stringify({ gradient: ["#1b2634", "#9b6bc1"], strokeWidth: 4, ornament: "stars", glow: "#9b6bc1" }) },
+  { key: "frame_spring",     name: "春之觉醒",   description: "完成春之觉醒活动全部任务解锁",          tier: "legendary", slot: "frame", source: "event",       sourceKey: "spring_awakening_2026", emoji: "🌸", style: JSON.stringify({ gradient: ["#c76d95", "#fff0e0"], strokeWidth: 4, ornament: "wave", glow: "#c76d95" }) },
+];
+
+/**
+ * Limited-time Events — manually-curated. Users see active + upcoming + past
+ * on /events. Missions track metric counts within the event window.
+ */
+function eventsForSeed() {
+  const now = new Date();
+  // 14-day Spring Awakening window starting today
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 14);
+
+  // 7-day Quarterly Push starting in 7 days
+  const upStart = new Date(start);
+  upStart.setDate(upStart.getDate() + 7);
+  const upEnd = new Date(upStart);
+  upEnd.setDate(upEnd.getDate() + 7);
+
+  return [
+    {
+      key: "spring_awakening_2026",
+      name: "春之觉醒",
+      description: "14 天的执行 + 复盘 + 决策三路并进 · 完成全部解锁春之觉醒相框",
+      emoji: "🌸",
+      themeColor: "#c76d95",
+      startsAt: start,
+      endsAt: end,
+      missions: JSON.stringify([
+        { key: "tasks",     title: "完成 20 个任务",      metric: "task_done",       target: 20, emoji: "✅", xpReward: 100, goldReward: 30 },
+        { key: "routines",  title: "完成 25 个日程",      metric: "routine_done",    target: 25, emoji: "🔁", xpReward: 100, goldReward: 30 },
+        { key: "habits",    title: "正向习惯打卡 30 次",  metric: "habit_tick",      target: 30, emoji: "🔥", xpReward: 100, goldReward: 30 },
+        { key: "reviews",   title: "完成 7 次每日复盘",   metric: "daily_review",    target: 7,  emoji: "📖", xpReward: 150, goldReward: 50, fateReward: 2 },
+        { key: "decisions", title: "记录或复盘 3 个决策", metric: "decision_logged", target: 3,  emoji: "🧭", xpReward: 200, goldReward: 60, gemsReward: 1 },
+      ]),
+      bonusXp: 800,
+      bonusGold: 250,
+      bonusGems: 5,
+      bonusFate: 5,
+      bonusEquipmentKey: "frame_spring",
+    },
+    {
+      key: "quarterly_sprint_q2",
+      name: "季度冲刺 Q2",
+      description: "7 天战略冲刺 · 推动 OKR + 项目 + 决策",
+      emoji: "🚀",
+      themeColor: "#3a6b8e",
+      startsAt: upStart,
+      endsAt: upEnd,
+      missions: JSON.stringify([
+        { key: "goal",      title: "完成 1 个 OKR 目标",  metric: "goal_done",       target: 1, emoji: "🎯", xpReward: 300, goldReward: 100, gemsReward: 2 },
+        { key: "projects",  title: "完成 1 个项目",       metric: "project_done",    target: 1, emoji: "🏗️", xpReward: 200, goldReward: 80,  gemsReward: 1 },
+        { key: "weekly",    title: "完成本周复盘",        metric: "weekly_review",   target: 1, emoji: "📓", xpReward: 150, goldReward: 50,  fateReward: 1 },
+        { key: "principles",title: "新增 1 条原则",       metric: "principle_added", target: 1, emoji: "📜", xpReward: 100, goldReward: 30,  fateReward: 1 },
+      ]),
+      bonusXp: 600,
+      bonusGold: 200,
+      bonusGems: 3,
+      bonusFate: 3,
+      bonusEquipmentKey: null,
+    },
+  ];
+}
+
+/**
  * Default Principles seeded for new users — drawn from Dalio + Heath WRAP + Atomic Habits.
  * User can edit/archive/delete; intent is to give a starting palette, not be canonical.
  */
@@ -202,6 +292,44 @@ async function main() {
   }
   console.log(`Seeded ${TITLES.length} title definitions.`);
 
+  // ---------- Equipment / Avatar Frames (global) ----------
+  for (const e of EQUIPMENT) {
+    await prisma.equipment.upsert({
+      where: { key: e.key },
+      create: e,
+      update: { ...e },
+    });
+  }
+  console.log(`Seeded ${EQUIPMENT.length} equipment definitions.`);
+
+  // ---------- Events (global) ----------
+  // upsert by key — but startsAt/endsAt should NOT be reset on every seed
+  // run, otherwise running seed pushes the window forward repeatedly.
+  for (const ev of eventsForSeed()) {
+    const existing = await prisma.event.findUnique({ where: { key: ev.key } });
+    if (existing) {
+      // Refresh metadata only (name/desc/missions can evolve), keep dates
+      await prisma.event.update({
+        where: { key: ev.key },
+        data: {
+          name: ev.name,
+          description: ev.description,
+          emoji: ev.emoji,
+          themeColor: ev.themeColor,
+          missions: ev.missions,
+          bonusXp: ev.bonusXp,
+          bonusGold: ev.bonusGold,
+          bonusGems: ev.bonusGems,
+          bonusFate: ev.bonusFate,
+          bonusEquipmentKey: ev.bonusEquipmentKey,
+        },
+      });
+    } else {
+      await prisma.event.create({ data: ev });
+    }
+  }
+  console.log(`Seeded events.`);
+
   // ---------- User + per-user defaults ----------
   let user = await prisma.user.findFirst();
   if (!user) {
@@ -241,6 +369,45 @@ async function main() {
       data: DEFAULT_PRINCIPLES.map((p) => ({ ...p, userId: user.id })),
     });
     console.log(`Seeded ${DEFAULT_PRINCIPLES.length} default principles.`);
+  }
+
+  // ---------- Grant seed-source Equipment to existing user ----------
+  const seedEquipment = await prisma.equipment.findMany({ where: { source: "seed" } });
+  for (const eq of seedEquipment) {
+    try {
+      await prisma.userEquipment.create({ data: { userId: user.id, equipmentKey: eq.key } });
+    } catch {
+      // unique-constraint duplicate — skip
+    }
+  }
+  // Default-equip the basic frame if user has nothing equipped
+  const u = await prisma.user.findUnique({ where: { id: user.id }, select: { equippedFrameKey: true } });
+  if (!u?.equippedFrameKey) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { equippedFrameKey: "frame_parchment" },
+    });
+  }
+
+  // ---------- Backfill achievement-source Equipment for already-unlocked achievements ----------
+  const allEquipment = await prisma.equipment.findMany({ where: { source: "achievement" } });
+  const eqUserAchUnlocks = await prisma.achievementUnlock.findMany({
+    where: { userId: user.id },
+    include: { achievement: true },
+  });
+  const eqUnlockedAchKeys = new Set(eqUserAchUnlocks.map((u) => u.achievement.key));
+  const eqToBackfill = allEquipment.filter((e) => e.sourceKey && eqUnlockedAchKeys.has(e.sourceKey));
+  if (eqToBackfill.length > 0) {
+    let added = 0;
+    for (const eq of eqToBackfill) {
+      try {
+        await prisma.userEquipment.create({ data: { userId: user.id, equipmentKey: eq.key } });
+        added++;
+      } catch {
+        // duplicate
+      }
+    }
+    if (added > 0) console.log(`Backfilled ${added} achievement-source equipment.`);
   }
 
   // ---------- Backfill UserTitle from existing achievement unlocks ----------

@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Trophy, Settings as SettingsIcon, HelpCircle, LayoutGrid, Mail, Bell, Zap } from "lucide-react";
 import { useUser, useResin } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
+import { AvatarFrame } from "@/components/avatar-frame";
 
 /**
  * Top nav — matches the final reference mock:
@@ -139,17 +139,20 @@ export function TopNav() {
             <Bell size={16} />
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--danger)] shadow-[0_0_0_2px_var(--bg-card)]" />
           </button>
-          <Link href="/settings" className="flex items-center gap-2.5 rounded-full border border-[var(--border)] bg-[var(--bg-card)]/70 pr-3 pl-1 py-1 transition-colors hover:border-[var(--gold)]">
-            <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[var(--gold)] shadow-[0_0_0_2px_var(--bg-card)]">
-              <Image
-                src="/lifeos/profile_avatar.png"
-                alt="avatar"
-                width={36}
-                height={36}
-                className="object-cover"
-                priority
-              />
-            </div>
+          <Link
+            href="/settings"
+            className="flex items-center gap-2.5 rounded-full border border-[var(--border)] bg-[var(--bg-card)]/70 pr-3 pl-1 py-1 transition-colors hover:border-[var(--gold)]"
+            style={
+              user?.equippedFrame?.style.glow
+                ? { color: user.equippedFrame.style.glow }
+                : undefined
+            }
+          >
+            <AvatarFrame
+              size={32}
+              style={user?.equippedFrame?.style ?? null}
+              alt={user?.name ?? "avatar"}
+            />
             <div className="text-left leading-tight">
               <div className="flex items-baseline gap-1.5">
                 <span className="font-display text-[13px] font-semibold text-[var(--fg-strong)]">

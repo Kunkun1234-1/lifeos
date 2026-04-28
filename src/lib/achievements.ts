@@ -138,6 +138,20 @@ export async function checkAchievements(userId: string): Promise<UnlockResult[]>
             if (!isUniqueViolation(e)) throw e;
           }
         }
+        // Cascade: unlock matching achievement-source equipment (avatar frames).
+        const matchingEquipment = await prisma.equipment.findMany({
+          where: { source: "achievement", sourceKey: def.key },
+          select: { key: true },
+        });
+        for (const eq of matchingEquipment) {
+          try {
+            await prisma.userEquipment.create({
+              data: { userId, equipmentKey: eq.key },
+            });
+          } catch (e) {
+            if (!isUniqueViolation(e)) throw e;
+          }
+        }
         newlyUnlocked.push({
           id: def.id,
           key: def.key,

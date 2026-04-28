@@ -30,6 +30,9 @@ model User {
   // Equipped Title (Phase 3 cosmetic) — references Title.key, nullable.
   equippedTitleKey   String?
 
+  // Equipped avatar frame (Equipment slot) — references Equipment.key, nullable.
+  equippedFrameKey   String?
+
   // User preferences (theme, disabled modules, etc.)
   preferences        String   @default("{}")   // JSON object
 
@@ -69,6 +72,8 @@ model User {
   decisions    Decision[]
   titles       UserTitle[]
   notes        Note[]
+  eventClaims  UserEventClaim[]
+  equipment    UserEquipment[]
 }
 
 // ============================================================
@@ -625,6 +630,96 @@ model UserTitle {
 // Knowledge Base / 第二大脑 (PARA-R: Resources + Notes + Highlights)
 // Per design doc §3 Knowledge Base layer.
 // ============================================================
+
+// ============================================================
+// Phase 3 收尾: Events (限时活动) — Genshin 5-layer rhythm last layer
+// ============================================================
+
+model Event {
+  id            String   @id @default(cuid())
+  key           String   @unique // stable identifier for seed/upserts
+  name          String
+  description   String
+  emoji         String   @default("🎉")
+  // Color theme for the banner (CSS color, e.g. "#9b6bc1")
+  themeColor    String   @default("#b68838")
+
+  startsAt      DateTime
+  endsAt        DateTime
+
+  // Mission catalog — JSON array of {key, title, metric, target, xpReward, goldReward, gemsReward, fateReward, emoji}
+  // metric values are checked at request time; missions complete once their counter reaches target.
+  missions      String   @default("[]")
+
+  // Bonus completion reward when ALL missions are claimed
+  bonusXp       Int      @default(0)
+  bonusGold     Int      @default(0)
+  bonusGems     Int      @default(0)
+  bonusFate     Int      @default(0)
+  // Optional Equipment.key unlocked when all missions claimed
+  bonusEquipmentKey String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  claims        UserEventClaim[]
+
+  @@index([startsAt, endsAt])
+}
+
+model UserEventClaim {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  missionKey  String                   // which mission within the event was claimed
+  // Snapshot of the metric value at claim time (for analytics)
+  snapshot    Int      @default(0)
+  claimedAt   DateTime @default(now())
+
+  @@unique([userId, eventId, missionKey])
+  @@index([userId, eventId])
+}
+
+// ============================================================
+// Phase 3 收尾: Equipment (装备/外观) — collection-oriented cosmetic slots
+// Per design doc §4.1. v1 ships avatar-frame slot only; schema supports
+// adding banner/badge/etc. slots later.
+// ============================================================
+
+model Equipment {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String
+  emoji       String   @default("🖼️")
+  slot        String   @default("frame")     // frame | banner | badge (future)
+  tier        String   @default("common")    // common | rare | epic | legendary
+  // Source how the user obtains it: achievement | event | gacha | seed
+  source      String   @default("seed")
+  sourceKey   String?                        // achievement key, event key, etc.
+  // Visual style — JSON spec consumed by the frame renderer
+  // {gradient: [c1, c2], strokeWidth, ornament, glow}
+  style       String   @default("{}")
+
+  unlocks     UserEquipment[]
+
+  @@index([slot, tier])
+  @@index([sourceKey])
+}
+
+model UserEquipment {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipmentKey String
+  equipment    Equipment  @relation(fields: [equipmentKey], references: [key], onDelete: Cascade)
+  unlockedAt   DateTime   @default(now())
+
+  @@unique([userId, equipmentKey])
+  @@index([userId, unlockedAt])
+}
 
 model Note {
   id          String   @id @default(cuid())

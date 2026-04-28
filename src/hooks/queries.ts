@@ -24,6 +24,8 @@ import type {
   DecisionDTO,
   TitlesSnapshot,
   NoteDTO,
+  EventSnapshotDTO,
+  EquipmentSnapshotDTO,
 } from "@/lib/types";
 import { useRewardsStore } from "@/stores/rewards";
 
@@ -47,6 +49,8 @@ export const qk = {
   titles: ["titles"] as const,
   resin: ["resin"] as const,
   notes: (filters?: Record<string, string | undefined>) => ["notes", filters ?? {}] as const,
+  events: ["events"] as const,
+  equipment: ["equipment"] as const,
 };
 
 // ---------- queries ----------
@@ -777,6 +781,73 @@ export function useDeleteNote() {
   return useMutation({
     mutationFn: (id: string) => api(`/api/notes/${id}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
+  });
+}
+
+// ---------- Phase 3 收尾: Events ----------
+
+export const useEvents = () =>
+  useQuery({
+    queryKey: qk.events,
+    queryFn: () => api<EventSnapshotDTO[]>("/api/events"),
+    refetchInterval: 60_000,
+  });
+
+export function useClaimEventMission() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: ({ eventId, missionKey }: { eventId: string; missionKey: string }) =>
+      api<{
+        ok: true;
+        reward: RewardResult;
+        event: EventSnapshotDTO | null;
+        unlockedEquipmentKey: string | null;
+      }>(`/api/events/${eventId}/claim`, {
+        method: "POST",
+        json: { missionKey },
+      }),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: data.reward.gemsGranted ?? 0,
+          fate: data.reward.fateGranted ?? 0,
+          areaKey: null,
+          label: data.unlockedEquipmentKey
+            ? "🎉 活动奖励 + 解锁相框"
+            : "🎉 活动奖励",
+        });
+      }
+      qc.invalidateQueries({ queryKey: qk.events });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.equipment });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+    },
+  });
+}
+
+// ---------- Equipment ----------
+
+export const useEquipment = () =>
+  useQuery({
+    queryKey: qk.equipment,
+    queryFn: () => api<EquipmentSnapshotDTO>("/api/equipment"),
+  });
+
+export function useEquipFrame() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string | null) =>
+      api<{ ok: true; equippedKey: string | null }>("/api/equipment/equip", {
+        method: "POST",
+        json: { key },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.equipment });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
   });
 }
 

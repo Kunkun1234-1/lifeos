@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { getUserXpSnapshot } from "@/lib/rewards";
 import { deriveLevel } from "@/lib/gamification";
 import { UserUpdateSchema } from "@/lib/validators";
+import { parseFrameStyle as parseFrameStyleLocal } from "@/lib/equipment";
 
 function parseList(raw: string | null): string[] {
   if (!raw) return [];
@@ -29,6 +30,27 @@ export async function GET() {
     if (t) equippedTitle = t;
   }
 
+  let equippedFrame: {
+    key: string;
+    name: string;
+    tier: string;
+    style: ReturnType<typeof parseFrameStyleLocal>;
+  } | null = null;
+  if (user.equippedFrameKey) {
+    const eq = await prisma.equipment.findUnique({
+      where: { key: user.equippedFrameKey },
+      select: { key: true, name: true, tier: true, style: true },
+    });
+    if (eq) {
+      equippedFrame = {
+        key: eq.key,
+        name: eq.name,
+        tier: eq.tier,
+        style: parseFrameStyleLocal(eq.style),
+      };
+    }
+  }
+
   return NextResponse.json({
     id: user.id,
     name: user.name,
@@ -45,6 +67,7 @@ export async function GET() {
     levelProgress: leveling.progress,
     currency: user.currency ?? { gold: 0, gems: 0, fate: 0 },
     equippedTitle,
+    equippedFrame,
   });
 }
 

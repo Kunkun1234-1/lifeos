@@ -16,6 +16,17 @@ export type UserSnapshot = {
   levelProgress: number;
   currency: { gold: number; gems: number; fate: number };
   equippedTitle: { key: string; name: string; emoji: string; tier: string } | null;
+  equippedFrame: {
+    key: string;
+    name: string;
+    tier: string;
+    style: {
+      gradient: [string, string];
+      strokeWidth: number;
+      ornament?: "diamond" | "stars" | "wave" | "ring" | "spark";
+      glow?: string;
+    };
+  } | null;
 };
 
 export type AreaDTO = {
@@ -289,6 +300,76 @@ export type TitleDTO = {
 
 export type TitlesSnapshot = {
   items: TitleDTO[];
+  equippedKey: string | null;
+  unlockedCount: number;
+  totalCount: number;
+};
+
+export type EventStatus = "upcoming" | "active" | "ended";
+
+export type EventMissionDTO = {
+  key: string;
+  title: string;
+  metric: string;
+  target: number;
+  current: number;
+  progress: number;
+  done: boolean;
+  claimed: boolean;
+  emoji: string;
+  xpReward: number;
+  goldReward: number;
+  gemsReward: number;
+  fateReward: number;
+};
+
+export type EventSnapshotDTO = {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  emoji: string;
+  themeColor: string;
+  startsAt: string;
+  endsAt: string;
+  status: EventStatus;
+  msToStart: number | null;
+  msToEnd: number | null;
+  missions: EventMissionDTO[];
+  bonus: {
+    xp: number;
+    gold: number;
+    gems: number;
+    fate: number;
+    equipmentKey: string | null;
+  };
+  bonusClaimed: boolean;
+  allMissionsClaimed: boolean;
+};
+
+export type EquipmentItemDTO = {
+  key: string;
+  name: string;
+  description: string;
+  emoji: string;
+  slot: string;
+  tier: "common" | "rare" | "epic" | "legendary";
+  source: "seed" | "achievement" | "event" | "gacha";
+  sourceKey: string | null;
+  sourceAchievement: { key: string; name: string; emoji: string; tier: string; trigger: string } | null;
+  style: {
+    gradient: [string, string];
+    strokeWidth: number;
+    ornament?: "diamond" | "stars" | "wave" | "ring" | "spark";
+    glow?: string;
+  };
+  unlocked: boolean;
+  unlockedAt: string | null;
+  equipped: boolean;
+};
+
+export type EquipmentSnapshotDTO = {
+  items: EquipmentItemDTO[];
   equippedKey: string | null;
   unlockedCount: number;
   totalCount: number;
