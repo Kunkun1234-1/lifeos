@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local SQLite (dev DB regenerated from migrations + seed)
+/prisma/dev.db
+/prisma/dev.db-journal
+
+# Claude Code runtime files (per-machine)
+/.claude/scheduled_tasks.lock

@@ -1,0 +1,708 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/fetcher";
+import type {
+  UserSnapshot,
+  AreaDTO,
+  TaskDTO,
+  HabitDTO,
+  RoutineDTO,
+  CommissionsTodayDTO,
+  ReviewDTO,
+  RewardResult,
+  GoalDTO,
+  ProjectDTO,
+  RewardItemDTO,
+  AchievementDTO,
+  GachaState,
+  GachaPullResult,
+  FreezeState,
+  BPSnapshot,
+  BPLevelReward,
+  PrincipleDTO,
+  DecisionDTO,
+  TitlesSnapshot,
+} from "@/lib/types";
+import { useRewardsStore } from "@/stores/rewards";
+
+export const qk = {
+  user: ["user"] as const,
+  areas: ["areas"] as const,
+  tasks: (status?: string) => ["tasks", { status }] as const,
+  habits: ["habits"] as const,
+  routines: ["routines"] as const,
+  commissions: ["commissions", "today"] as const,
+  reviews: (kind?: string) => ["reviews", { kind }] as const,
+  goals: ["goals"] as const,
+  projects: (status?: string) => ["projects", { status }] as const,
+  rewards: ["rewards"] as const,
+  achievements: ["achievements"] as const,
+  gacha: ["gacha"] as const,
+  freeze: ["freeze"] as const,
+  battlepass: ["battlepass"] as const,
+  principles: (archived?: boolean) => ["principles", { archived }] as const,
+  decisions: (status?: string) => ["decisions", { status }] as const,
+  titles: ["titles"] as const,
+};
+
+// ---------- queries ----------
+export const useUser = () =>
+  useQuery({ queryKey: qk.user, queryFn: () => api<UserSnapshot>("/api/user") });
+
+export const useAreas = () =>
+  useQuery({ queryKey: qk.areas, queryFn: () => api<AreaDTO[]>("/api/areas") });
+
+export const useTasks = (status?: string) =>
+  useQuery({
+    queryKey: qk.tasks(status),
+    queryFn: () => api<TaskDTO[]>(`/api/tasks${status ? `?status=${status}` : ""}`),
+  });
+
+export const useHabits = () =>
+  useQuery({ queryKey: qk.habits, queryFn: () => api<HabitDTO[]>("/api/habits") });
+
+export const useRoutines = () =>
+  useQuery({ queryKey: qk.routines, queryFn: () => api<RoutineDTO[]>("/api/routines") });
+
+export const useCommissions = () =>
+  useQuery({
+    queryKey: qk.commissions,
+    queryFn: () => api<CommissionsTodayDTO>("/api/commissions/today"),
+    staleTime: 30_000,
+  });
+
+export const useReviews = (kind?: string) =>
+  useQuery({
+    queryKey: qk.reviews(kind),
+    queryFn: () => api<ReviewDTO[]>(`/api/review${kind ? `?kind=${kind}` : ""}`),
+  });
+
+// ---------- mutations ----------
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api("/api/user", { method: "PATCH", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.user }),
+  });
+}
+
+export function useCreateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<TaskDTO>("/api/tasks", { method: "POST", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
+export function useCompleteTask() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<{ task: TaskDTO; reward: RewardResult }>(`/api/tasks/${id}/complete`, {
+        method: "POST",
+      }),
+    onSuccess: (data) => {
+      push({
+        xp: data.reward.xpGranted,
+        gold: data.reward.goldGranted,
+        gems: 0,
+        fate: 0,
+        areaKey: data.reward.areaKey,
+        label: "Task done",
+      });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.areas });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/tasks/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export function useCreateHabit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<HabitDTO>("/api/habits", { method: "POST", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.habits });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
+export function useTickHabit() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: ({ id, direction }: { id: string; direction: "+" | "-" }) =>
+      api<{ habit: HabitDTO; reward: RewardResult }>(`/api/habits/${id}/tick`, {
+        method: "POST",
+        json: { direction },
+      }),
+    onSuccess: (data, vars) => {
+      if (vars.direction === "+") {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: 0,
+          fate: 0,
+          areaKey: data.reward.areaKey,
+          label: "Habit +",
+        });
+      } else {
+        push({
+          xp: -data.habit.xpPerTick,
+          gold: -data.habit.goldPerTick,
+          gems: 0,
+          fate: 0,
+          areaKey: data.reward.areaKey,
+          label: "Habit −",
+        });
+      }
+      qc.invalidateQueries({ queryKey: qk.habits });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.areas });
+    },
+  });
+}
+
+export function useDeleteHabit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/habits/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.habits }),
+  });
+}
+
+export function useCreateRoutine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<RoutineDTO>("/api/routines", { method: "POST", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.routines });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
+export function useCompleteRoutine() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<{ routine: RoutineDTO; reward: RewardResult; streak: number }>(
+        `/api/routines/${id}/complete`,
+        { method: "POST" }
+      ),
+    onSuccess: (data) => {
+      push({
+        xp: data.reward.xpGranted,
+        gold: data.reward.goldGranted,
+        gems: 0,
+        fate: 0,
+        areaKey: data.reward.areaKey,
+        label: `Routine · streak ${data.streak}`,
+      });
+      qc.invalidateQueries({ queryKey: qk.routines });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.areas });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
+export function useDeleteRoutine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/routines/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.routines }),
+  });
+}
+
+export function useCompleteCommission() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      api<{
+        items: unknown;
+        completedCount: number;
+        bonusClaimed: boolean;
+        reward: RewardResult;
+        bonusReward: RewardResult | null;
+        allDone: boolean;
+      }>(`/api/commissions/complete`, {
+        method: "POST",
+        json: { itemId },
+      }),
+    onSuccess: (data) => {
+      push({
+        xp: data.reward.xpGranted,
+        gold: data.reward.goldGranted,
+        gems: 0,
+        fate: 0,
+        areaKey: data.reward.areaKey,
+        label: "Commission",
+      });
+      if (data.bonusReward) {
+        push({
+          xp: data.bonusReward.xpGranted,
+          gold: data.bonusReward.goldGranted,
+          gems: data.bonusReward.gemsGranted ?? 0,
+          fate: data.bonusReward.fateGranted ?? 0,
+          areaKey: null,
+          label: "🎉 All 4 Complete!",
+        });
+      }
+      qc.invalidateQueries({ queryKey: qk.commissions });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.areas });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: qk.habits });
+      qc.invalidateQueries({ queryKey: qk.routines });
+    },
+  });
+}
+
+export function useRegenerateCommissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api("/api/commissions/today", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.commissions }),
+  });
+}
+
+// ---------- Phase 2/3 ----------
+
+export const useGoals = () =>
+  useQuery({ queryKey: qk.goals, queryFn: () => api<GoalDTO[]>("/api/goals") });
+
+export const useProjects = (status?: string) =>
+  useQuery({
+    queryKey: qk.projects(status),
+    queryFn: () => api<ProjectDTO[]>(`/api/projects${status ? `?status=${status}` : ""}`),
+  });
+
+export const useRewards = () =>
+  useQuery({ queryKey: qk.rewards, queryFn: () => api<RewardItemDTO[]>("/api/rewards") });
+
+export const useAchievements = () =>
+  useQuery({ queryKey: qk.achievements, queryFn: () => api<AchievementDTO[]>("/api/achievements") });
+
+export const useGacha = () =>
+  useQuery({ queryKey: qk.gacha, queryFn: () => api<GachaState>("/api/gacha"), staleTime: 5_000 });
+
+export const useFreeze = () =>
+  useQuery({ queryKey: qk.freeze, queryFn: () => api<FreezeState>("/api/freeze") });
+
+export function useCreateGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<GoalDTO>("/api/goals", { method: "POST", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
+  });
+}
+
+export function useUpdateGoal() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<{ goal: GoalDTO; reward: RewardResult | null }>(`/api/goals/${id}`, {
+        method: "PATCH",
+        json: body,
+      }),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: data.reward.gemsGranted ?? 0,
+          fate: data.reward.fateGranted ?? 0,
+          areaKey: data.reward.areaKey,
+          label: "🎯 Goal Done",
+        });
+      }
+      qc.invalidateQueries({ queryKey: qk.goals });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+    },
+  });
+}
+
+export function useDeleteGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/goals/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
+  });
+}
+
+export function useUpdateKR() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goalId, krId, body }: { goalId: string; krId: string; body: Record<string, unknown> }) =>
+      api(`/api/goals/${goalId}/kr/${krId}`, { method: "PATCH", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
+  });
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<ProjectDTO>("/api/projects", { method: "POST", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: qk.goals });
+    },
+  });
+}
+
+export function useUpdateProject() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<{ project: ProjectDTO; reward: RewardResult | null }>(`/api/projects/${id}`, {
+        method: "PATCH",
+        json: body,
+      }),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: data.reward.gemsGranted ?? 0,
+          fate: data.reward.fateGranted ?? 0,
+          areaKey: data.reward.areaKey,
+          label: "🏗️ Project Done",
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+      qc.invalidateQueries({ queryKey: qk.goals });
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/projects/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+  });
+}
+
+export function useCreateReward() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<RewardItemDTO>("/api/rewards", { method: "POST", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.rewards });
+      qc.invalidateQueries({ queryKey: qk.gacha });
+    },
+  });
+}
+
+export function useUpdateReward() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api(`/api/rewards/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.rewards });
+      qc.invalidateQueries({ queryKey: qk.gacha });
+    },
+  });
+}
+
+export function useDeleteReward() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/rewards/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.rewards });
+      qc.invalidateQueries({ queryKey: qk.gacha });
+    },
+  });
+}
+
+export function useRedeemReward() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<{ redemption: { id: string }; reward: RewardItemDTO }>(
+        `/api/rewards/${id}/redeem`,
+        { method: "POST" }
+      ),
+    onSuccess: (data) => {
+      push({
+        xp: 0,
+        gold: -data.reward.costGold,
+        gems: -data.reward.costGems,
+        fate: 0,
+        areaKey: null,
+        label: `${data.reward.emoji} ${data.reward.name}`,
+      });
+      qc.invalidateQueries({ queryKey: qk.rewards });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
+  });
+}
+
+export function usePullGacha() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (count: 1 | 10) =>
+      api<GachaPullResult>("/api/gacha/pull", { method: "POST", json: { count } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.gacha });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.rewards });
+    },
+  });
+}
+
+export const useBattlePass = () =>
+  useQuery({
+    queryKey: qk.battlepass,
+    queryFn: () => api<BPSnapshot>("/api/battlepass"),
+    staleTime: 5_000,
+  });
+
+export function useClaimBPLevel() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (level: number) =>
+      api<{ ok: true; reward: BPLevelReward; claimed: number[] }>(
+        "/api/battlepass/claim",
+        { method: "POST", json: { level } }
+      ),
+    onSuccess: (data) => {
+      push({
+        xp: 0,
+        gold: data.reward.gold,
+        gems: data.reward.gems,
+        fate: data.reward.fate,
+        areaKey: null,
+        label: `🏆 BP Lv.${data.reward.level}`,
+      });
+      qc.invalidateQueries({ queryKey: qk.battlepass });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
+  });
+}
+
+export function useBuyFreeze() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: () => api<{ stash: { count: number } }>("/api/freeze", { method: "POST" }),
+    onSuccess: (data) => {
+      push({ xp: 0, gold: -50, gems: 0, fate: 0, areaKey: null, label: "🧊 Streak Freeze ×1" });
+      qc.invalidateQueries({ queryKey: qk.freeze });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
+  });
+}
+
+export function useCreateReview() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<{ reward: RewardResult }>("/api/review", { method: "POST", json: body }),
+    onSuccess: (data) => {
+      push({
+        xp: data.reward.xpGranted,
+        gold: data.reward.goldGranted,
+        gems: 0,
+        fate: data.reward.fateGranted ?? 0,
+        areaKey: null,
+        label: "Daily Review 📝",
+      });
+      qc.invalidateQueries({ queryKey: ["reviews"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
+  });
+}
+
+// ---------- Phase 4: Principles + Decisions ----------
+
+export const usePrinciples = (archived = false) =>
+  useQuery({
+    queryKey: qk.principles(archived),
+    queryFn: () => api<PrincipleDTO[]>(`/api/principles${archived ? "?archived=1" : ""}`),
+  });
+
+export const useDecisions = (status?: string) =>
+  useQuery({
+    queryKey: qk.decisions(status),
+    queryFn: () => api<DecisionDTO[]>(`/api/decisions${status ? `?status=${status}` : ""}`),
+  });
+
+export function useCreatePrinciple() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<{ principle: PrincipleDTO; reward: RewardResult }>("/api/principles", {
+        method: "POST",
+        json: body,
+      }),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: 0,
+          fate: 0,
+          areaKey: null,
+          label: "📜 Principle",
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["principles"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+    },
+  });
+}
+
+export function useUpdatePrinciple() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api(`/api/principles/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["principles"] }),
+  });
+}
+
+export function useDeletePrinciple() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/principles/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["principles"] }),
+  });
+}
+
+export function useCreateDecision() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<{ decision: DecisionDTO; reward: RewardResult }>("/api/decisions", {
+        method: "POST",
+        json: body,
+      }),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: 0,
+          fate: 0,
+          areaKey: data.reward.areaKey,
+          label: "🧭 Decision logged",
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["decisions"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+      qc.invalidateQueries({ queryKey: ["principles"] });
+    },
+  });
+}
+
+export function useUpdateDecision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api(`/api/decisions/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["decisions"] });
+      qc.invalidateQueries({ queryKey: ["principles"] });
+    },
+  });
+}
+
+export function useDeleteDecision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/decisions/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["decisions"] }),
+  });
+}
+
+export function useReviewDecision() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<{ decision: DecisionDTO; reward: RewardResult }>(
+        `/api/decisions/${id}/review`,
+        { method: "POST", json: body }
+      ),
+    onSuccess: (data) => {
+      if (data.reward) {
+        push({
+          xp: data.reward.xpGranted,
+          gold: data.reward.goldGranted,
+          gems: data.reward.gemsGranted ?? 0,
+          fate: data.reward.fateGranted ?? 0,
+          areaKey: null,
+          label: "🔍 Decision reviewed",
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["decisions"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+      qc.invalidateQueries({ queryKey: qk.titles });
+    },
+  });
+}
+
+// ---------- Phase 3 收尾: Titles ----------
+
+export const useTitles = () =>
+  useQuery({
+    queryKey: qk.titles,
+    queryFn: () => api<TitlesSnapshot>("/api/titles"),
+  });
+
+export function useEquipTitle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string | null) =>
+      api<{ ok: true; equippedKey: string | null }>("/api/titles/equip", {
+        method: "POST",
+        json: { key },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.titles });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
+  });
+}

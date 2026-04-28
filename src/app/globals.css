@@ -1,26 +1,414 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   LifeOS — 二游 "Life Management System" 米纸 parchment 主题
+   Inspired by Genshin character profile / HSR parchment UI
+   Cream warm background + ink navy panels + gold filigree
+   ============================================================ */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Parchment surfaces */
+  --bg:            #efe6d0;        /* deep warm parchment */
+  --bg-page:       #f4ecd9;        /* page tint */
+  --bg-raised:     #faf3e2;        /* light card */
+  --bg-card:       #fcf7ea;        /* top card */
+  --bg-elevated:   #ffffff;
+  --bg-panel-ink:  #2a3648;        /* dark ink panel (for stat bars bg) */
+
+  /* Ink typography */
+  --fg:          #2c3e52;          /* deep ink navy */
+  --fg-strong:   #1b2634;          /* near-black heading */
+  --fg-muted:    #6b6458;          /* muted brown */
+  --fg-subtle:   #9a8f7f;          /* light grey-brown */
+  --fg-on-ink:   #e8d9a8;          /* cream text on dark panels */
+
+  /* Gold system — 二游命脉 */
+  --gold:        #b68838;          /* base gold */
+  --gold-deep:   #8a6820;          /* deep gold shadow */
+  --gold-bright: #d4a94d;          /* highlight gold */
+  --gold-pale:   #e8c977;          /* pale gold */
+  --gold-tint:   rgba(182, 136, 56, 0.12);
+  --gold-shimmer: linear-gradient(135deg, #b68838 0%, #e8c977 30%, #fff4c2 50%, #d4a94d 70%, #8a6820 100%);
+
+  /* Borders */
+  --border:        #d4c69d;        /* parchment edge */
+  --border-strong: #b68838;        /* gold */
+  --border-soft:   #e8dcc0;
+
+  /* Brand accent (kept soft) */
+  --accent:        #3a6b8e;        /* ink blue-teal */
+  --accent-strong: #2a4a66;
+  --accent-glow:   rgba(58, 107, 142, 0.25);
+
+  /* Elemental attribute colors — softer, storybook style */
+  --attr-str:  #c5554a;            /* health red */
+  --attr-int:  #3a6b8e;            /* intellect blue */
+  --attr-cha:  #c76d95;            /* charisma rose */
+  --attr-wis:  #4c8a74;            /* wisdom emerald */
+  --attr-cre:  #9b6bc1;            /* creative violet */
+  --attr-gold: #b68838;            /* wealth gold */
+
+  /* Feedback */
+  --success: #4c8a74;
+  --warning: #c18a3a;
+  --danger:  #c5554a;
+
+  /* Backward-compat aliases for legacy var names used in sub-pages */
+  --gold-accent:   var(--gold);
+  --border-gold:   var(--gold);
+  --accent-strong-rgb: 58, 107, 142;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Legacy class aliases (so existing rarity-sweep callers still work) */
+.rarity-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.rarity-sweep::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shine-sweep 3.5s ease-in-out infinite;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), "Noto Serif SC", system-ui, sans-serif;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Parchment background texture — subtle floral ornament watermark */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse at 15% 10%, rgba(182, 136, 56, 0.06) 0, transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(58, 107, 142, 0.04) 0, transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 244, 194, 0.12) 0, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Gentle paper noise (data-URI micro SVG for durability) */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.5  0 0 0 0 0.3  0 0 0 0.08 0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+
+.font-display {
+  font-family: var(--font-display-cn), var(--font-display), "Noto Serif SC",
+    "Source Han Serif SC", Georgia, serif;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.font-display-en {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.hero-title {
+  font-family: var(--font-display-cn), "Noto Serif SC", serif;
+  color: var(--fg-strong);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+/* Section label: Chinese + English stacked, scholar-feel */
+.section-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.section-label .cn {
+  font-family: var(--font-display-cn), "Noto Serif SC", serif;
+  font-weight: 700;
+  color: var(--fg-strong);
+  letter-spacing: 0.08em;
+}
+.section-label .en {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.7em;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+/* ============================================================
+   Panels — two flavors: cream card + ink-navy card
+   ============================================================ */
+
+.panel-cream {
+  position: relative;
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-raised) 100%);
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 1px 2px rgba(43, 34, 15, 0.04),
+    0 12px 32px -16px rgba(43, 34, 15, 0.15);
+}
+
+/* Gold double-line inset frame (adds 6px inside gold hairline) */
+.panel-cream.framed {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    inset 0 0 0 6px var(--bg-card),
+    inset 0 0 0 7px var(--gold-tint),
+    0 1px 2px rgba(43, 34, 15, 0.04),
+    0 12px 32px -16px rgba(43, 34, 15, 0.15);
+}
+
+/* Ornate corner markers — for headline panels */
+.panel-cream.ornate::before,
+.panel-cream.ornate::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--gold);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.panel-cream.ornate::before {
+  top: 6px; left: 6px; border-right: none; border-bottom: none;
+}
+.panel-cream.ornate::after {
+  bottom: 6px; right: 6px; border-left: none; border-top: none;
+}
+
+/* Dark ink card (for hero banner / assets card style) */
+.panel-ink {
+  position: relative;
+  background: linear-gradient(160deg, #2f3e55 0%, #1e2938 100%);
+  border: 1px solid var(--gold-deep);
+  color: var(--fg-on-ink);
+  box-shadow:
+    inset 0 0 0 2px rgba(182, 136, 56, 0.25),
+    0 12px 32px -12px rgba(20, 28, 42, 0.45);
+}
+
+/* ============================================================
+   Dividers & flourishes
+   ============================================================ */
+
+.divider-gold {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--gold);
+}
+.divider-gold::before,
+.divider-gold::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--gold) 30%,
+    var(--gold) 70%,
+    transparent 100%
+  );
+  opacity: 0.55;
+}
+
+.diamond-gold {
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  box-shadow: 0 0 4px rgba(182, 136, 56, 0.45);
+}
+
+.corner-bracket {
+  position: relative;
+}
+.corner-bracket::before,
+.corner-bracket::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--gold);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.corner-bracket::before {
+  top: -1px; left: -1px; border-right: none; border-bottom: none;
+}
+.corner-bracket::after {
+  bottom: -1px; right: -1px; border-left: none; border-top: none;
+}
+
+/* ============================================================
+   Stat bars (horizontal with colored fill & labels)
+   ============================================================ */
+
+.stat-bar-track {
+  background: var(--bg-panel-ink);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  height: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.stat-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fill-from), var(--fill-to));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+/* ============================================================
+   Hero gold button
+   ============================================================ */
+
+.btn-gold {
+  background: var(--gold-shimmer);
+  background-size: 200% 100%;
+  color: #231607;
+  border: 1px solid var(--gold-deep);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+    0 2px 8px -2px rgba(182, 136, 56, 0.4);
+  transition: all 250ms;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.btn-gold:hover {
+  background-position: 100% 50%;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 4px 14px -2px rgba(182, 136, 56, 0.6);
+}
+.btn-gold:disabled {
+  filter: saturate(0.4);
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Scrollbar (parchment flavor)
+   ============================================================ */
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-page); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--border-strong), var(--gold-deep));
+  border-radius: 5px;
+  border: 2px solid var(--bg-page);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* ============================================================
+   Animations
+   ============================================================ */
+
+@keyframes shine-sweep {
+  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  30%  { opacity: 0.6; }
+  100% { transform: translateX(220%)  skewX(-18deg); opacity: 0; }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 169, 77, 0); }
+  50%      { box-shadow: 0 0 18px 4px rgba(212, 169, 77, 0.4); }
+}
+
+.float-y { animation: float-y 4s ease-in-out infinite; }
+.pulse-gold { animation: pulse-gold 2.8s ease-in-out infinite; }
+
+.shine-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.shine-sweep::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  animation: shine-sweep 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   Utility: ink card (used inside cream panels)
+   ============================================================ */
+.chip-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  background: var(--gold-tint);
+  color: var(--gold-deep);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+}
+
+/* Link style — scholarly underline */
+a.link-gold {
+  color: var(--gold-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(182, 136, 56, 0.4);
+}
+a.link-gold:hover { text-decoration-color: var(--gold); }
+
+/* 书脊 ribbon — decorative corner tag */
+.ribbon-gold {
+  position: relative;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: #2c1c0a;
+  font-family: var(--font-display-cn), serif;
+  font-weight: 700;
+  box-shadow: 0 2px 6px -2px rgba(138, 104, 32, 0.5);
 }

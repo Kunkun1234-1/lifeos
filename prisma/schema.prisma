@@ -1,0 +1,611 @@
+// LifeOS Prisma schema
+// SQLite for local dev; schema designed to be Postgres-compatible
+// (switch datasource provider to "postgresql" when deploying to Neon/Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Layer 1: Identity & Vision
+// ============================================================
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String?  @unique
+  name               String   @default("Player One")
+  class              String   @default("Scholar") // Scholar | Athlete | Artist | Engineer | Connector
+  timezone           String   @default("Asia/Shanghai")
+
+  // Vision layer
+  visionStatement    String?
+  coreValues         String   @default("[]")   // JSON array<string>
+  identityStatements String   @default("[]")   // JSON array<string>
+
+  // Equipped Title (Phase 3 cosmetic) — references Title.key, nullable.
+  equippedTitleKey   String?
+
+  // User preferences (theme, disabled modules, etc.)
+  preferences        String   @default("{}")   // JSON object
+
+  onboardedAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Gacha pity counters (Phase 3 §4.5)
+  pullsSinceRare    Int  @default(0)
+  pullsSinceEpic    Int  @default(0)
+  totalPulls        Int  @default(0)
+
+  areas        Area[]
+  tasks        Task[]
+  habits       Habit[]
+  routines     Routine[]
+  xpEntries    XpLedger[]
+  currency     Currency?
+  commissions  DailyCommission[]
+  reviews      Review[]
+  goals        Goal[]
+  projects     Project[]
+  rewards      RewardItem[]
+  redemptions  RewardRedemption[]
+  pulls        GachaPull[]
+  unlocks      AchievementUnlock[]
+  freezeStash  StreakFreeze?
+  battlePasses BattlePass[]
+  principles   Principle[]
+  decisions    Decision[]
+  titles       UserTitle[]
+}
+
+// ============================================================
+// Layer 2: Life Areas (= gamified "departments" / attributes)
+// ============================================================
+
+model Area {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name         String
+  icon         String   @default("⭐")
+  color        String   @default("#8B5CF6")
+  weight       Float    @default(1.0)
+  healthScore  Int      @default(50) // 0-100
+
+  // Gamification attribute tag
+  attributeKey String   @default("INT") // STR | INT | CHA | WIS | CRE | GOLD
+  attributeXp  Int      @default(0)
+
+  order        Int      @default(0)
+  archived     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasks     Task[]
+  habits    Habit[]
+  routines  Routine[]
+  goals     Goal[]
+  projects  Project[]
+  decisions Decision[]
+
+  @@index([userId])
+}
+
+// ============================================================
+// Layer 5: Execution — Tasks / Habits / Routines
+// ============================================================
+
+model Task {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId      String?
+  area        Area?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  title       String
+  notes       String?
+  status      String    @default("TODO") // TODO | DONE | CANCELED
+  priority    Int       @default(2)       // 1=high, 2=normal, 3=low
+  dueDate     DateTime?
+
+  xpReward    Int       @default(10)
+  goldReward  Int       @default(5)
+
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+}
+
+model Habit {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId        String?
+  area          Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  title         String
+  notes         String?
+  direction     String   @default("positive") // positive | negative | both
+
+  positiveCount Int      @default(0)
+  negativeCount Int      @default(0)
+
+  xpPerTick     Int      @default(5)
+  goldPerTick   Int      @default(2)
+
+  archived      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ticks         HabitTick[]
+
+  @@index([userId])
+}
+
+model HabitTick {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  direction String   // "+" | "-"
+  xpDelta   Int
+  goldDelta Int
+  createdAt DateTime @default(now())
+
+  @@index([habitId, createdAt])
+}
+
+model Routine {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId            String?
+  area              Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  title             String
+  notes             String?
+
+  // Days of week as JSON array of ints (0=Sun..6=Sat); default every day
+  daysOfWeek        String   @default("[0,1,2,3,4,5,6]")
+
+  xpReward          Int      @default(15)
+  goldReward        Int      @default(8)
+
+  streakCurrent     Int      @default(0)
+  streakBest        Int      @default(0)
+  freezesAvailable  Int      @default(2) // Duolingo-style
+
+  lastCompletedDate String?  // YYYY-MM-DD
+
+  archived          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  completions       RoutineCompletion[]
+
+  @@index([userId])
+}
+
+model RoutineCompletion {
+  id        String   @id @default(cuid())
+  routineId String
+  routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  date      String   // YYYY-MM-DD local
+  createdAt DateTime @default(now())
+
+  @@unique([routineId, date])
+  @@index([routineId, date])
+}
+
+// ============================================================
+// Gamification ledgers
+// ============================================================
+
+model XpLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  source    String   // task | habit | routine | commission | review | bonus
+  sourceId  String?
+  areaKey   String?  // which attribute gained XP (STR/INT/...)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Currency {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gold      Int      @default(0)
+  gems      Int      @default(0)
+  fate      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// Daily Commissions (《原神》式日委托)
+// ============================================================
+
+model DailyCommission {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           String   // YYYY-MM-DD local
+
+  // Array of 4 items; each {sourceType: "task"|"habit"|"routine", sourceId, title, done, xp, gold, areaKey?}
+  items          String   // JSON
+
+  completedCount Int      @default(0)
+  bonusClaimed   Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+// ============================================================
+// Review Layer
+// ============================================================
+
+model Review {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind        String   // daily | weekly | monthly | quarterly
+  periodStart DateTime
+  periodEnd   DateTime
+  content     String   // JSON — structure varies per kind
+  mood        Int?     // 1-10
+  energy      Int?     // 1-10
+  focus       Int?     // 1-10
+  createdAt   DateTime @default(now())
+
+  @@index([userId, kind, createdAt])
+}
+
+// ============================================================
+// Layer 3: Goals / OKRs
+// ============================================================
+
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId      String?
+  area        Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  type        String   @default("okr") // okr | milestone
+  objective   String
+  notes       String?
+  timeframe   String   // e.g. "Q2-2026" | "Year-2026"
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("active") // active | done | paused | archived
+  confidence  Int      @default(5)        // 1-10 weekly self-rating
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  keyResults  KeyResult[]
+  projects    Project[]
+
+  @@index([userId, status])
+  @@index([userId, timeframe])
+}
+
+model KeyResult {
+  id           String  @id @default(cuid())
+  goalId       String
+  goal         Goal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  description  String
+  unit         String? // tasks | hours | books | percent | custom
+  target       Float
+  current      Float   @default(0)
+  order        Int     @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([goalId])
+}
+
+// ============================================================
+// Layer 4: Projects (PARA-P)
+// ============================================================
+
+model Project {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId       String?
+  area         Area?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  goalId       String?
+  goal         Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
+
+  title        String
+  deliverable  String?
+  notes        String?
+  status       String    @default("active") // idea | active | paused | done | archived
+  startDate    DateTime?
+  deadline     DateTime?
+  completedAt  DateTime?
+
+  xpReward     Int       @default(100)
+  goldReward   Int       @default(40)
+  gemsReward   Int       @default(1)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tasks        Task[]
+
+  @@index([userId, status])
+}
+
+// ============================================================
+// Phase 3: Rewards Store (currency outlet)
+// ============================================================
+
+model RewardItem {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  description   String?
+  emoji         String   @default("🎁")
+  tier          String   @default("common") // common | rare | epic | legendary
+
+  costGold      Int      @default(0)
+  costGems      Int      @default(0)
+
+  inGachaPool   Boolean  @default(true)
+  weight        Int      @default(1) // gacha pool weight within tier
+
+  redeemedCount Int      @default(0)
+  archived      Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  redemptions   RewardRedemption[]
+  pulls         GachaPull[]
+
+  @@index([userId, tier])
+}
+
+model RewardRedemption {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardId   String
+  reward     RewardItem  @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  costGold   Int         @default(0)
+  costGems   Int         @default(0)
+  source     String      @default("store") // store | gacha
+  redeemedAt DateTime    @default(now())
+
+  @@index([userId, redeemedAt])
+}
+
+// ============================================================
+// Phase 3: Achievements
+// ============================================================
+
+model Achievement {
+  id          String   @id @default(cuid())
+  // Global definitions; not user-scoped
+  key         String   @unique // "first_task" | "streak_7" | etc.
+  name        String
+  description String
+  emoji       String   @default("🏆")
+  tier        String   @default("bronze") // bronze | silver | gold | legendary
+  category    String   @default("milestone") // streak | cumulative | milestone | hidden
+
+  // Trigger spec — interpreted by achievements engine.
+  // Format: "<metric>:<threshold>" e.g. "task_done_count:10" "routine_streak:30"
+  trigger     String
+  hidden      Boolean  @default(false)
+  rewardGold  Int      @default(0)
+  rewardGems  Int      @default(0)
+  rewardFate  Int      @default(0)
+
+  unlocks     AchievementUnlock[]
+
+  @@index([category])
+}
+
+model AchievementUnlock {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime     @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId, unlockedAt])
+}
+
+// ============================================================
+// Phase 3: Gacha pulls
+// ============================================================
+
+model GachaPull {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardId    String?
+  reward      RewardItem?  @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+
+  tier        String       // common | rare | epic | legendary
+  fateSpent   Int          @default(1)
+  pity        String?      // "soft" | "hard" — for analytics
+  pulledAt    DateTime     @default(now())
+
+  @@index([userId, pulledAt])
+}
+
+// ============================================================
+// Phase 3: Streak Freeze inventory
+// ============================================================
+
+model StreakFreeze {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  count     Int      @default(0)
+  totalUsed Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// Phase 3: Weekly Battle Pass (per design §4.4)
+// ============================================================
+
+model BattlePass {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weekStart     String   // YYYY-MM-DD (Monday) — local
+  weekEnd       String   // YYYY-MM-DD (Sunday) — local
+
+  // Cached snapshot (recomputed on each load); persisted for history view
+  totalXp       Int      @default(0)
+  level         Int      @default(0)
+
+  // 8-10 missions, JSON array of { key, title, target, current, xpReward, area? }
+  missions      String   @default("[]")
+
+  // BP level rewards already claimed: JSON array<int>
+  claimedLevels String   @default("[]")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, weekStart])
+  @@index([userId, weekStart])
+}
+
+// ============================================================
+// Phase 4: Decision Engine — Principles Library + Decision Journal
+// (Per design §1.4 Dalio Principles + Heath WRAP)
+// ============================================================
+
+model Principle {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  body        String                       // Full statement, can be multi-line
+  source      String?                      // "Dalio" | "WRAP" | "personal" | book ref
+  category    String   @default("life")    // life | decision | health | money | relationship | career
+  emoji       String   @default("📜")
+
+  usageCount  Int      @default(0)         // how many decisions cite this
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  citations   DecisionPrinciple[]
+
+  @@index([userId, archived])
+}
+
+model Decision {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId          String?
+  area            Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  title           String
+  context         String                          // What's the situation
+  status          String   @default("open")       // open | decided | reviewed
+  stakes          String   @default("medium")     // low | medium | high
+
+  // Options + EV — JSON array of {label, prob, payoff, penalty, ev, notes?}
+  // prob in 0..1 (probability of payoff); penalty applied to (1-prob).
+  options         String   @default("[]")
+  chosenIndex    Int?                              // null until decided
+
+  // WRAP / Pre-mortem support fields
+  preMortem       String?                          // What could go wrong
+  tenTenTen       String?                          // 10-min / 10-month / 10-year reflection
+
+  decidedAt       DateTime?
+  reviewDueAt     DateTime?                        // when to come back
+
+  // Post-mortem (filled at review time)
+  outcome         String?
+  lessons         String?
+  rating          Int?                             // 1-10 retrospective decision quality
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  reviewedAt      DateTime?
+
+  principles      DecisionPrinciple[]
+
+  @@index([userId, status])
+  @@index([userId, reviewDueAt])
+}
+
+model DecisionPrinciple {
+  decisionId    String
+  decision      Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  principleId   String
+  principle     Principle @relation(fields: [principleId], references: [id], onDelete: Cascade)
+
+  @@id([decisionId, principleId])
+  @@index([principleId])
+}
+
+// ============================================================
+// Phase 3 收尾: Titles (称号系统)
+// Each title is a global definition unlocked by achieving a specific
+// achievement (sourceAchievementKey). User can equip one at a time;
+// shows in TopNav under the avatar pill.
+// ============================================================
+
+model Title {
+  id                    String   @id @default(cuid())
+  key                   String   @unique  // stable identifier, used by User.equippedTitleKey
+  name                  String              // 显示名 — 称号本身（"晨型人"、"Dalio 门徒"）
+  description           String              // 一句解锁/含义说明
+  emoji                 String   @default("🏷️")
+  tier                  String   @default("bronze") // bronze | silver | gold | legendary
+  sourceAchievementKey  String              // FK by-key to Achievement.key
+
+  unlocks               UserTitle[]
+
+  @@index([sourceAchievementKey])
+  @@index([tier])
+}
+
+model UserTitle {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  titleKey    String                        // FK to Title.key
+  title       Title    @relation(fields: [titleKey], references: [key], onDelete: Cascade)
+  unlockedAt  DateTime @default(now())
+
+  @@unique([userId, titleKey])
+  @@index([userId, unlockedAt])
+}
