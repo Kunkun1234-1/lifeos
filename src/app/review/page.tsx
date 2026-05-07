@@ -23,7 +23,7 @@ export default function ReviewPage() {
         </div>
         <div className="mt-2 h-px bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/40 to-transparent" />
         <p className="mt-3 max-w-2xl text-sm text-[var(--fg-muted)]">
-          每日 2-3 分钟，每周日 20-30 分钟。复盘是这个系统真正能"学你"的部分。
+          每日 2-3 分钟，每周日 20-30 分钟。复盘是这个系统真正能&ldquo;学你&rdquo;的部分。
         </p>
       </div>
 
