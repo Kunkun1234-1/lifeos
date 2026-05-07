@@ -58,6 +58,12 @@ export async function GET() {
     visionStatement: user.visionStatement,
     coreValues: parseList(user.coreValues),
     identityStatements: parseList(user.identityStatements),
+    // Profile basics
+    avatarUrl: user.avatarUrl ?? null,
+    gender: user.gender ?? null,
+    birthday: user.birthday ? user.birthday.toISOString() : null,
+    region: user.region ?? null,
+    motto: user.motto ?? null,
     onboardedAt: user.onboardedAt,
     totalXp,
     xpByArea: byArea,
@@ -86,6 +92,16 @@ export async function PATCH(req: Request) {
       identityStatements: data.identityStatements
         ? JSON.stringify(data.identityStatements)
         : undefined,
+      // For nullable string fields: undefined skips, null clears, value sets.
+      avatarUrl: data.avatarUrl === undefined ? undefined : data.avatarUrl,
+      gender: data.gender === undefined ? undefined : data.gender,
+      birthday: data.birthday === undefined
+        ? undefined
+        : data.birthday === null || data.birthday === ""
+        ? null
+        : new Date(data.birthday),
+      region: data.region === undefined ? undefined : data.region,
+      motto: data.motto === undefined ? undefined : data.motto,
       onboardedAt: data.onboarded ? new Date() : undefined,
     },
   });

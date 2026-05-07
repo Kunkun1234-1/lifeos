@@ -173,7 +173,7 @@ export function AssetsCard() {
 
   return (
     <div className="panel-cream framed relative rounded-sm p-4 space-y-3 overflow-hidden">
-      <SectionHeader cn="人生资产" en="Assets" more="/settings" />
+      <SectionHeader cn="人生资产" en="Assets" more="/rewards" />
 
       <div className="relative flex items-end gap-3">
         {/* Treasure chest from asset sheet */}
@@ -230,7 +230,7 @@ export function AchievementsCard() {
 
   return (
     <div className="panel-cream framed rounded-sm p-4 space-y-3">
-      <SectionHeader cn="近期成就" en="Recent Achievements" more="/review" />
+      <SectionHeader cn="近期成就" en="Recent Achievements" more="/achievements" />
       <ul className="space-y-2.5">
         {items.map((it, i) => (
           <li key={i} className="flex items-start gap-2.5">

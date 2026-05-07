@@ -183,13 +183,22 @@ export default function GachaPage() {
                 {state!.recent.slice(0, 8).map((p) => (
                   <li key={p.id} className="flex items-center gap-2">
                     <span
-                      className="grid h-6 w-6 place-items-center rounded-sm border text-xs"
+                      className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-sm border text-xs"
                       style={{
                         borderColor: TIER_COLOR[p.tier],
                         background: `${TIER_COLOR[p.tier]}20`,
                       }}
                     >
-                      {p.reward?.emoji ?? "✦"}
+                      {p.reward?.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.reward.imageUrl}
+                          alt={p.reward.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span>{p.reward?.emoji ?? "✦"}</span>
+                      )}
                     </span>
                     <span className="truncate font-display text-[var(--fg-strong)]">
                       {p.reward?.name ?? "(空)"}
@@ -347,8 +356,23 @@ function RevealOverlay({
           ))}
         </div>
 
-        <div className="mt-6 text-center text-xs text-white/60">
-          {flipAll ? "点击空白处关闭" : "翻牌中…"}
+        <div className="mt-6 flex flex-col items-center gap-3">
+          {flipAll ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismiss();
+              }}
+              className="rounded-sm border border-[var(--gold)]/70 bg-gradient-to-b from-[var(--gold)] to-[var(--gold-deep)] px-8 py-2 font-display text-sm font-semibold tracking-[0.18em] text-[#1a2230] shadow-[0_4px_12px_-4px_rgba(196,167,82,0.6)] hover:brightness-110"
+            >
+              继续 · CONTINUE
+            </button>
+          ) : (
+            <div className="text-xs text-white/60">翻牌中…</div>
+          )}
+          {flipAll && (
+            <div className="text-[10px] text-white/40">或点击空白处关闭</div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -415,9 +439,21 @@ function PullCard({
               <span key={j}>★</span>
             ))}
           </div>
-          {/* Emoji */}
-          <div className="text-5xl" style={{ filter: `drop-shadow(0 0 12px ${TIER_COLOR[tier]})` }}>
-            {reward?.emoji ?? "✦"}
+          {/* Emoji or image */}
+          <div
+            className="grid h-20 w-20 place-items-center overflow-hidden rounded-sm text-5xl"
+            style={{ filter: `drop-shadow(0 0 12px ${TIER_COLOR[tier]})` }}
+          >
+            {reward?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={reward.imageUrl}
+                alt={reward.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span>{reward?.emoji ?? "✦"}</span>
+            )}
           </div>
           {/* Name */}
           <div className="text-center">

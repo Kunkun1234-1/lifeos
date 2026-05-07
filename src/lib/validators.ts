@@ -69,7 +69,55 @@ export const UserUpdateSchema = z.object({
   visionStatement: z.string().max(1000).optional().nullable(),
   coreValues: z.array(z.string().max(100)).max(8).optional(),
   identityStatements: z.array(z.string().max(200)).max(8).optional(),
+  // Profile basics
+  avatarUrl: z.string().max(500).optional().nullable(),
+  gender: z.string().max(20).optional().nullable(),
+  birthday: z.string().optional().nullable(), // ISO yyyy-mm-dd, parsed server-side
+  region: z.string().max(60).optional().nullable(),
+  motto: z.string().max(280).optional().nullable(),
   onboarded: z.boolean().optional(),
+});
+
+// ---------- Custom Achievements / Events ----------
+export const CustomAchievementCreateSchema = z.object({
+  name: z.string().min(1).max(60),
+  description: z.string().max(280).default(""),
+  emoji: z.string().max(8).default("🏆"),
+  imageUrl: z.string().max(500).optional().nullable(),
+  tier: z.enum(["bronze", "silver", "gold", "legendary"]).default("bronze"),
+  rewardGold: z.number().int().min(0).max(10000).default(0),
+  rewardGems: z.number().int().min(0).max(1000).default(0),
+  rewardFate: z.number().int().min(0).max(100).default(0),
+});
+
+export const CustomEventCreateSchema = z.object({
+  name: z.string().min(1).max(60),
+  description: z.string().max(280).default(""),
+  emoji: z.string().max(8).default("🎉"),
+  imageUrl: z.string().max(500).optional().nullable(),
+  themeColor: z.string().max(20).default("#b68838"),
+  startsAt: z.string(), // ISO datetime
+  endsAt: z.string(),
+  missions: z
+    .array(
+      z.object({
+        key: z.string().min(1).max(40),
+        title: z.string().min(1).max(80),
+        metric: z.string().min(1).max(40), // e.g. task_done, routine_done, habit_pos
+        target: z.number().int().min(1).max(1000),
+        xpReward: z.number().int().min(0).max(2000).default(0),
+        goldReward: z.number().int().min(0).max(2000).default(0),
+        gemsReward: z.number().int().min(0).max(200).default(0),
+        fateReward: z.number().int().min(0).max(20).default(0),
+        emoji: z.string().max(8).default("📝"),
+      }),
+    )
+    .min(1)
+    .max(10),
+  bonusXp: z.number().int().min(0).max(10000).default(0),
+  bonusGold: z.number().int().min(0).max(10000).default(0),
+  bonusGems: z.number().int().min(0).max(2000).default(0),
+  bonusFate: z.number().int().min(0).max(50).default(0),
 });
 
 export const AreaUpdateSchema = z.object({
@@ -142,6 +190,7 @@ export const RewardItemSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional().nullable(),
   emoji: z.string().max(8).default("🎁"),
+  imageUrl: z.string().max(500).optional().nullable(),
   tier: z.enum(["common", "rare", "epic", "legendary"]).default("common"),
   costGold: z.number().int().min(0).max(100000).default(0),
   costGems: z.number().int().min(0).max(100).default(0),

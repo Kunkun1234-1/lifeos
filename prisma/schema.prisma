@@ -18,9 +18,18 @@ datasource db {
 model User {
   id                 String   @id @default(cuid())
   email              String?  @unique
+  emailVerified      DateTime?
+  image              String?  // OAuth-provided avatar (separate from user-uploaded `avatarUrl`)
   name               String   @default("Player One")
   class              String   @default("Scholar") // Scholar | Athlete | Artist | Engineer | Connector
   timezone           String   @default("Asia/Shanghai")
+
+  // Profile basics (editable from /settings)
+  avatarUrl          String?  // user-uploaded avatar; falls back to /lifeos/profile_avatar.png
+  gender             String?  // 男 / 女 / 其他 — free-form, optional
+  birthday           DateTime? // for age derivation + birthday surfacing
+  region             String?  // 地区 / city
+  motto              String?  // 人生信条 (separate from visionStatement which is the 10y arrow)
 
   // Vision layer
   visionStatement    String?
@@ -74,6 +83,53 @@ model User {
   notes        Note[]
   eventClaims  UserEventClaim[]
   equipment    UserEquipment[]
+  customAchievements Achievement[] @relation("UserCustomAchievements")
+  customEvents       Event[]       @relation("UserCustomEvents")
+
+  // Auth.js (next-auth v5) relations
+  accounts     Account[]
+  sessions     Session[]
+}
+
+// ============================================================
+// Auth.js (next-auth v5) — required tables for OAuth + sessions
+// ============================================================
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String   // "oauth" | "email" | "credentials"
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 // ============================================================
@@ -383,6 +439,7 @@ model RewardItem {
   name          String
   description   String?
   emoji         String   @default("🎁")
+  imageUrl      String?  // optional user-uploaded image (overrides emoji visually in gacha + store)
   tier          String   @default("common") // common | rare | epic | legendary
 
   costGold      Int      @default(0)
@@ -424,16 +481,22 @@ model RewardRedemption {
 
 model Achievement {
   id          String   @id @default(cuid())
-  // Global definitions; not user-scoped
-  key         String   @unique // "first_task" | "streak_7" | etc.
+  // Global definitions when ownerUserId is null; per-user customs when set.
+  key         String   @unique // "first_task" | "streak_7" | "u:cuid" for customs
   name        String
   description String
   emoji       String   @default("🏆")
+  imageUrl    String?  // optional user-uploaded image (overrides emoji visually)
   tier        String   @default("bronze") // bronze | silver | gold | legendary
-  category    String   @default("milestone") // streak | cumulative | milestone | hidden
+  category    String   @default("milestone") // streak | cumulative | milestone | hidden | custom
+
+  // Owner — null = system-seeded global, otherwise user-scoped custom.
+  ownerUserId String?
+  ownerUser   User?    @relation("UserCustomAchievements", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   // Trigger spec — interpreted by achievements engine.
   // Format: "<metric>:<threshold>" e.g. "task_done_count:10" "routine_streak:30"
+  // For customs: "manual" allows manual-tick unlock (user marks as done).
   trigger     String
   hidden      Boolean  @default(false)
   rewardGold  Int      @default(0)
@@ -443,6 +506,7 @@ model Achievement {
   unlocks     AchievementUnlock[]
 
   @@index([category])
+  @@index([ownerUserId])
 }
 
 model AchievementUnlock {
@@ -641,8 +705,13 @@ model Event {
   name          String
   description   String
   emoji         String   @default("🎉")
+  imageUrl      String?  // optional user-uploaded banner image
   // Color theme for the banner (CSS color, e.g. "#9b6bc1")
   themeColor    String   @default("#b68838")
+
+  // Owner — null = system-seeded, otherwise user-scoped custom event.
+  ownerUserId   String?
+  ownerUser     User?    @relation("UserCustomEvents", fields: [ownerUserId], references: [id], onDelete: Cascade)
 
   startsAt      DateTime
   endsAt        DateTime
@@ -665,6 +734,7 @@ model Event {
   claims        UserEventClaim[]
 
   @@index([startsAt, endsAt])
+  @@index([ownerUserId])
 }
 
 model UserEventClaim {

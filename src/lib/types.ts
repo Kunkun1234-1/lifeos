@@ -7,6 +7,11 @@ export type UserSnapshot = {
   visionStatement: string | null;
   coreValues: string[];
   identityStatements: string[];
+  avatarUrl: string | null;
+  gender: string | null;
+  birthday: string | null;
+  region: string | null;
+  motto: string | null;
   onboardedAt: string | null;
   totalXp: number;
   xpByArea: Record<string, number>;
@@ -167,6 +172,7 @@ export type RewardItemDTO = {
   name: string;
   description: string | null;
   emoji: string;
+  imageUrl: string | null;
   tier: "common" | "rare" | "epic" | "legendary";
   costGold: number;
   costGems: number;
@@ -181,9 +187,12 @@ export type AchievementDTO = {
   name: string;
   description: string;
   emoji: string;
+  imageUrl: string | null;
   tier: "bronze" | "silver" | "gold" | "legendary";
   category: string;
   hidden: boolean;
+  isCustom: boolean;
+  isManual: boolean;
   threshold: number;
   current: number;
   progress: number;
@@ -329,7 +338,9 @@ export type EventSnapshotDTO = {
   name: string;
   description: string;
   emoji: string;
+  imageUrl: string | null;
   themeColor: string;
+  isCustom: boolean;
   startsAt: string;
   endsAt: string;
   status: EventStatus;

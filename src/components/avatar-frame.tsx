@@ -1,6 +1,5 @@
 "use client";
 
-import { useId } from "react";
 import Image from "next/image";
 
 export type AvatarFrameStyle = {
@@ -33,10 +32,7 @@ export function AvatarFrame({
   const s = style ?? DEFAULT_STYLE;
   const padding = Math.max(2, s.strokeWidth + 1);
   const outer = size + padding * 2;
-  // useId guarantees a stable, per-instance id so multiple frames on the same
-  // page (TopNav + equipped panel + grid card) don't collide on `<linearGradient>` IDs.
-  const reactId = useId();
-  const id = `frame-${reactId.replace(/[:]/g, "")}`;
+  const id = `frame-${s.gradient[0].replace("#", "")}-${s.gradient[1].replace("#", "")}-${s.strokeWidth}-${s.ornament ?? "n"}`;
   const ornamentEls = renderOrnament(s.ornament, outer);
 
   return (

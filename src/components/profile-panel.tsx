@@ -20,7 +20,12 @@ export function ProfilePanel() {
   const { data: areas } = useAreas();
 
   const vitals = mapVitals(user?.xpByArea ?? {});
-  const age = 18; // Phase 2: derive from user.dob
+  const birthday = user?.birthday ? new Date(user.birthday) : null;
+  const age = birthday ? deriveAge(birthday) : null;
+  const birthdayLabel = birthday
+    ? `${pad2(birthday.getMonth() + 1)}/${pad2(birthday.getDate())}`
+    : null;
+  const avatarSrc = user?.avatarUrl || "/lifeos/profile_avatar.png";
 
   return (
     <aside className="space-y-5 px-1">
@@ -43,12 +48,13 @@ export function ProfilePanel() {
           </div>
           <div className="relative h-[64px] w-[64px] overflow-hidden rounded-full border-2 border-[var(--gold)] shadow-[0_0_0_2px_var(--bg),inset_0_0_0_1px_rgba(255,255,255,0.4)]">
             <Image
-              src="/lifeos/profile_avatar.png"
+              src={avatarSrc}
               alt="avatar"
               width={64}
               height={64}
-              className="object-cover"
+              className="h-full w-full object-cover"
               priority
+              unoptimized
             />
           </div>
         </div>
@@ -59,15 +65,25 @@ export function ProfilePanel() {
             </span>
             <Sparkles size={14} className="text-[var(--gold)]" />
           </div>
-          <div className="mt-1.5">
-            <span className="inline-flex items-center rounded-sm border border-[var(--accent-strong)] bg-gradient-to-b from-[var(--accent)] to-[var(--accent-strong)] px-2 py-0.5 font-display text-[11px] font-bold text-white">
-              {age}岁
-            </span>
-          </div>
+          {age !== null && (
+            <div className="mt-1.5">
+              <span className="inline-flex items-center rounded-sm border border-[var(--accent-strong)] bg-gradient-to-b from-[var(--accent)] to-[var(--accent-strong)] px-2 py-0.5 font-display text-[11px] font-bold text-white">
+                {age}岁
+              </span>
+            </div>
+          )}
           <div className="mt-2 space-y-0.5 font-display text-[12px] text-[var(--fg-muted)]">
-            <MetaRow label="性别" value="男" />
-            <MetaRow label="生日" value="07/15" />
-            <MetaRow label="地区" value="蒙德城" />
+            {user?.gender && <MetaRow label="性别" value={user.gender} />}
+            {birthdayLabel && <MetaRow label="生日" value={birthdayLabel} />}
+            {user?.region && <MetaRow label="地区" value={user.region} />}
+            {!user?.gender && !birthdayLabel && !user?.region && (
+              <a
+                href="/settings"
+                className="text-[10px] italic text-[var(--gold-deep)] underline-offset-2 hover:underline"
+              >
+                前往设置完善个人信息 →
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -101,13 +117,21 @@ export function ProfilePanel() {
       </div>
       <blockquote className="relative pl-3 font-display text-[13px] leading-relaxed text-[var(--fg)]">
         <div className="absolute left-0 top-1 h-full w-0.5 bg-[var(--gold)]" />
-        {user?.visionStatement ? (
+        {user?.motto ? (
+          <>&ldquo;{user.motto}&rdquo;</>
+        ) : user?.visionStatement ? (
           <>&ldquo;{user.visionStatement}&rdquo;</>
         ) : (
           <>
             &ldquo;旅途的意义不在于终点，
             <br />
             而在于沿途的选择与风景。&rdquo;
+            <a
+              href="/settings"
+              className="ml-1 text-[10px] italic text-[var(--gold-deep)] underline-offset-2 hover:underline"
+            >
+              （设置 →）
+            </a>
           </>
         )}
         {/* Decorative feather */}
@@ -117,6 +141,18 @@ export function ProfilePanel() {
       </blockquote>
     </aside>
   );
+}
+
+function deriveAge(birthday: Date): number {
+  const now = new Date();
+  let age = now.getFullYear() - birthday.getFullYear();
+  const m = now.getMonth() - birthday.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birthday.getDate())) age -= 1;
+  return Math.max(0, age);
+}
+
+function pad2(n: number): string {
+  return n.toString().padStart(2, "0");
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {

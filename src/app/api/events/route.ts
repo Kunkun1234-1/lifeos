@@ -14,11 +14,17 @@ export async function GET() {
 
   const events = await prisma.event.findMany({
     where: {
-      OR: [
-        { startsAt: { gte: lookbackStart, lte: lookaheadEnd } },
-        { endsAt: { gte: lookbackStart, lte: lookaheadEnd } },
-        // Currently active
-        { AND: [{ startsAt: { lte: now } }, { endsAt: { gte: now } }] },
+      // System-seeded (ownerUserId null) + this user's customs.
+      AND: [
+        { OR: [{ ownerUserId: null }, { ownerUserId: userId }] },
+        {
+          OR: [
+            { startsAt: { gte: lookbackStart, lte: lookaheadEnd } },
+            { endsAt: { gte: lookbackStart, lte: lookaheadEnd } },
+            // Currently active
+            { AND: [{ startsAt: { lte: now } }, { endsAt: { gte: now } }] },
+          ],
+        },
       ],
     },
     orderBy: { startsAt: "asc" },

@@ -176,7 +176,9 @@ export async function checkAchievements(userId: string): Promise<UnlockResult[]>
  * For UI: snapshot of locked + unlocked achievements, with progress per metric.
  */
 export async function getAchievementsSnapshot(userId: string) {
+  // System-seeded (ownerUserId null) + this user's customs.
   const defs = await prisma.achievement.findMany({
+    where: { OR: [{ ownerUserId: null }, { ownerUserId: userId }] },
     orderBy: [{ tier: "asc" }, { category: "asc" }],
   });
   const unlocks = await prisma.achievementUnlock.findMany({
@@ -245,18 +247,22 @@ export async function getAchievementsSnapshot(userId: string) {
 
   return defs.map((d) => {
     const unlockedAt = unlockMap.get(d.id) ?? null;
-    const [metric, thresholdRaw] = d.trigger.split(":");
+    const isManual = d.trigger === "manual";
+    const [metric, thresholdRaw] = isManual ? ["manual", "1"] : d.trigger.split(":");
     const threshold = Number(thresholdRaw);
-    const current = metricMap[metric] ?? 0;
+    const current = isManual ? (unlockedAt ? 1 : 0) : metricMap[metric] ?? 0;
     return {
       id: d.id,
       key: d.key,
       name: d.name,
       description: d.description,
       emoji: d.emoji,
+      imageUrl: d.imageUrl,
       tier: d.tier,
       category: d.category,
       hidden: d.hidden,
+      isCustom: d.ownerUserId !== null,
+      isManual,
       threshold,
       current,
       progress: threshold > 0 ? Math.min(1, current / threshold) : 0,

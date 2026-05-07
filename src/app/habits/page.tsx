@@ -213,7 +213,14 @@ function HabitRow({
             <Plus size={16} />
           </Button>
         )}
-        <Button size="icon" variant="ghost" onClick={() => remove.mutate(habit.id)} title="Archive">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => {
+            if (confirm(`Archive habit "${habit.title}"? History will be kept.`)) remove.mutate(habit.id);
+          }}
+          title="Archive"
+        >
           <Trash2 size={14} />
         </Button>
       </div>

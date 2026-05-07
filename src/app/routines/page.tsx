@@ -239,7 +239,14 @@ function RoutineRow({
         <span className="font-mono text-[var(--accent-glow)]">+{routine.xpReward}xp</span>
         <span className="font-mono text-[var(--attr-gold)]">+{routine.goldReward}⭐</span>
       </div>
-      <Button size="icon" variant="ghost" onClick={() => remove.mutate(routine.id)} title="Archive">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => {
+          if (confirm(`Archive routine "${routine.title}"? Streak history will be kept.`)) remove.mutate(routine.id);
+        }}
+        title="Archive"
+      >
         <Trash2 size={14} />
       </Button>
     </li>

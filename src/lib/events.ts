@@ -107,7 +107,9 @@ export type EventSnapshot = {
   name: string;
   description: string;
   emoji: string;
+  imageUrl: string | null;
   themeColor: string;
+  isCustom: boolean;
   startsAt: string;
   endsAt: string;
   status: EventStatus;
@@ -141,7 +143,9 @@ export async function getEventSnapshot(
     name: string;
     description: string;
     emoji: string;
+    imageUrl?: string | null;
     themeColor: string;
+    ownerUserId?: string | null;
     startsAt: Date;
     endsAt: Date;
     missions: string;
@@ -198,7 +202,9 @@ export async function getEventSnapshot(
     name: event.name,
     description: event.description,
     emoji: event.emoji,
+    imageUrl: event.imageUrl ?? null,
     themeColor: event.themeColor,
+    isCustom: event.ownerUserId != null,
     startsAt: event.startsAt.toISOString(),
     endsAt: event.endsAt.toISOString(),
     status,

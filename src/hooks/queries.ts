@@ -313,6 +313,36 @@ export const useRewards = () =>
 export const useAchievements = () =>
   useQuery({ queryKey: qk.achievements, queryFn: () => api<AchievementDTO[]>("/api/achievements") });
 
+export function useCreateCustomAchievement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<{ id: string }>("/api/achievements/custom", { method: "POST", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.achievements }),
+  });
+}
+
+export function useDeleteCustomAchievement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api(`/api/achievements/custom/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.achievements }),
+  });
+}
+
+export function useUnlockAchievement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api(`/api/achievements/${id}/unlock`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.achievements });
+      qc.invalidateQueries({ queryKey: qk.user });
+    },
+  });
+}
+
 export const useGacha = () =>
   useQuery({ queryKey: qk.gacha, queryFn: () => api<GachaState>("/api/gacha"), staleTime: 5_000 });
 
@@ -792,6 +822,23 @@ export const useEvents = () =>
     queryFn: () => api<EventSnapshotDTO[]>("/api/events"),
     refetchInterval: 60_000,
   });
+
+export function useCreateCustomEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<{ id: string }>("/api/events/custom", { method: "POST", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.events }),
+  });
+}
+
+export function useDeleteCustomEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/events/custom/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.events }),
+  });
+}
 
 export function useClaimEventMission() {
   const qc = useQueryClient();

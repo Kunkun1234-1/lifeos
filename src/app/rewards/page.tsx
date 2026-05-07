@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Coins, Gem, Gift, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
+import { ImagePicker } from "@/components/image-picker";
 import {
   useRewards,
   useCreateReward,
@@ -151,8 +152,13 @@ function RewardCard({ item }: { item: RewardItemDTO }) {
   return (
     <div className={`relative panel-cream framed rounded-sm p-4 ${TIER_BG[item.tier]}`}>
       <div className="flex items-start gap-3">
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-sm border border-[var(--gold)] bg-[var(--bg-card)] text-2xl">
-          {item.emoji}
+        <div className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-sm border border-[var(--gold)] bg-[var(--bg-card)] text-2xl">
+          {item.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+          ) : (
+            item.emoji
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-display text-[14px] font-bold text-[var(--fg-strong)]">
@@ -205,6 +211,7 @@ function NewRewardForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [emoji, setEmoji] = useState("🎁");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tier, setTier] = useState<Tier>("common");
   const [costGold, setCostGold] = useState(50);
   const [costGems, setCostGems] = useState(0);
@@ -216,6 +223,7 @@ function NewRewardForm({ onDone }: { onDone: () => void }) {
       name: name.trim(),
       description: description.trim() || null,
       emoji: emoji || "🎁",
+      imageUrl,
       tier,
       costGold,
       costGems,
@@ -231,6 +239,16 @@ function NewRewardForm({ onDone }: { onDone: () => void }) {
         <span className="en text-[10px]">New Reward</span>
       </div>
       <div className="grid gap-4">
+        <div className="grid gap-1.5">
+          <Label>图标 / 图片</Label>
+          <ImagePicker
+            value={imageUrl}
+            onChange={setImageUrl}
+            fallbackEmoji={emoji || "🎁"}
+            label="上传奖品图片"
+            hint="抽卡时显示，留空则用 emoji"
+          />
+        </div>
         <div className="grid grid-cols-[60px_1fr] gap-3">
           <div className="grid gap-1.5">
             <Label>Emoji</Label>

@@ -40,7 +40,7 @@ export default function StrategyPage() {
           </span>
         </div>
         <blockquote className="mt-3 border-l-2 border-[var(--gold)] pl-4 font-display text-[15px] leading-relaxed text-[var(--fg-strong)]">
-          {user?.visionStatement ?? "（尚未设定愿景，前往 设置 → Vision &amp; Identity 填写）"}
+          {user?.visionStatement ?? "（尚未设定愿景，前往 设置 → Vision & Identity 填写）"}
         </blockquote>
         {user?.identityStatements && user.identityStatements.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-2">

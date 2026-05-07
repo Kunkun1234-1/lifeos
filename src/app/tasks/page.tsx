@@ -372,7 +372,14 @@ function TaskRow({
         <span className="font-mono text-[var(--accent-glow)]">+{task.xpReward}xp</span>
         <span className="font-mono text-[var(--attr-gold)]">+{task.goldReward}⭐</span>
       </div>
-      <Button size="icon" variant="ghost" onClick={() => remove.mutate(task.id)} title="Delete">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => {
+          if (confirm(`Delete task "${task.title}"?`)) remove.mutate(task.id);
+        }}
+        title="Delete"
+      >
         <Trash2 size={14} />
       </Button>
     </li>
