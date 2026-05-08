@@ -11,8 +11,8 @@ import { Sun } from "lucide-react";
  */
 export function HeroScene() {
   const { data: user } = useUser();
-  const age = 18; // Phase 2: compute from user.dob
-  const year = age;
+  const birthday = user?.birthday ? new Date(user.birthday) : null;
+  const age = birthday ? deriveAge(birthday) : null;
   const date = new Date().toLocaleDateString("zh-CN", {
     month: "2-digit",
     day: "2-digit",
@@ -41,23 +41,34 @@ export function HeroScene() {
         className="absolute right-8 top-6 z-10 text-right"
         suppressHydrationWarning
       >
-        <div className="flex items-baseline justify-end gap-2">
-          <span className="font-display-en text-[11px] tracking-[0.3em] text-[var(--fg-strong)]/60">
-            YEAR
-          </span>
-          <span className="font-display text-[14px] font-bold text-[var(--fg-strong)]">
-            {year}
-          </span>
-        </div>
-        <div className="mt-1 flex items-baseline justify-end gap-3">
-          <div
-            className="font-display text-[64px] font-bold leading-none text-[var(--fg-strong)]"
-            style={{ textShadow: "0 2px 20px rgba(252,247,234,0.6)" }}
-            suppressHydrationWarning
+        {age !== null ? (
+          <>
+            <div className="flex items-baseline justify-end gap-2">
+              <span className="font-display-en text-[11px] tracking-[0.3em] text-[var(--fg-strong)]/60">
+                YEAR
+              </span>
+              <span className="font-display text-[14px] font-bold text-[var(--fg-strong)]">
+                {age}
+              </span>
+            </div>
+            <div className="mt-1 flex items-baseline justify-end gap-3">
+              <div
+                className="font-display text-[64px] font-bold leading-none text-[var(--fg-strong)]"
+                style={{ textShadow: "0 2px 20px rgba(252,247,234,0.6)" }}
+                suppressHydrationWarning
+              >
+                {age}岁
+              </div>
+            </div>
+          </>
+        ) : (
+          <a
+            href="/settings"
+            className="block font-display-en text-[11px] tracking-[0.3em] text-[var(--gold-deep)] underline-offset-2 hover:underline"
           >
-            {age}岁
-          </div>
-        </div>
+            设置生日 → SET BIRTHDAY
+          </a>
+        )}
         <div className="mt-1 flex items-center justify-end gap-1.5 text-[var(--fg-strong)]">
           <span className="font-mono text-[13px]" suppressHydrationWarning>{date}</span>
           <Sun size={13} className="text-[var(--warning)]" />
@@ -89,4 +100,12 @@ export function HeroScene() {
       </div>
     </section>
   );
+}
+
+function deriveAge(birthday: Date): number {
+  const now = new Date();
+  let age = now.getFullYear() - birthday.getFullYear();
+  const m = now.getMonth() - birthday.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birthday.getDate())) age -= 1;
+  return Math.max(0, age);
 }

@@ -1,25 +1,30 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
-import { useUser, useAreas } from "@/hooks/queries";
+import { useUser } from "@/hooks/queries";
 import { deriveLevel } from "@/lib/gamification";
-import { Heart, Smile, Zap, Sparkles } from "lucide-react";
+import {
+  Heart,
+  BookOpen,
+  Users,
+  Brain,
+  Palette,
+  Coins,
+  Sparkles,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 /**
- * Left profile — flat on parchment (no outer panel), matches final reference.
- * Header: 个人信息 INFORMATION with gold hairline
- * — avatar (gold ring) + name + star + age chip
- * — 3 meta rows (性别/生日/地区)
- * — 4 colored stat bars (健康/心情/精力/灵感)
- * — 人格特质 TRAITS radar (6 axes, labels + numbers)
- * — 人生信条 MOTTO block
+ * Left profile — flat on parchment (no outer panel).
+ * Six attributes match the project's 6 dimensions (per docs §4.1 + /help):
+ *   STR→健康  INT→学习  CHA→关系  WIS→心智  CRE→创造  GOLD→财富
+ * Stat bars + radar both render real `xpByArea`. Both link to /analytics.
  */
 export function ProfilePanel() {
   const { data: user } = useUser();
-  const { data: areas } = useAreas();
+  const xpByArea = user?.xpByArea ?? {};
 
-  const vitals = mapVitals(user?.xpByArea ?? {});
   const birthday = user?.birthday ? new Date(user.birthday) : null;
   const age = birthday ? deriveAge(birthday) : null;
   const birthdayLabel = birthday
@@ -29,7 +34,6 @@ export function ProfilePanel() {
 
   return (
     <aside className="space-y-5 px-1">
-      {/* Section heading */}
       <div>
         <div className="section-label">
           <span className="cn text-lg">个人信息</span>
@@ -41,7 +45,6 @@ export function ProfilePanel() {
       {/* Avatar + name */}
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
-          {/* Gold compass ring */}
           <div className="absolute inset-0 -m-0.5 rounded-full border border-[var(--gold)]/40" />
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-[var(--gold)]">
             <Sparkles size={10} />
@@ -88,27 +91,24 @@ export function ProfilePanel() {
         </div>
       </div>
 
-      {/* Stat bars */}
-      <div className="space-y-2">
-        {vitals.map((v) => (
-          <StatBar key={v.key} vital={v} />
+      {/* 6 attribute stat bars — STR/INT/CHA/WIS/CRE/GOLD */}
+      <div className="space-y-1">
+        {DIMENSIONS.map((d) => (
+          <StatBar key={d.key} dim={d} xp={xpByArea[d.key] ?? 0} />
         ))}
       </div>
 
-      {/* Gold divider */}
       <div className="divider-gold text-[10px] font-display-en tracking-[0.3em]">
         <span className="font-display text-[13px] font-bold tracking-[0.08em] text-[var(--fg-strong)]">
-          人格特质
+          六维属性
         </span>
-        <span className="text-[9px]">TRAITS</span>
+        <span className="text-[9px]">ATTRIBUTES</span>
       </div>
 
-      {/* Radar */}
       <div className="-mt-1">
-        <RadarChart xp={user?.xpByArea ?? {}} />
+        <RadarChart xp={xpByArea} />
       </div>
 
-      {/* Motto */}
       <div className="divider-gold text-[10px] font-display-en tracking-[0.3em]">
         <span className="font-display text-[13px] font-bold tracking-[0.08em] text-[var(--fg-strong)]">
           人生信条
@@ -134,7 +134,6 @@ export function ProfilePanel() {
             </a>
           </>
         )}
-        {/* Decorative feather */}
         <div className="absolute -right-2 -bottom-2 text-[var(--gold)]/50">
           <Feather size={16} />
         </div>
@@ -166,82 +165,74 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-type Vital = {
-  key: string;
+type Dimension = {
+  key: "STR" | "INT" | "CHA" | "WIS" | "CRE" | "GOLD";
   cn: string;
   icon: React.ReactNode;
-  value: number;
   color: string;
 };
 
-function mapVitals(xpByArea: Record<string, number>): Vital[] {
-  const normalize = (xp: number) => {
-    const { level, progress } = deriveLevel(xp);
-    return Math.min(100, level * 10 + Math.round(progress * 10));
-  };
-  const withFloor = (n: number, floor: number) => Math.max(floor, n);
-  return [
-    { key: "STR", cn: "健康", icon: <Heart size={13} />,   value: withFloor(normalize(xpByArea.STR ?? 0),  86), color: "var(--attr-str)" },
-    { key: "CHA", cn: "心情", icon: <Smile size={13} />,   value: withFloor(normalize(xpByArea.CHA ?? 0),  72), color: "#d9a23a" },
-    { key: "WIS", cn: "精力", icon: <Zap size={13} />,     value: withFloor(normalize(xpByArea.WIS ?? 0),  68), color: "var(--attr-int)" },
-    { key: "CRE", cn: "灵感", icon: <Sparkles size={13} />, value: withFloor(normalize(xpByArea.CRE ?? 0), 61), color: "var(--attr-cre)" },
-  ];
+const DIMENSIONS: Dimension[] = [
+  { key: "STR",  cn: "健康", icon: <Heart size={13} />,    color: "var(--attr-str)" },
+  { key: "INT",  cn: "学习", icon: <BookOpen size={13} />, color: "var(--attr-int)" },
+  { key: "CHA",  cn: "关系", icon: <Users size={13} />,    color: "var(--attr-cha)" },
+  { key: "WIS",  cn: "心智", icon: <Brain size={13} />,    color: "var(--attr-wis)" },
+  { key: "CRE",  cn: "创造", icon: <Palette size={13} />,  color: "var(--attr-cre)" },
+  { key: "GOLD", cn: "财富", icon: <Coins size={13} />,    color: "var(--attr-gold)" },
+];
+
+/** Map raw XP → 0-100 score (level*10 + progress*10, capped). */
+function xpToScore(xp: number): number {
+  const { level, progress } = deriveLevel(xp);
+  return Math.min(100, level * 10 + Math.round(progress * 10));
 }
 
-function StatBar({ vital }: { vital: Vital }) {
-  const { cn, icon, value, color } = vital;
+function StatBar({ dim, xp }: { dim: Dimension; xp: number }) {
+  const value = xpToScore(xp);
   return (
-    <div className="flex items-center gap-2">
-      <span className="shrink-0" style={{ color }}>
-        {icon}
+    <Link
+      href={`/analytics`}
+      title={`${dim.cn} · ${dim.key} · ${xp} XP — 查看属性分布`}
+      className="group flex items-center gap-2 rounded-sm px-1 py-0.5 transition-colors hover:bg-[var(--gold-tint)]"
+    >
+      <span className="shrink-0" style={{ color: dim.color }}>
+        {dim.icon}
       </span>
       <span className="w-9 shrink-0 font-display text-[13px] font-semibold text-[var(--fg-strong)]">
-        {cn}
+        {dim.cn}
       </span>
-      <div
-        className="relative h-[6px] flex-1 overflow-hidden rounded-full bg-[var(--bg-panel-ink)]/15 border border-[var(--border)]"
-      >
+      <div className="relative h-[6px] flex-1 overflow-hidden rounded-full bg-[var(--bg-panel-ink)]/15 border border-[var(--border)]">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
           transition={{ duration: 0.7, ease: "easeOut" }}
           className="h-full rounded-full"
           style={{
-            background: `linear-gradient(90deg, ${color}CC, ${color})`,
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.3)`,
+            background: `linear-gradient(90deg, ${dim.color}CC, ${dim.color})`,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)",
           }}
         />
       </div>
       <span className="w-12 shrink-0 text-right font-mono text-[11px] text-[var(--fg)]">
         {value}/100
       </span>
-    </div>
+    </Link>
   );
 }
 
-/** 6-axis personality radar */
+/** 6-axis attribute radar — one axis per dimension, real data only. */
 function RadarChart({ xp }: { xp: Record<string, number> }) {
-  const axes = [
-    { key: "INT", label: "乐观", angle: -Math.PI / 2 },
-    { key: "STR", label: "理性", angle: -Math.PI / 2 + Math.PI / 3 },
-    { key: "CHA", label: "社交", angle: -Math.PI / 2 + (2 * Math.PI) / 3 },
-    { key: "WIS", label: "自律", angle: -Math.PI / 2 + Math.PI },
-    { key: "CRE", label: "创造", angle: -Math.PI / 2 + (4 * Math.PI) / 3 },
-    { key: "GOLD", label: "勇气", angle: -Math.PI / 2 + (5 * Math.PI) / 3 },
-  ];
+  const axes = DIMENSIONS.map((d, i) => ({
+    ...d,
+    angle: -Math.PI / 2 + (i * 2 * Math.PI) / DIMENSIONS.length,
+  }));
   const size = 220;
   const cx = size / 2;
   const cy = size / 2;
   const maxR = 78;
   const levels = 4;
-  const minScores = [78, 72, 65, 80, 85, 88]; // reference display values
 
-  const values = axes.map((a, i) => {
-    const xpVal = xp[a.key] ?? 0;
-    const { level } = deriveLevel(xpVal);
-    const computed = Math.min(100, level * 10);
-    return Math.max(computed, minScores[i]);
-  });
+  const values = axes.map((a) => xpToScore(xp[a.key] ?? 0));
 
   const point = (i: number, r: number) => {
     const { angle } = axes[i];
@@ -253,63 +244,69 @@ function RadarChart({ xp }: { xp: Record<string, number> }) {
     .join(" ");
 
   return (
-    <div className="relative mx-auto" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* concentric hexagons */}
-        {Array.from({ length: levels }).map((_, l) => (
-          <polygon
-            key={l}
-            points={axes.map((_, i) => point(i, (maxR * (l + 1)) / levels).join(",")).join(" ")}
-            fill="none"
-            stroke="var(--border)"
-            strokeWidth={0.8}
-            opacity={0.5}
-          />
-        ))}
-        {/* spokes */}
-        {axes.map((_, i) => {
-          const [x, y] = point(i, maxR);
-          return (
-            <line
-              key={i}
-              x1={cx}
-              y1={cy}
-              x2={x}
-              y2={y}
+    <Link
+      href="/analytics"
+      title="查看 90 天属性分布"
+      className="block transition-opacity hover:opacity-90"
+    >
+      <div
+        className="relative mx-auto cursor-pointer"
+        style={{ width: size, height: size }}
+      >
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {Array.from({ length: levels }).map((_, l) => (
+            <polygon
+              key={l}
+              points={axes.map((_, i) => point(i, (maxR * (l + 1)) / levels).join(",")).join(" ")}
+              fill="none"
               stroke="var(--border)"
               strokeWidth={0.8}
               opacity={0.5}
             />
+          ))}
+          {axes.map((_, i) => {
+            const [x, y] = point(i, maxR);
+            return (
+              <line
+                key={i}
+                x1={cx}
+                y1={cy}
+                x2={x}
+                y2={y}
+                stroke="var(--border)"
+                strokeWidth={0.8}
+                opacity={0.5}
+              />
+            );
+          })}
+          <polygon
+            points={polyPoints}
+            fill="rgba(42, 54, 72, 0.55)"
+            stroke="var(--accent-strong)"
+            strokeWidth={1.4}
+          />
+          {values.map((v, i) => {
+            const [x, y] = point(i, (v / 100) * maxR);
+            return <circle key={i} cx={x} cy={y} r={2.4} fill="var(--gold)" />;
+          })}
+        </svg>
+        {axes.map((a, i) => {
+          const [x, y] = point(i, maxR + 18);
+          return (
+            <div
+              key={a.key}
+              className="absolute flex flex-col items-center"
+              style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
+            >
+              <div className="font-display text-[11px] font-bold text-[var(--fg-strong)]">
+                {a.cn}
+              </div>
+              <div className="font-mono text-[10px] text-[var(--fg)]">{values[i]}</div>
+            </div>
           );
         })}
-        {/* filled polygon */}
-        <polygon
-          points={polyPoints}
-          fill="rgba(42, 54, 72, 0.55)"
-          stroke="var(--accent-strong)"
-          strokeWidth={1.4}
-        />
-        {values.map((v, i) => {
-          const [x, y] = point(i, (v / 100) * maxR);
-          return <circle key={i} cx={x} cy={y} r={2.4} fill="var(--gold)" />;
-        })}
-      </svg>
-      {axes.map((a, i) => {
-        const [x, y] = point(i, maxR + 18);
-        return (
-          <div
-            key={a.key}
-            className="absolute flex flex-col items-center"
-            style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
-          >
-            <div className="font-display text-[11px] font-bold text-[var(--fg-strong)]">
-              {a.label}
-            </div>
-            <div className="font-mono text-[10px] text-[var(--fg)]">{values[i]}</div>
-          </div>
-        );
-      })}
-    </div>
+      </div>
+    </Link>
   );
 }
 
