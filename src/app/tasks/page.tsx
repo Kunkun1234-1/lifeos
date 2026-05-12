@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Check, Trash2, List, Grid2x2 } from "lucide-react";
+import { Plus, Check, Trash2, List, Grid2x2, Pencil, X } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AreaSelect } from "@/components/area-select";
-import { useTasks, useCreateTask, useCompleteTask, useDeleteTask } from "@/hooks/queries";
+import { useTasks, useCreateTask, useCompleteTask, useDeleteTask, useUpdateTask } from "@/hooks/queries";
 import type { TaskDTO } from "@/lib/types";
 
 type View = "list" | "matrix";
@@ -319,69 +319,175 @@ function TaskForm({ onDone }: { onDone: () => void }) {
 
 const PRIORITY_LABEL = ["", "High", "Normal", "Low"];
 
-function TaskRow({
-  task,
-}: {
-  task: {
-    id: string;
-    title: string;
-    status: string;
-    priority: number;
-    dueDate: string | null;
-    xpReward: number;
-    goldReward: number;
-    area: { name: string; icon: string } | null;
-  };
-}) {
+function TaskRow({ task }: { task: TaskDTO }) {
   const done = task.status === "DONE";
   const complete = useCompleteTask();
   const remove = useDeleteTask();
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <li className="rounded-xl border border-[var(--accent)]/60 bg-[var(--bg-raised)]/60 p-4">
+        <TaskEditForm task={task} onDone={() => setEditing(false)} />
+      </li>
+    );
+  }
 
   return (
     <li
-      className={`flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-raised)]/40 px-4 py-3 transition-all ${
+      className={`rounded-xl border border-[var(--border)] bg-[var(--bg-raised)]/40 px-4 py-3 transition-all ${
         done ? "opacity-60" : "hover:border-[var(--accent)]"
       }`}
     >
-      <Button
-        size="icon"
-        variant={done ? "secondary" : "outline"}
-        disabled={done || complete.isPending}
-        onClick={() => complete.mutate(task.id)}
-        title="Mark done"
-      >
-        <Check size={14} />
-      </Button>
-      <div className="min-w-0 flex-1">
-        <div className={`truncate text-sm font-medium ${done ? "line-through" : ""}`}>
-          {task.title}
+      <div className="flex items-center gap-3">
+        <Button
+          size="icon"
+          variant={done ? "secondary" : "outline"}
+          disabled={done || complete.isPending}
+          onClick={() => complete.mutate(task.id)}
+          title="Mark done"
+        >
+          <Check size={14} />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className={`truncate text-sm font-medium ${done ? "line-through" : ""}`}>
+            {task.title}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--fg-subtle)]">
+            {task.area && (
+              <span>
+                {task.area.icon} {task.area.name}
+              </span>
+            )}
+            <Badge tone={task.priority === 1 ? "danger" : "default"} className="text-[10px]">
+              {PRIORITY_LABEL[task.priority]}
+            </Badge>
+            {task.dueDate && <span>due {new Date(task.dueDate).toLocaleDateString()}</span>}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--fg-subtle)]">
-          {task.area && (
-            <span>
-              {task.area.icon} {task.area.name}
-            </span>
-          )}
-          <Badge tone={task.priority === 1 ? "danger" : "default"} className="text-[10px]">
-            {PRIORITY_LABEL[task.priority]}
-          </Badge>
-          {task.dueDate && <span>due {new Date(task.dueDate).toLocaleDateString()}</span>}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono text-[var(--accent-glow)]">+{task.xpReward}xp</span>
+          <span className="font-mono text-[var(--attr-gold)]">+{task.goldReward}⭐</span>
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setEditing(true)}
+          title="Edit"
+          disabled={done}
+        >
+          <Pencil size={14} />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => {
+            if (confirm(`Delete task "${task.title}"?`)) remove.mutate(task.id);
+          }}
+          title="Delete"
+        >
+          <Trash2 size={14} />
+        </Button>
       </div>
-      <div className="flex items-center gap-2 text-xs">
-        <span className="font-mono text-[var(--accent-glow)]">+{task.xpReward}xp</span>
-        <span className="font-mono text-[var(--attr-gold)]">+{task.goldReward}⭐</span>
-      </div>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={() => {
-          if (confirm(`Delete task "${task.title}"?`)) remove.mutate(task.id);
-        }}
-        title="Delete"
-      >
-        <Trash2 size={14} />
-      </Button>
+      {task.notes && (
+        <div className="mt-2 ml-12 whitespace-pre-wrap rounded-sm border-l-2 border-[var(--border)] bg-[var(--bg-page)]/60 px-3 py-2 text-xs text-[var(--fg-muted)]">
+          {task.notes}
+        </div>
+      )}
     </li>
+  );
+}
+
+function TaskEditForm({ task, onDone }: { task: TaskDTO; onDone: () => void }) {
+  const [title, setTitle] = useState(task.title);
+  const [notes, setNotes] = useState(task.notes ?? "");
+  const [areaId, setAreaId] = useState<string | null>(task.area?.id ?? null);
+  const [priority, setPriority] = useState(task.priority);
+  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : "");
+  const [xpReward, setXpReward] = useState(task.xpReward);
+  const [goldReward, setGoldReward] = useState(task.goldReward);
+
+  const update = useUpdateTask();
+
+  const submit = async () => {
+    if (!title.trim()) return;
+    await update.mutateAsync({
+      id: task.id,
+      title: title.trim(),
+      notes: notes.trim() || null,
+      areaId,
+      priority,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      xpReward,
+      goldReward,
+    });
+    onDone();
+  };
+
+  return (
+    <div className="grid gap-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--gold-deep)]">
+          Edit task
+        </div>
+        <Button size="icon" variant="ghost" onClick={onDone} title="Cancel">
+          <X size={14} />
+        </Button>
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Title</Label>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Notes</Label>
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-1.5">
+          <Label>Life Area</Label>
+          <AreaSelect value={areaId} onChange={setAreaId} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Priority</Label>
+          <Select value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
+            <option value={1}>1 — High</option>
+            <option value={2}>2 — Normal</option>
+            <option value={3}>3 — Low</option>
+          </Select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Due date (optional)</Label>
+          <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1.5">
+            <Label>XP</Label>
+            <Input
+              type="number"
+              min={0}
+              value={xpReward}
+              onChange={(e) => setXpReward(Number(e.target.value))}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Gold</Label>
+            <Input
+              type="number"
+              min={0}
+              value={goldReward}
+              onChange={(e) => setGoldReward(Number(e.target.value))}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button onClick={submit} disabled={update.isPending || !title.trim()}>
+          {update.isPending ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </div>
   );
 }

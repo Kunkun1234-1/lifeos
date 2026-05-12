@@ -141,6 +141,18 @@ export function useDeleteTask() {
   });
 }
 
+export function useUpdateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
+      api<TaskDTO>(`/api/tasks/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
 export function useCreateHabit() {
   const qc = useQueryClient();
   return useMutation({
