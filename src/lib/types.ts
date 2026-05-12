@@ -59,6 +59,8 @@ export type TaskDTO = {
   goldReward: number;
   areaId: string | null;
   area: AreaDTO | null;
+  projectId: string | null;
+  project: { id: string; title: string; status: string } | null;
   completedAt: string | null;
   createdAt: string;
 };

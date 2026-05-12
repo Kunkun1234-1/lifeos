@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AreaSelect } from "@/components/area-select";
+import { ProjectSelect } from "@/components/project-select";
 import { useTasks, useCreateTask, useCompleteTask, useDeleteTask, useUpdateTask } from "@/hooks/queries";
 import type { TaskDTO } from "@/lib/types";
 
@@ -224,6 +225,7 @@ function TaskForm({ onDone }: { onDone: () => void }) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [areaId, setAreaId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [priority, setPriority] = useState(2);
   const [dueDate, setDueDate] = useState("");
   const [xpReward, setXpReward] = useState(10);
@@ -237,6 +239,7 @@ function TaskForm({ onDone }: { onDone: () => void }) {
       title: title.trim(),
       notes: notes.trim() || null,
       areaId,
+      projectId,
       priority,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       xpReward,
@@ -265,6 +268,10 @@ function TaskForm({ onDone }: { onDone: () => void }) {
         <div className="grid gap-1.5">
           <Label>Notes (optional)</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Project (optional) · 挂载到项目</Label>
+          <ProjectSelect value={projectId} onChange={setProjectId} />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-1.5">
@@ -359,6 +366,11 @@ function TaskRow({ task }: { task: TaskDTO }) {
                 {task.area.icon} {task.area.name}
               </span>
             )}
+            {task.project && (
+              <span className="rounded-sm bg-[var(--gold-tint)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--gold-deep)]">
+                📁 {task.project.title}
+              </span>
+            )}
             <Badge tone={task.priority === 1 ? "danger" : "default"} className="text-[10px]">
               {PRIORITY_LABEL[task.priority]}
             </Badge>
@@ -402,6 +414,7 @@ function TaskEditForm({ task, onDone }: { task: TaskDTO; onDone: () => void }) {
   const [title, setTitle] = useState(task.title);
   const [notes, setNotes] = useState(task.notes ?? "");
   const [areaId, setAreaId] = useState<string | null>(task.area?.id ?? null);
+  const [projectId, setProjectId] = useState<string | null>(task.projectId ?? null);
   const [priority, setPriority] = useState(task.priority);
   const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : "");
   const [xpReward, setXpReward] = useState(task.xpReward);
@@ -416,6 +429,7 @@ function TaskEditForm({ task, onDone }: { task: TaskDTO; onDone: () => void }) {
       title: title.trim(),
       notes: notes.trim() || null,
       areaId,
+      projectId,
       priority,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       xpReward,
@@ -441,6 +455,10 @@ function TaskEditForm({ task, onDone }: { task: TaskDTO; onDone: () => void }) {
       <div className="grid gap-1.5">
         <Label>Notes</Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Project · 挂载到项目</Label>
+        <ProjectSelect value={projectId} onChange={setProjectId} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-1.5">
