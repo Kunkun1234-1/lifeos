@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Check, Edit3, Target } from "lucide-react";
+import { Plus, Trash2, Check, Edit3, Target, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
@@ -255,6 +255,7 @@ function GoalCard({ goal }: { goal: GoalDTO }) {
   const update = useUpdateGoal();
   const remove = useDeleteGoal();
   const updateKR = useUpdateKR();
+  const [editing, setEditing] = useState(false);
 
   const totalProgress =
     goal.keyResults.length > 0
@@ -265,6 +266,14 @@ function GoalCard({ goal }: { goal: GoalDTO }) {
       : 0;
   const isDone = goal.status === "done";
   const isActive = goal.status === "active";
+
+  if (editing) {
+    return (
+      <div className="panel-cream framed rounded-sm p-5 ring-2 ring-[var(--gold)]/40">
+        <GoalEditForm goal={goal} onDone={() => setEditing(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className={`panel-cream framed group rounded-sm p-5 ${isDone ? "opacity-70" : ""}`}>
@@ -304,6 +313,16 @@ function GoalCard({ goal }: { goal: GoalDTO }) {
               disabled={update.isPending}
             >
               <Check size={14} />
+            </Button>
+          )}
+          {!isDone && (
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Edit"
+              onClick={() => setEditing(true)}
+            >
+              <Edit3 size={14} />
             </Button>
           )}
           <Button
@@ -469,5 +488,97 @@ function KRRow({
         />
       </div>
     </li>
+  );
+}
+
+function GoalEditForm({ goal, onDone }: { goal: GoalDTO; onDone: () => void }) {
+  const update = useUpdateGoal();
+  const [objective, setObjective] = useState(goal.objective);
+  const [notes, setNotes] = useState(goal.notes ?? "");
+  const [areaId, setAreaId] = useState<string | null>(goal.areaId ?? null);
+  const [timeframe, setTimeframe] = useState(goal.timeframe);
+  const [confidence, setConfidence] = useState(goal.confidence ?? 5);
+
+  // Allow user to keep current timeframe even if not in presets
+  const timeframeOptions = TIMEFRAME_PRESETS.includes(timeframe)
+    ? TIMEFRAME_PRESETS
+    : [timeframe, ...TIMEFRAME_PRESETS];
+
+  const submit = async () => {
+    if (!objective.trim()) return;
+    await update.mutateAsync({
+      id: goal.id,
+      body: {
+        objective: objective.trim(),
+        notes: notes.trim() || null,
+        areaId,
+        timeframe,
+        confidence,
+      },
+    });
+    onDone();
+  };
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex items-center justify-between">
+        <div className="section-label">
+          <span className="cn text-sm">编辑目标</span>
+          <span className="en text-[10px]">Edit Goal</span>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onDone} title="Cancel">
+          <X size={14} />
+        </Button>
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Objective</Label>
+        <Input
+          value={objective}
+          onChange={(e) => setObjective(e.target.value)}
+          autoFocus
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-1.5">
+          <Label>Life Area</Label>
+          <AreaSelect value={areaId} onChange={setAreaId} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Timeframe</Label>
+          <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
+            {timeframeOptions.map((tf) => (
+              <option key={tf} value={tf}>
+                {tf}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Notes</Label>
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Confidence (1-10): {confidence}</Label>
+        <Input
+          type="range"
+          min={1}
+          max={10}
+          value={confidence}
+          onChange={(e) => setConfidence(Number(e.target.value))}
+        />
+      </div>
+      <p className="text-[11px] text-[var(--fg-subtle)]">
+        KR 在卡片里直接点 ✏️ 编辑（这里只改目标本身的字段）。
+      </p>
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button onClick={submit} disabled={update.isPending || !objective.trim()}>
+          {update.isPending ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </div>
   );
 }

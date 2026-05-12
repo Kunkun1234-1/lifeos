@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Check, Pause, Play, Hammer } from "lucide-react";
+import { Plus, Trash2, Check, Pause, Play, Hammer, Pencil, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
@@ -205,11 +205,20 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
 function ProjectCard({ project }: { project: ProjectDTO }) {
   const update = useUpdateProject();
   const remove = useDeleteProject();
+  const [editing, setEditing] = useState(false);
 
   const isDone = project.status === "done";
   const isPaused = project.status === "paused";
   const taskProgress =
     project.taskCount > 0 ? project.taskDoneCount / project.taskCount : 0;
+
+  if (editing) {
+    return (
+      <div className="panel-cream framed rounded-sm p-5 ring-2 ring-[var(--gold)]/40">
+        <ProjectEditForm project={project} onDone={() => setEditing(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className={`panel-cream framed rounded-sm p-5 ${isDone ? "opacity-70" : ""}`}>
@@ -313,6 +322,16 @@ function ProjectCard({ project }: { project: ProjectDTO }) {
             <Check size={12} /> Complete
           </Button>
         )}
+        {!isDone && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setEditing(true)}
+            title="Edit"
+          >
+            <Pencil size={12} />
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"
@@ -321,6 +340,124 @@ function ProjectCard({ project }: { project: ProjectDTO }) {
           }}
         >
           <Trash2 size={12} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ProjectEditForm({
+  project,
+  onDone,
+}: {
+  project: ProjectDTO;
+  onDone: () => void;
+}) {
+  const update = useUpdateProject();
+  const { data: goals } = useGoals();
+  const [title, setTitle] = useState(project.title);
+  const [deliverable, setDeliverable] = useState(project.deliverable ?? "");
+  const [notes, setNotes] = useState(project.notes ?? "");
+  const [areaId, setAreaId] = useState<string | null>(project.areaId ?? null);
+  const [goalId, setGoalId] = useState<string | null>(project.goalId ?? null);
+  const [deadline, setDeadline] = useState(
+    project.deadline ? project.deadline.slice(0, 10) : "",
+  );
+  const [xpReward, setXpReward] = useState(project.xpReward);
+  const [goldReward, setGoldReward] = useState(project.goldReward);
+  const [gemsReward, setGemsReward] = useState(project.gemsReward);
+
+  const submit = async () => {
+    if (!title.trim()) return;
+    await update.mutateAsync({
+      id: project.id,
+      body: {
+        title: title.trim(),
+        deliverable: deliverable.trim() || null,
+        notes: notes.trim() || null,
+        areaId,
+        goalId,
+        deadline: deadline ? new Date(deadline).toISOString() : null,
+        xpReward,
+        goldReward,
+        gemsReward,
+      },
+    });
+    onDone();
+  };
+
+  return (
+    <div className="grid gap-4">
+      <div className="flex items-center justify-between">
+        <div className="section-label">
+          <span className="cn text-sm">编辑项目</span>
+          <span className="en text-[10px]">Edit Project</span>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onDone} title="Cancel">
+          <X size={14} />
+        </Button>
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Title</Label>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Deliverable</Label>
+        <Textarea
+          value={deliverable}
+          onChange={(e) => setDeliverable(e.target.value)}
+          rows={2}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Notes</Label>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-1.5">
+          <Label>Area</Label>
+          <AreaSelect value={areaId} onChange={setAreaId} />
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Linked Goal</Label>
+          <Select value={goalId ?? ""} onChange={(e) => setGoalId(e.target.value || null)}>
+            <option value="">— No goal —</option>
+            {goals?.filter((g) => g.status === "active" || g.id === goalId).map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.timeframe} · {g.objective}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Deadline</Label>
+          <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="grid gap-1.5">
+            <Label>XP</Label>
+            <Input type="number" min={0} value={xpReward} onChange={(e) => setXpReward(Number(e.target.value))} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Gold</Label>
+            <Input type="number" min={0} value={goldReward} onChange={(e) => setGoldReward(Number(e.target.value))} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>Gems</Label>
+            <Input type="number" min={0} value={gemsReward} onChange={(e) => setGemsReward(Number(e.target.value))} />
+          </div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button onClick={submit} disabled={update.isPending || !title.trim()}>
+          {update.isPending ? "Saving…" : "Save"}
         </Button>
       </div>
     </div>
