@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { grantReward } from "@/lib/rewards";
@@ -32,6 +32,10 @@ export async function POST(_req: Request, { params }: Params) {
     }),
   ]);
 
-  const unlocks = await safeCheck(userId);
-  return NextResponse.json({ task: updated, reward, unlocks });
+  // safeCheck runs 16 parallel COUNT queries — push it past the response
+  // boundary so the client sees "done" in ~ms instead of waiting on the
+  // achievement scan. New unlocks surface on the next /api/achievements fetch.
+  after(() => safeCheck(userId));
+
+  return NextResponse.json({ task: updated, reward, unlocks: [] });
 }

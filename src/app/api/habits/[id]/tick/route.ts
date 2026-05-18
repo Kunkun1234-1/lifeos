@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { grantReward, deductReward } from "@/lib/rewards";
@@ -44,8 +44,8 @@ export async function POST(req: Request, { params }: Params) {
         areaId: habit.areaId,
       }),
     ]);
-    const unlocks = await safeCheck(userId);
-    return NextResponse.json({ habit: updated, reward, unlocks });
+    after(() => safeCheck(userId));
+    return NextResponse.json({ habit: updated, reward, unlocks: [] });
   }
 
   // Negative direction
@@ -67,6 +67,6 @@ export async function POST(req: Request, { params }: Params) {
       areaId: habit.areaId,
     }),
   ]);
-  const unlocks = await safeCheck(userId);
-  return NextResponse.json({ habit: updated, reward, unlocks });
+  after(() => safeCheck(userId));
+  return NextResponse.json({ habit: updated, reward, unlocks: [] });
 }

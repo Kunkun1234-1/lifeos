@@ -116,6 +116,29 @@ export function useCompleteTask() {
       api<{ task: TaskDTO; reward: RewardResult }>(`/api/tasks/${id}/complete`, {
         method: "POST",
       }),
+    // Optimistic: flip the row to DONE in every cached tasks list before
+    // the server confirms. Eliminates the visible Neon-roundtrip stall
+    // (the user's "5-7s wait after clicking complete" pain).
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["tasks"] });
+      const snapshots = qc.getQueriesData<TaskDTO[]>({ queryKey: ["tasks"] });
+      qc.setQueriesData<TaskDTO[]>({ queryKey: ["tasks"] }, (old) =>
+        old?.map((t) =>
+          t.id === id
+            ? { ...t, status: "DONE" as const, completedAt: new Date().toISOString() }
+            : t,
+        ),
+      );
+      return { snapshots };
+    },
+    onError: (_err, _id, context) => {
+      // Rollback every snapshot we took
+      if (context?.snapshots) {
+        for (const [key, value] of context.snapshots) {
+          qc.setQueryData(key, value);
+        }
+      }
+    },
     onSuccess: (data) => {
       push({
         xp: data.reward.xpGranted,
@@ -125,6 +148,8 @@ export function useCompleteTask() {
         areaKey: data.reward.areaKey,
         label: "Task done",
       });
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     },
   });
 
-  const unlocks = await safeCheck(userId);
+  after(() => safeCheck(userId));
   return NextResponse.json({
     id: updated.id,
     items,
@@ -120,6 +120,6 @@ export async function POST(req: Request) {
     reward,
     bonusReward,
     allDone,
-    unlocks,
+    unlocks: [],
   });
 }
