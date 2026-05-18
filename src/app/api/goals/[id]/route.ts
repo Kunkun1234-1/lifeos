@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { GoalUpdateSchema } from "@/lib/validators";
@@ -33,7 +33,6 @@ export async function PATCH(req: Request, { params }: Params) {
   });
 
   let reward = null;
-  let unlocks = null;
   if (becomingDone) {
     reward = await grantReward({
       userId,
@@ -45,10 +44,10 @@ export async function PATCH(req: Request, { params }: Params) {
       sourceId: id,
       areaId: existing.areaId,
     });
-    unlocks = await safeCheck(userId);
+    after(() => safeCheck(userId));
   }
 
-  return NextResponse.json({ goal: updated, reward, unlocks });
+  return NextResponse.json({ goal: updated, reward, unlocks: [] });
 }
 
 export async function DELETE(_req: Request, { params }: Params) {

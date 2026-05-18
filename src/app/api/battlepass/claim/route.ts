@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getCurrentUserId } from "@/lib/user";
 import { claimBPLevel } from "@/lib/battlepass";
@@ -15,6 +15,6 @@ export async function POST(req: Request) {
   if (!result.ok) {
     return NextResponse.json(result, { status: 400 });
   }
-  const unlocks = await safeCheck(userId);
-  return NextResponse.json({ ...result, unlocks });
+  after(() => safeCheck(userId));
+  return NextResponse.json({ ...result, unlocks: [] });
 }

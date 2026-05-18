@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
@@ -107,7 +107,7 @@ export async function POST(req: Request, { params }: Params) {
     sourceId: event.id,
   });
 
-  const unlocks = await safeCheck(userId);
+  after(() => safeCheck(userId));
 
   // Re-fetch fresh snapshot for the client
   const freshEvent = await prisma.event.findUnique({ where: { id } });
@@ -118,6 +118,6 @@ export async function POST(req: Request, { params }: Params) {
     reward,
     event: fresh,
     unlockedEquipmentKey,
-    unlocks,
+    unlocks: [],
   });
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { DecisionReviewSchema } from "@/lib/validators";
@@ -57,7 +57,7 @@ export async function POST(req: Request, { params }: Params) {
     sourceId: id,
     areaId: existing.areaId,
   });
-  const unlocks = await safeCheck(userId);
+  after(() => safeCheck(userId));
 
-  return NextResponse.json({ decision: serializeDecision(updated), reward, unlocks });
+  return NextResponse.json({ decision: serializeDecision(updated), reward, unlocks: [] });
 }

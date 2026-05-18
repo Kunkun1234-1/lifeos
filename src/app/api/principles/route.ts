@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { PrincipleCreateSchema } from "@/lib/validators";
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     source: "bonus",
     sourceId: principle.id,
   });
-  const unlocks = await safeCheck(userId);
+  after(() => safeCheck(userId));
 
-  return NextResponse.json({ principle, reward, unlocks }, { status: 201 });
+  return NextResponse.json({ principle, reward, unlocks: [] }, { status: 201 });
 }

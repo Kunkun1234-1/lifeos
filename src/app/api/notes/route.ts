@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { NoteCreateSchema } from "@/lib/validators";
@@ -111,10 +111,10 @@ export async function POST(req: Request) {
     sourceId: note.id,
     areaId: data.areaId ?? null,
   });
-  const unlocks = await safeCheck(userId);
+  after(() => safeCheck(userId));
 
   return NextResponse.json(
-    { note: serializeNote(note), reward, unlocks },
+    { note: serializeNote(note), reward, unlocks: [] },
     { status: 201 }
   );
 }

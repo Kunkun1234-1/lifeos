@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
@@ -77,6 +77,6 @@ export async function POST(req: Request) {
     areaId: null,
   });
 
-  const unlocks = await safeCheck(userId);
-  return NextResponse.json({ review, reward, unlocks }, { status: 201 });
+  after(() => safeCheck(userId));
+  return NextResponse.json({ review, reward, unlocks: [] }, { status: 201 });
 }

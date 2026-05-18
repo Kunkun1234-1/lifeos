@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/fetcher";
+import { todayYMD, addDaysYMD } from "@/lib/date";
 import type {
   UserSnapshot,
   AreaDTO,
@@ -199,6 +200,29 @@ export function useTickHabit() {
         method: "POST",
         json: { direction },
       }),
+    // Optimistic: bump positive/negative count immediately so repeated taps
+    // feel responsive on the habits list.
+    onMutate: async ({ id, direction }) => {
+      await qc.cancelQueries({ queryKey: qk.habits });
+      const snapshot = qc.getQueryData<HabitDTO[]>(qk.habits);
+      qc.setQueryData<HabitDTO[]>(qk.habits, (old) =>
+        old?.map((h) =>
+          h.id === id
+            ? {
+                ...h,
+                positiveCount:
+                  direction === "+" ? h.positiveCount + 1 : h.positiveCount,
+                negativeCount:
+                  direction === "-" ? h.negativeCount + 1 : h.negativeCount,
+              }
+            : h,
+        ),
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(qk.habits, ctx.snapshot);
+    },
     onSuccess: (data, vars) => {
       if (vars.direction === "+") {
         push({
@@ -219,6 +243,8 @@ export function useTickHabit() {
           label: "Habit −",
         });
       }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.habits });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
@@ -255,6 +281,33 @@ export function useCompleteRoutine() {
         `/api/routines/${id}/complete`,
         { method: "POST" }
       ),
+    // Optimistic: replicate the server's streak math so the row flips to
+    // "done today" + streak+1 instantly, instead of waiting on the
+    // round-trip.
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: qk.routines });
+      const snapshot = qc.getQueryData<RoutineDTO[]>(qk.routines);
+      const today = todayYMD();
+      const yesterday = addDaysYMD(today, -1);
+      qc.setQueryData<RoutineDTO[]>(qk.routines, (old) =>
+        old?.map((r) => {
+          if (r.id !== id || r.completedToday) return r;
+          const newStreak =
+            r.lastCompletedDate === yesterday ? r.streakCurrent + 1 : 1;
+          return {
+            ...r,
+            streakCurrent: newStreak,
+            streakBest: Math.max(r.streakBest, newStreak),
+            lastCompletedDate: today,
+            completedToday: true,
+          };
+        }),
+      );
+      return { snapshot };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(qk.routines, ctx.snapshot);
+    },
     onSuccess: (data) => {
       push({
         xp: data.reward.xpGranted,
@@ -264,6 +317,8 @@ export function useCompleteRoutine() {
         areaKey: data.reward.areaKey,
         label: `Routine · streak ${data.streak}`,
       });
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.routines });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
@@ -296,6 +351,32 @@ export function useCompleteCommission() {
         method: "POST",
         json: { itemId },
       }),
+    // Optimistic: flip the item to done + recompute completedCount +
+    // pre-claim the 4/4 bonus state so the schedule card responds
+    // immediately. Reward toast still waits for the server confirm.
+    onMutate: async (itemId) => {
+      await qc.cancelQueries({ queryKey: qk.commissions });
+      const snapshot = qc.getQueryData<CommissionsTodayDTO>(qk.commissions);
+      qc.setQueryData<CommissionsTodayDTO>(qk.commissions, (old) => {
+        if (!old) return old;
+        const nextItems = old.items.map((it) =>
+          it.id === itemId ? { ...it, done: true } : it,
+        );
+        const completedCount = nextItems.filter((it) => it.done).length;
+        const allDone =
+          completedCount === nextItems.length && nextItems.length > 0;
+        return {
+          ...old,
+          items: nextItems,
+          completedCount,
+          bonusClaimed: allDone ? true : old.bonusClaimed,
+        };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(qk.commissions, ctx.snapshot);
+    },
     onSuccess: (data) => {
       push({
         xp: data.reward.xpGranted,
@@ -315,6 +396,8 @@ export function useCompleteCommission() {
           label: "🎉 All 4 Complete!",
         });
       }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: qk.commissions });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
