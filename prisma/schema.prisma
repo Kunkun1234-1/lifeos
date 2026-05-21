@@ -67,6 +67,9 @@ model User {
   routines     Routine[]
   xpEntries    XpLedger[]
   currency     Currency?
+  financeAccounts FinanceAccount[]
+  financeCategories FinanceCategory[]
+  financeTransactions FinanceTransaction[]
   commissions  DailyCommission[]
   reviews      Review[]
   goals        Goal[]
@@ -301,6 +304,103 @@ model Currency {
   gems      Int      @default(0)
   fate      Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+enum FinanceAccountType {
+  cash
+  bank
+  wallet
+  credit
+  investment
+  debt
+  receivable
+  virtual
+}
+
+enum FinanceTransactionType {
+  income
+  expense
+  transfer
+}
+
+// ============================================================
+// Finance Ledger — real-world accounts, categories, transactions
+// ============================================================
+
+model FinanceAccount {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name                String
+  type                FinanceAccountType @default(cash)
+  currencyCode        String   @default("CNY")
+  initialBalanceCents Int      @default(0)
+  balanceCents        Int      @default(0)
+  includeInNetWorth   Boolean  @default(true)
+  color               String   @default("#b68838")
+  icon                String   @default("wallet")
+  archived            Boolean  @default(false)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  outgoingTransactions FinanceTransaction[] @relation("FinanceSourceAccount")
+  incomingTransactions FinanceTransaction[] @relation("FinanceTargetAccount")
+
+  @@index([userId, archived])
+  @@index([userId, type])
+}
+
+model FinanceCategory {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name               String
+  kind               FinanceTransactionType
+  color              String   @default("#b68838")
+  monthlyBudgetCents Int      @default(0)
+  order              Int      @default(0)
+  archived           Boolean  @default(false)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  transactions       FinanceTransaction[]
+
+  @@unique([userId, kind, name])
+  @@index([userId, kind, archived])
+}
+
+model FinanceTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type            FinanceTransactionType
+  amountCents     Int
+  currencyCode    String   @default("CNY")
+
+  sourceAccountId String?
+  sourceAccount   FinanceAccount? @relation("FinanceSourceAccount", fields: [sourceAccountId], references: [id], onDelete: SetNull)
+  targetAccountId String?
+  targetAccount   FinanceAccount? @relation("FinanceTargetAccount", fields: [targetAccountId], references: [id], onDelete: SetNull)
+  categoryId      String?
+  category        FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  payee           String?
+  note            String?
+  tags            String   @default("[]")
+  occurredAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, occurredAt])
+  @@index([userId, type, occurredAt])
+  @@index([sourceAccountId])
+  @@index([targetAccountId])
+  @@index([categoryId])
 }
 
 // ============================================================

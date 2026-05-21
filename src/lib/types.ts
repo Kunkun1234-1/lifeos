@@ -183,6 +183,83 @@ export type RewardItemDTO = {
   redeemedCount: number;
 };
 
+export type FinanceAccountType =
+  | "cash"
+  | "bank"
+  | "wallet"
+  | "credit"
+  | "investment"
+  | "debt"
+  | "receivable"
+  | "virtual";
+
+export type FinanceTransactionType = "income" | "expense" | "transfer";
+
+export type FinanceAccountDTO = {
+  id: string;
+  name: string;
+  type: FinanceAccountType;
+  currencyCode: string;
+  initialBalanceCents: number;
+  balanceCents: number;
+  includeInNetWorth: boolean;
+  color: string;
+  icon: string;
+  archived: boolean;
+  createdAt: string;
+};
+
+export type FinanceCategoryDTO = {
+  id: string;
+  name: string;
+  kind: FinanceTransactionType;
+  color: string;
+  monthlyBudgetCents: number;
+  order: number;
+};
+
+export type FinanceTransactionDTO = {
+  id: string;
+  type: FinanceTransactionType;
+  amountCents: number;
+  currencyCode: string;
+  sourceAccountId: string | null;
+  targetAccountId: string | null;
+  categoryId: string | null;
+  sourceAccount: { id: string; name: string; type: FinanceAccountType } | null;
+  targetAccount: { id: string; name: string; type: FinanceAccountType } | null;
+  category: { id: string; name: string; kind: FinanceTransactionType; color: string } | null;
+  payee: string | null;
+  note: string | null;
+  tags: string[];
+  occurredAt: string;
+  createdAt: string;
+};
+
+export type AssetsSnapshotDTO = {
+  summary: {
+    netWorthCents: number;
+    assetsCents: number;
+    liabilitiesCents: number;
+    monthIncomeCents: number;
+    monthExpenseCents: number;
+    monthNetCents: number;
+    monthBudgetCents: number;
+    monthBudgetUsedRate: number | null;
+  };
+  currency: { gold: number; gems: number; fate: number };
+  accounts: FinanceAccountDTO[];
+  categories: FinanceCategoryDTO[];
+  transactions: FinanceTransactionDTO[];
+  expenseByCategory: Array<{
+    categoryId: string | null;
+    name: string;
+    color: string;
+    amountCents: number;
+    budgetCents: number;
+  }>;
+};
+
 export type AchievementDTO = {
   id: string;
   key: string;

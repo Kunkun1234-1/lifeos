@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useCommissions, useRoutines, useTasks, useUser, useCompleteCommission } from "@/hooks/queries";
+import { useAssets, useCommissions, useRoutines, useTasks, useCompleteCommission } from "@/hooks/queries";
 import type { CommissionItem } from "@/lib/commissions";
 import { Footprints, BookOpen, Sparkles, Dumbbell, Coffee, Trophy, Check, Loader2, ScrollText } from "lucide-react";
 
@@ -166,14 +166,15 @@ export function TasksCard() {
 
 /* ---------- Assets Card ---------- */
 export function AssetsCard() {
-  const { data: user } = useUser();
-  const gold = user?.currency.gold ?? 0;
-  const gems = user?.currency.gems ?? 0;
-  const fate = user?.currency.fate ?? 0;
+  const { data: assets } = useAssets();
+  const netWorth = assets?.summary.netWorthCents ?? 0;
+  const gold = assets?.currency.gold ?? 0;
+  const gems = assets?.currency.gems ?? 0;
+  const fate = assets?.currency.fate ?? 0;
 
   return (
     <div className="panel-cream framed relative rounded-sm p-4 space-y-3 overflow-hidden">
-      <SectionHeader cn="人生资产" en="Assets" more="/rewards" />
+      <SectionHeader cn="人生资产" en="Assets" more="/assets" />
 
       <div className="relative flex items-end gap-3">
         {/* Treasure chest from asset sheet */}
@@ -190,8 +191,12 @@ export function AssetsCard() {
           <div className="flex items-baseline justify-between">
             <span className="font-display text-[11px] text-[var(--fg-muted)]">总资产</span>
             <span className="font-display text-lg font-bold text-[var(--gold-deep)]">
-              ¥{gold.toLocaleString()}
+              {formatCompactMoney(netWorth)}
             </span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="font-display-en text-[9px] tracking-[0.2em] text-[var(--fg-subtle)]">GOLD</span>
+            <span className="font-mono text-xs text-[var(--attr-gold)]">{gold.toLocaleString()} ⭐</span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="font-display-en text-[9px] tracking-[0.2em] text-[var(--fg-subtle)]">GEMS</span>
@@ -205,6 +210,14 @@ export function AssetsCard() {
       </div>
     </div>
   );
+}
+
+function formatCompactMoney(cents: number) {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: "CNY",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
 }
 
 /* ---------- Achievements Card ---------- */

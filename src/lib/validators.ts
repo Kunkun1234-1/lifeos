@@ -200,6 +200,32 @@ export const RewardItemSchema = z.object({
 
 export const RewardItemUpdateSchema = RewardItemSchema.partial();
 
+// ---------- Finance ----------
+export const FinanceAccountCreateSchema = z.object({
+  name: z.string().min(1).max(80),
+  type: z
+    .enum(["cash", "bank", "wallet", "credit", "investment", "debt", "receivable", "virtual"])
+    .default("cash"),
+  currencyCode: z.string().min(3).max(3).default("CNY"),
+  initialBalanceCents: z.number().int().min(-1_000_000_000).max(1_000_000_000).default(0),
+  includeInNetWorth: z.boolean().default(true),
+  color: z.string().max(20).default("#b68838"),
+  icon: z.string().max(30).default("wallet"),
+});
+
+export const FinanceTransactionCreateSchema = z.object({
+  type: z.enum(["income", "expense", "transfer"]),
+  amountCents: z.number().int().min(1).max(1_000_000_000),
+  currencyCode: z.string().min(3).max(3).default("CNY"),
+  sourceAccountId: z.string().optional().nullable(),
+  targetAccountId: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  payee: z.string().max(120).optional().nullable(),
+  note: z.string().max(500).optional().nullable(),
+  tags: z.array(z.string().max(40)).max(12).default([]),
+  occurredAt: z.string().datetime().optional(),
+});
+
 // ---------- Gacha ----------
 export const GachaPullSchema = z.object({
   count: z.union([z.literal(1), z.literal(10)]).default(1),

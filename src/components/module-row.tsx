@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAreas, useUser } from "@/hooks/queries";
 import { deriveLevel } from "@/lib/gamification";
@@ -20,6 +21,9 @@ const AREA_META: Record<string, { cn: string; en: string; art: string }> = {
 };
 
 const ORDER = ["Health", "Learning", "Relationships", "Wellbeing", "Creative", "Finance"];
+const MODULE_HREF: Partial<Record<string, string>> = {
+  Finance: "/assets",
+};
 
 export function ModuleRow() {
   const { data: areas } = useAreas();
@@ -46,7 +50,7 @@ export function ModuleRow() {
           if (!meta) return null;
           const xp = xpByArea[a.attributeKey] ?? 0;
           const { level, xpIntoLevel, xpForNext, progress } = deriveLevel(xp);
-          return (
+          const card = (
             <motion.div
               key={a.id}
               initial={{ opacity: 0, y: 10 }}
@@ -98,6 +102,14 @@ export function ModuleRow() {
                 </div>
               </div>
             </motion.div>
+          );
+          const href = MODULE_HREF[a.name];
+          return href ? (
+            <Link key={a.id} href={href} className="block">
+              {card}
+            </Link>
+          ) : (
+            card
           );
         })}
       </div>

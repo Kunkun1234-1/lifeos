@@ -27,6 +27,9 @@ import type {
   NoteDTO,
   EventSnapshotDTO,
   EquipmentSnapshotDTO,
+  AssetsSnapshotDTO,
+  FinanceAccountDTO,
+  FinanceTransactionDTO,
 } from "@/lib/types";
 import { useRewardsStore } from "@/stores/rewards";
 
@@ -52,6 +55,7 @@ export const qk = {
   notes: (filters?: Record<string, string | undefined>) => ["notes", filters ?? {}] as const,
   events: ["events"] as const,
   equipment: ["equipment"] as const,
+  assets: ["assets"] as const,
 };
 
 // ---------- queries ----------
@@ -429,6 +433,36 @@ export const useProjects = (status?: string) =>
 
 export const useRewards = () =>
   useQuery({ queryKey: qk.rewards, queryFn: () => api<RewardItemDTO[]>("/api/rewards") });
+
+export const useAssets = () =>
+  useQuery({ queryKey: qk.assets, queryFn: () => api<AssetsSnapshotDTO>("/api/assets") });
+
+export function useCreateFinanceAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<FinanceAccountDTO>("/api/assets/accounts", { method: "POST", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets }),
+  });
+}
+
+export function useCreateFinanceTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<FinanceTransactionDTO>("/api/assets/transactions", { method: "POST", json: body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets }),
+  });
+}
+
+export function useDeleteFinanceTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api(`/api/assets/transactions/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets }),
+  });
+}
 
 export const useAchievements = () =>
   useQuery({ queryKey: qk.achievements, queryFn: () => api<AchievementDTO[]>("/api/achievements") });
