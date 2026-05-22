@@ -5,37 +5,19 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useAreas, useUser } from "@/hooks/queries";
 import { deriveLevel } from "@/lib/gamification";
+import { AREA_META, AREA_ORDER, type AreaName } from "@/lib/area-meta";
 
 /**
  * 6 life-module cards — display order matches the 6 attributes (STR/INT/CHA/WIS/CRE/GOLD).
  * Names align with /help and ProfilePanel: 健康/学习/关系/心智/创造/财富.
  */
 
-const AREA_META: Record<string, { cn: string; en: string; art: string }> = {
-  Health:        { cn: "健康", en: "Health",        art: "/lifeos/module_skills.png" },
-  Learning:      { cn: "学习", en: "Learning",      art: "/lifeos/module_academics.png" },
-  Relationships: { cn: "关系", en: "Relationships", art: "/lifeos/module_relationships.png" },
-  Wellbeing:     { cn: "心智", en: "Mind",          art: "/lifeos/module_mind.png" },
-  Creative:      { cn: "创造", en: "Creative",      art: "/lifeos/module_reputation.png" },
-  Finance:       { cn: "财富", en: "Wealth",        art: "/lifeos/module_wealth.png" },
-};
-
-const ORDER = ["Health", "Learning", "Relationships", "Wellbeing", "Creative", "Finance"];
-const MODULE_HREF: Record<string, string> = {
-  Health: "/habits",
-  Learning: "/tasks",
-  Relationships: "/projects",
-  Wellbeing: "/review",
-  Creative: "/notes",
-  Finance: "/assets",
-};
-
 export function ModuleRow() {
   const { data: areas } = useAreas();
   const { data: user } = useUser();
 
   const xpByArea = user?.xpByArea ?? {};
-  const ordered = ORDER
+  const ordered = AREA_ORDER
     .map((n) => areas?.find((a) => a.name === n))
     .filter((a): a is NonNullable<typeof a> => !!a);
 
@@ -51,7 +33,7 @@ export function ModuleRow() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {ordered.map((a, i) => {
-          const meta = AREA_META[a.name];
+          const meta = AREA_META[a.name as AreaName];
           if (!meta) return null;
           const xp = xpByArea[a.attributeKey] ?? 0;
           const { level, xpIntoLevel, xpForNext, progress } = deriveLevel(xp);
@@ -109,17 +91,16 @@ export function ModuleRow() {
                   />
                 </div>
                 <div className="mt-2 text-right font-display text-[11px] text-[var(--gold-deep)] opacity-70 transition-opacity group-hover:opacity-100">
-                  进入模块 →
+                  查看领域 →
                 </div>
               </div>
             </motion.div>
           );
-          const href = MODULE_HREF[a.name];
           return (
             <Link
               key={a.id}
-              href={href}
-              aria-label={`进入${meta.cn}模块`}
+              href={`/areas/${a.id}`}
+              aria-label={`查看${meta.cn}领域`}
               className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)]/70"
             >
               {card}
