@@ -229,6 +229,7 @@ export const FinanceTransactionCreateSchema = z.object({
 // ---------- Gacha ----------
 export const GachaPullSchema = z.object({
   count: z.union([z.literal(1), z.literal(10)]).default(1),
+  currency: z.enum(["fate", "gold"]).default("fate"),
 });
 
 // ---------- Phase 4: Principles ----------

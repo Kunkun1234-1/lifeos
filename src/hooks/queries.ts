@@ -666,8 +666,17 @@ export function useRedeemReward() {
 export function usePullGacha() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (count: 1 | 10) =>
-      api<GachaPullResult>("/api/gacha/pull", { method: "POST", json: { count } }),
+    mutationFn: ({
+      count,
+      currency,
+    }: {
+      count: 1 | 10;
+      currency: "fate" | "gold";
+    }) =>
+      api<GachaPullResult>("/api/gacha/pull", {
+        method: "POST",
+        json: { count, currency },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.gacha });
       qc.invalidateQueries({ queryKey: qk.user });

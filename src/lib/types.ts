@@ -281,6 +281,7 @@ export type AchievementDTO = {
 };
 
 export type GachaState = {
+  gold: number;
   fate: number;
   pullsSinceRare: number;
   pullsSinceEpic: number;
@@ -294,6 +295,7 @@ export type GachaState = {
   }>;
   pool: RewardItemDTO[];
   rewards: RewardItemDTO[];
+  goldPerPull: number;
   fourStarPityAt: number;
   softPityAt: number;
   hardPityAt: number;
@@ -306,7 +308,11 @@ export type GachaPullResult = {
     pity: "soft" | "hard" | null;
     reward: RewardItemDTO | null;
   }>;
+  goldRemaining: number;
   fateRemaining: number;
+  goldSpent: number;
+  fateSpent: number;
+  currency: "fate" | "gold";
   pullsSinceRare: number;
   pullsSinceEpic: number;
   totalPulls: number;

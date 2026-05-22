@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Coins,
   ImagePlus,
   RefreshCw,
   Save,
@@ -61,6 +62,9 @@ const TIER_STARS: Record<Tier, number> = {
 };
 
 const TIER_ORDER: Tier[] = ["common", "rare", "epic", "legendary"];
+const WISH_AUDIO_SRC = "/gacha/audio/gilded-ascent.mp3";
+
+type PaymentCurrency = "fate" | "gold";
 
 type RewardDraft = {
   name: string;
@@ -89,15 +93,21 @@ const emptyDraft: RewardDraft = {
 export default function GachaPage() {
   const { data: state } = useGacha();
   const pull = usePullGacha();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [phase, setPhase] = useState<"idle" | "rolling" | "reveal">("idle");
   const [results, setResults] = useState<GachaPullResult["results"] | null>(null);
   const [rollingTier, setRollingTier] = useState<Tier>("common");
   const [rollingCount, setRollingCount] = useState<1 | 10>(1);
+  const [rollingCurrency, setRollingCurrency] = useState<PaymentCurrency>("fate");
   const [error, setError] = useState<string | null>(null);
 
+  const gold = state?.gold ?? 0;
   const fate = state?.fate ?? 0;
-  const canSingle = fate >= 1 && !pull.isPending;
-  const canTen = fate >= 10 && !pull.isPending;
+  const goldPerPull = state?.goldPerPull ?? 160;
+  const canSingleFate = fate >= 1 && !pull.isPending;
+  const canTenFate = fate >= 10 && !pull.isPending;
+  const canSingleGold = gold >= goldPerPull && !pull.isPending;
+  const canTenGold = gold >= goldPerPull * 10 && !pull.isPending;
   const pool = state?.pool ?? [];
   const rewards = state?.rewards ?? pool;
   const activePoolCount = pool.length;
@@ -106,12 +116,29 @@ export default function GachaPage() {
   const fiveStarSoftLeft = Math.max(0, (state?.softPityAt ?? 74) - (state?.pullsSinceEpic ?? 0));
   const fiveStarHardLeft = Math.max(0, (state?.hardPityAt ?? 90) - (state?.pullsSinceEpic ?? 0));
 
-  const doPull = async (count: 1 | 10) => {
+  const playWishAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.volume = 0.78;
+    void audio.play().catch(() => {});
+  };
+
+  const stopWishAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+  };
+
+  const doPull = async (count: 1 | 10, currency: PaymentCurrency) => {
     setError(null);
     setRollingTier("common");
     setRollingCount(count);
+    setRollingCurrency(currency);
+    playWishAudio();
     try {
-      const response = await pull.mutateAsync(count);
+      const response = await pull.mutateAsync({ count, currency });
       const topTier = getHighestTier(response.results);
       setRollingTier(topTier);
       setResults(response.results);
@@ -119,6 +146,7 @@ export default function GachaPage() {
       setTimeout(() => setPhase("reveal"), 6200);
     } catch (e) {
       setPhase("idle");
+      stopWishAudio();
       setError((e as Error).message);
     }
   };
@@ -128,6 +156,8 @@ export default function GachaPage() {
     setResults(null);
     setRollingTier("common");
     setRollingCount(1);
+    setRollingCurrency("fate");
+    stopWishAudio();
   };
 
   const highestTier = results ? getHighestTier(results) : "common";
@@ -142,15 +172,17 @@ export default function GachaPage() {
           </div>
           <div className="mt-2 h-px bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/40 to-transparent" />
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--fg-muted)]">
-            命运券投入星轨，抽取你自己设定的现实奖励。五星 0.6% 起步、74 抽后概率上升、90 抽必出；四星 5.1% 起步、10 抽必出。
+            命运券或金币都可以投入星轨，抽取你自己设定的现实奖励。五星 0.6% 起步、74 抽后概率上升、90 抽必出；四星 5.1% 起步、10 抽必出。
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center sm:w-[420px]">
+        <div className="grid grid-cols-2 gap-2 text-center sm:w-[520px] sm:grid-cols-4">
           <StatTile label="命运券" value={fate} suffix="张" tone="gold" />
+          <StatTile label="金币" value={gold} suffix="" tone="blue" />
           <StatTile label="四星保底" value={fourStarLeft} suffix="抽" tone="blue" />
           <StatTile label="五星保底" value={fiveStarHardLeft} suffix="抽" tone="gold" />
         </div>
       </header>
+      <audio ref={audioRef} src={WISH_AUDIO_SRC} preload="auto" />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_350px]">
         <section className="panel-ink relative min-h-[480px] overflow-hidden rounded-sm">
@@ -188,28 +220,48 @@ export default function GachaPage() {
                   距离四星 {fourStarLeft} 抽 · 五星软保底 {fiveStarSoftLeft} 抽 · 五星硬保底 {fiveStarHardLeft} 抽
                 </div>
               </div>
-              <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={() => void doPull(1)}
-                  disabled={!canSingle}
+                  onClick={() => void doPull(1, "fate")}
+                  disabled={!canSingleFate}
                   className="border-[#f5c85d]/70 bg-[#101a2c]/60 text-[#fff2bd] hover:bg-[#f5c85d]/15"
                 >
                   <Ticket size={16} />
-                  祈愿 ×1
+                  命运券 ×1
                 </Button>
                 <Button
                   size="lg"
-                  onClick={() => void doPull(10)}
-                  disabled={!canTen}
+                  onClick={() => void doPull(10, "fate")}
+                  disabled={!canTenFate}
                   className="shadow-[0_0_28px_-12px_#f5c85d]"
                 >
                   <Wand2 size={16} />
-                  祈愿 ×10
+                  命运券 ×10
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => void doPull(1, "gold")}
+                  disabled={!canSingleGold}
+                  className="border-[#69b8ff]/70 bg-[#101a2c]/60 text-[#dff5ff] hover:bg-[#69b8ff]/15"
+                >
+                  <Coins size={16} />
+                  金币 ×{goldPerPull}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => void doPull(10, "gold")}
+                  disabled={!canTenGold}
+                  className="border-[#69b8ff]/70 bg-[#101a2c]/60 text-[#dff5ff] hover:bg-[#69b8ff]/15"
+                >
+                  <Coins size={16} />
+                  金币 ×{goldPerPull * 10}
                 </Button>
               </div>
-              {(fate < 1 || activePoolCount === 0 || error) && (
+              {(fate < 1 || gold < goldPerPull || activePoolCount === 0 || error) && (
                 <div className="mx-auto max-w-lg rounded-sm border border-white/15 bg-black/20 px-3 py-2 text-xs leading-5 text-[#d8e4ff]/75">
                   {error ? (
                     error
@@ -217,9 +269,9 @@ export default function GachaPage() {
                     "当前没有入池奖励。先在卡池工坊导入预设或创建奖励。"
                   ) : (
                     <>
-                      命运券不足。
+                      命运券或金币不足时，可以完成任务/复盘积累资源。
                       <Link href="/review" className="ml-1 text-[#fff0a7] underline-offset-4 hover:underline">
-                        完成复盘获取命运券
+                        去复盘
                       </Link>
                     </>
                   )}
@@ -300,7 +352,9 @@ export default function GachaPage() {
       <PoolWorkshop rewards={rewards} pool={pool} />
 
       <AnimatePresence>
-        {phase === "rolling" && <RollingOverlay tier={rollingTier} count={rollingCount} />}
+        {phase === "rolling" && (
+          <RollingOverlay tier={rollingTier} count={rollingCount} currency={rollingCurrency} />
+        )}
         {phase === "reveal" && results && (
           <RevealOverlay results={results} highestTier={highestTier} onDismiss={dismiss} />
         )}
@@ -596,7 +650,7 @@ function PoolItemRow({ item }: { item: RewardItemDTO }) {
     name: item.name,
     description: item.description ?? "",
     emoji: item.emoji,
-    imageUrl: item.imageUrl,
+    imageUrl: item.imageUrl ? normalizeRewardImageUrl(item.imageUrl) : null,
     tier: item.tier,
     costGold: item.costGold,
     costGems: item.costGems,
@@ -768,7 +822,15 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function RollingOverlay({ tier, count }: { tier: Tier; count: 1 | 10 }) {
+function RollingOverlay({
+  tier,
+  count,
+  currency,
+}: {
+  tier: Tier;
+  count: 1 | 10;
+  currency: PaymentCurrency;
+}) {
   const color = TIER_COLOR[tier];
   const videoSrc = getWishVideoSrc(tier, count);
   return (
@@ -821,7 +883,7 @@ function RollingOverlay({ tier, count }: { tier: Tier; count: 1 | 10 }) {
         className="absolute bottom-10 left-0 right-0 text-center"
       >
         <div className="font-display text-lg text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.85)]">
-          {count === 10 ? "十连祈愿" : "单次祈愿"}
+          {count === 10 ? "十连祈愿" : "单次祈愿"} · {currency === "fate" ? "命运券" : "金币"}
         </div>
         <div className="mt-2 text-xs text-white/60 drop-shadow-[0_0_10px_rgba(0,0,0,0.85)]">
           {TIER_LABEL[tier]} · ASTRAL SHIFT
@@ -1027,7 +1089,7 @@ function RewardIcon({
     >
       {reward?.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={reward.imageUrl} alt={reward.name} className="h-full w-full object-cover" />
+        <img src={normalizeRewardImageUrl(reward.imageUrl)} alt={reward.name} className="h-full w-full object-cover" />
       ) : (
         <span>{reward?.emoji ?? "✦"}</span>
       )}
@@ -1058,6 +1120,10 @@ function getWishVideoSrc(tier: Tier, count: 1 | 10) {
   if (tier === "legendary") return "/gacha/videos/single-gold.mp4";
   if (tier === "rare" || tier === "epic") return "/gacha/videos/single-purple.mp4";
   return "/gacha/videos/single-blue.mp4";
+}
+
+function normalizeRewardImageUrl(imageUrl: string) {
+  return imageUrl.replace(/^\/gacha\/items\/([a-z-]+)\.svg$/, "/gacha/items/$1.png");
 }
 
 function clampWeight(value: number) {

@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  *   - /login                — sign-in page
  *   - /api/auth/*           — Auth.js routes
  *   - /_next/*              — Next.js assets
- *   - /favicon.ico, /lifeos/*, /uploads/*, /gacha/items/*, /gacha/videos/* — static
+ *   - /favicon.ico, /lifeos/*, /uploads/*, /gacha/items/*, /gacha/videos/*, /gacha/audio/* — static
  */
 export default auth((req) => {
   const path = req.nextUrl.pathname;
@@ -15,6 +15,7 @@ export default auth((req) => {
     path.startsWith("/api/auth") ||
     path.startsWith("/_next") ||
     path.startsWith("/lifeos") ||
+    path.startsWith("/gacha/audio") ||
     path.startsWith("/gacha/items") ||
     path.startsWith("/gacha/videos") ||
     path.startsWith("/uploads") ||

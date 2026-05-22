@@ -5,7 +5,7 @@ import { GachaPullSchema } from "@/lib/validators";
 
 /**
  * Gacha pull — limited-banner style wish rules with original rewards.
- * Cost: 1 Fate per pull, 10 Fate for 10x.
+ * Cost: 1 Fate or 160 Gold per pull.
  * Base rates (no pity):
  *   Common / 3-star       94.3%
  *   Rare+Epic / 4-star     5.1%
@@ -26,6 +26,7 @@ const FIVE_STAR_RATE = 0.006;
 const FOUR_STAR_PITY = 10;
 const FIVE_STAR_SOFT_PITY = 74;
 const FIVE_STAR_HARD_PITY = 90;
+const GOLD_PER_PULL = 160;
 
 type Tier = "common" | "rare" | "epic" | "legendary";
 
@@ -56,18 +57,32 @@ function rollTier(pullsSinceFourStar: number, pullsSinceFiveStar: number): Tier 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId();
   const body = await req.json().catch(() => ({}));
-  const { count } = GachaPullSchema.parse(body);
+  const { count, currency: paymentCurrency } = GachaPullSchema.parse(body);
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   const currency = await prisma.currency.findUnique({ where: { userId } });
   if (!user || !currency) return NextResponse.json({ error: "User missing" }, { status: 404 });
 
-  if (currency.fate < count) {
+  const goldCost = paymentCurrency === "gold" ? count * GOLD_PER_PULL : 0;
+  const fateCost = paymentCurrency === "fate" ? count : 0;
+
+  if (paymentCurrency === "fate" && currency.fate < fateCost) {
     return NextResponse.json(
       {
         error: "Insufficient fate tokens",
-        need: count,
+        need: fateCost,
         have: currency.fate,
+      },
+      { status: 400 }
+    );
+  }
+
+  if (paymentCurrency === "gold" && currency.gold < goldCost) {
+    return NextResponse.json(
+      {
+        error: "Insufficient gold",
+        need: goldCost,
+        have: currency.gold,
       },
       { status: 400 }
     );
@@ -159,7 +174,7 @@ export async function POST(req: Request) {
         userId,
         rewardId: reward?.id ?? null,
         tier,
-        fateSpent: 1,
+        fateSpent: paymentCurrency === "fate" ? 1 : 0,
         pity,
       },
     });
@@ -198,13 +213,20 @@ export async function POST(req: Request) {
     }),
     prisma.currency.update({
       where: { userId },
-      data: { fate: { decrement: count } },
+      data:
+        paymentCurrency === "fate"
+          ? { fate: { decrement: fateCost } }
+          : { gold: { decrement: goldCost } },
     }),
   ]);
 
   return NextResponse.json({
     results,
+    goldRemaining: updatedCurrency.gold,
     fateRemaining: updatedCurrency.fate,
+    goldSpent: goldCost,
+    fateSpent: fateCost,
+    currency: paymentCurrency,
     pullsSinceRare: updatedUser.pullsSinceRare,
     pullsSinceEpic: updatedUser.pullsSinceEpic,
     totalPulls: updatedUser.totalPulls,
