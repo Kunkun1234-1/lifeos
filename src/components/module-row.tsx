@@ -21,7 +21,12 @@ const AREA_META: Record<string, { cn: string; en: string; art: string }> = {
 };
 
 const ORDER = ["Health", "Learning", "Relationships", "Wellbeing", "Creative", "Finance"];
-const MODULE_HREF: Partial<Record<string, string>> = {
+const MODULE_HREF: Record<string, string> = {
+  Health: "/habits",
+  Learning: "/tasks",
+  Relationships: "/projects",
+  Wellbeing: "/review",
+  Creative: "/notes",
   Finance: "/assets",
 };
 
@@ -56,7 +61,7 @@ export function ModuleRow() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="panel-cream framed group overflow-hidden rounded-sm transition-shadow hover:shadow-[0_18px_34px_-24px_rgba(70,48,24,0.45)]"
+              className="panel-cream framed group overflow-hidden rounded-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-24px_rgba(70,48,24,0.45)]"
             >
               <div className="relative mx-3 mt-3 aspect-[16/9] overflow-hidden rounded-sm border border-[var(--gold)]/70">
                 <Image
@@ -103,16 +108,22 @@ export function ModuleRow() {
                     }}
                   />
                 </div>
+                <div className="mt-2 text-right font-display text-[11px] text-[var(--gold-deep)] opacity-70 transition-opacity group-hover:opacity-100">
+                  进入模块 →
+                </div>
               </div>
             </motion.div>
           );
           const href = MODULE_HREF[a.name];
-          return href ? (
-            <Link key={a.id} href={href} className="block">
+          return (
+            <Link
+              key={a.id}
+              href={href}
+              aria-label={`进入${meta.cn}模块`}
+              className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)]/70"
+            >
               {card}
             </Link>
-          ) : (
-            card
           );
         })}
       </div>
