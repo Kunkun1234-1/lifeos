@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAssets, useCommissions, useRoutines, useTasks, useCompleteCommission } from "@/hooks/queries";
 import type { CommissionItem } from "@/lib/commissions";
-import { Footprints, BookOpen, Sparkles, Dumbbell, Coffee, Trophy, Check, Loader2, ScrollText } from "lucide-react";
+import { Footprints, BookOpen, Sparkles, Dumbbell, Coffee, Trophy, Check, Loader2, ScrollText, Coins, Gem, Ticket, WalletCards } from "lucide-react";
 
 /**
  * 4 right-side cards per reference: Schedule / Tasks / Assets / Achievements.
@@ -168,45 +168,67 @@ export function TasksCard() {
 export function AssetsCard() {
   const { data: assets } = useAssets();
   const netWorth = assets?.summary.netWorthCents ?? 0;
+  const monthNet = assets?.summary.monthNetCents ?? 0;
+  const accountCount = assets?.accounts.length ?? 0;
   const gold = assets?.currency.gold ?? 0;
   const gems = assets?.currency.gems ?? 0;
   const fate = assets?.currency.fate ?? 0;
+  const assetTokens = [
+    { label: "GOLD", value: gold.toLocaleString(), icon: Coins, color: "text-[var(--attr-gold)]" },
+    { label: "GEMS", value: gems.toLocaleString(), icon: Gem, color: "text-[var(--attr-cha)]" },
+    { label: "FATE", value: fate.toLocaleString(), icon: Ticket, color: "text-[var(--attr-cre)]" },
+  ];
 
   return (
-    <div className="panel-cream framed relative rounded-sm p-4 space-y-3 overflow-hidden">
+    <div className="panel-cream framed relative overflow-hidden rounded-sm p-4">
       <SectionHeader cn="人生资产" en="Assets" more="/assets" />
 
-      <div className="relative flex items-end gap-3">
-        {/* Treasure chest from asset sheet */}
-        <div className="relative h-[76px] w-[92px] shrink-0">
+      <Link href="/assets" className="group mt-3 block">
+        <div className="relative aspect-[2.35/1] overflow-hidden rounded-sm border border-[var(--gold)]/35 bg-[var(--bg-page)]">
           <Image
-            src="/lifeos/assets_card.png"
-            alt="treasure"
+            src="/lifeos/assets_card_v2.png"
+            alt="资产账本与钱包"
             fill
-            className="object-contain object-center"
-            sizes="92px"
+            className="object-cover object-left transition-transform duration-500 group-hover:scale-[1.03]"
+            sizes="(min-width: 1536px) 220px, (min-width: 1024px) 25vw, 50vw"
+            priority
           />
-        </div>
-        <div className="flex-1 space-y-1 text-sm">
-          <div className="flex items-baseline justify-between">
-            <span className="font-display text-[11px] text-[var(--fg-muted)]">总资产</span>
-            <span className="font-display text-lg font-bold text-[var(--gold-deep)]">
+          <div className="absolute inset-y-0 right-0 w-[48%] bg-gradient-to-l from-[var(--bg-panel)] via-[var(--bg-panel)]/88 to-transparent" />
+          <div className="absolute right-3 top-3 text-right">
+            <div className="font-display text-[11px] text-[var(--fg-muted)]">净资产</div>
+            <div className="font-display text-2xl font-bold leading-none text-[var(--gold-deep)]">
               {formatCompactMoney(netWorth)}
-            </span>
+            </div>
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-display-en text-[9px] tracking-[0.2em] text-[var(--fg-subtle)]">GOLD</span>
-            <span className="font-mono text-xs text-[var(--attr-gold)]">{gold.toLocaleString()} ⭐</span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-display-en text-[9px] tracking-[0.2em] text-[var(--fg-subtle)]">GEMS</span>
-            <span className="font-mono text-xs text-[var(--attr-cha)]">{gems} 💎</span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-display-en text-[9px] tracking-[0.2em] text-[var(--fg-subtle)]">FATE</span>
-            <span className="font-mono text-xs text-[var(--attr-cre)]">{fate} 🎫</span>
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 font-display text-[11px] text-[var(--fg-muted)]">
+            <WalletCards size={13} className="text-[var(--gold-deep)]" />
+            <span>{accountCount} 个账户</span>
           </div>
         </div>
+      </Link>
+
+      <div className="mt-3 flex items-baseline justify-between border-b border-[var(--gold)]/25 pb-2">
+        <span className="font-display text-[12px] text-[var(--fg-muted)]">本月结余</span>
+        <span className={`font-display text-[15px] font-bold ${monthNet >= 0 ? "text-[var(--attr-wis)]" : "text-[var(--attr-str)]"}`}>
+          {formatCompactMoney(monthNet)}
+        </span>
+      </div>
+
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {assetTokens.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="min-w-0">
+              <div className="flex items-center gap-1 text-[var(--fg-subtle)]">
+                <Icon size={13} className={item.color} />
+                <span className="font-display-en text-[9px] tracking-[0.16em]">{item.label}</span>
+              </div>
+              <div className={`mt-1 truncate font-mono text-sm font-bold ${item.color}`}>
+                {item.value}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
