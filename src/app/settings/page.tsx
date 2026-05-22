@@ -14,6 +14,7 @@ const CLASSES = ["Scholar", "Athlete", "Artist", "Engineer", "Connector"] as con
 export default function SettingsPage() {
   const { data: user } = useUser();
   const update = useUpdateUser();
+  const hydratedUserId = useRef<string | null>(null);
 
   const [name, setName] = useState("");
   const [klass, setKlass] = useState<(typeof CLASSES)[number]>("Scholar");
@@ -25,9 +26,12 @@ export default function SettingsPage() {
   const [birthday, setBirthday] = useState("");
   const [region, setRegion] = useState("");
   const [motto, setMotto] = useState("");
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && hydratedUserId.current !== user.id) {
+      hydratedUserId.current = user.id;
       setName(user.name);
       setKlass((user.class as (typeof CLASSES)[number]) ?? "Scholar");
       setVision(user.visionStatement ?? "");
@@ -40,6 +44,21 @@ export default function SettingsPage() {
       setMotto(user.motto ?? "");
     }
   }, [user]);
+
+  const persistAvatar = async (nextUrl: string | null) => {
+    const previous = avatarUrl;
+    setAvatarUrl(nextUrl);
+    setAvatarSaveError(null);
+    setAvatarSaving(true);
+    try {
+      await update.mutateAsync({ avatarUrl: nextUrl });
+    } catch (e) {
+      setAvatarUrl(previous);
+      setAvatarSaveError((e as Error).message || "头像保存失败");
+    } finally {
+      setAvatarSaving(false);
+    }
+  };
 
   const submit = async () => {
     await update.mutateAsync({
@@ -71,7 +90,12 @@ export default function SettingsPage() {
           <CardDescription>头像、姓名、基础信息（生日 → 年龄、地区、人生信条）。</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <AvatarPicker value={avatarUrl} onChange={setAvatarUrl} />
+          <AvatarPicker
+            value={avatarUrl}
+            onChange={persistAvatar}
+            saving={avatarSaving}
+            saveError={avatarSaveError}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
@@ -206,9 +230,13 @@ function AccountPanel() {
 function AvatarPicker({
   value,
   onChange,
+  saving = false,
+  saveError = null,
 }: {
   value: string | null;
-  onChange: (url: string | null) => void;
+  onChange: (url: string | null) => void | Promise<void>;
+  saving?: boolean;
+  saveError?: string | null;
 }) {
   const ref = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
@@ -226,7 +254,7 @@ function AvatarPicker({
         throw new Error(j.error ?? `Upload failed (${res.status})`);
       }
       const { url } = (await res.json()) as { url: string };
-      onChange(url);
+      await onChange(url);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -258,17 +286,17 @@ function AvatarPicker({
             variant="outline"
             size="sm"
             onClick={() => ref.current?.click()}
-            disabled={busy}
+            disabled={busy || saving}
           >
-            <Upload size={14} /> {busy ? "上传中…" : "上传图片"}
+            <Upload size={14} /> {busy ? "上传中…" : saving ? "保存中…" : "上传图片"}
           </Button>
           {value && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onChange(null)}
-              disabled={busy}
+              onClick={() => void onChange(null)}
+              disabled={busy || saving}
             >
               恢复默认
             </Button>
@@ -278,6 +306,7 @@ function AvatarPicker({
           PNG / JPG / WebP / GIF / SVG · ≤ 4 MB · 建议正方形
         </div>
         {err && <div className="text-[11px] text-[var(--danger)]">{err}</div>}
+        {saveError && <div className="text-[11px] text-[var(--danger)]">{saveError}</div>}
       </div>
     </div>
   );

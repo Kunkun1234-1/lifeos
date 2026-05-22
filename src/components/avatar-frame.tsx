@@ -90,6 +90,7 @@ export function AvatarFrame({
           height={size}
           className="h-full w-full object-cover"
           priority
+          unoptimized
         />
       </div>
     </div>

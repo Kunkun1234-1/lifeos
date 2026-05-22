@@ -147,6 +147,7 @@ export function TopNav() {
           >
             <AvatarFrame
               size={32}
+              src={mounted ? (user?.avatarUrl || undefined) : undefined}
               style={mounted ? (user?.equippedFrame?.style ?? null) : null}
               alt={mounted ? (user?.name ?? "avatar") : "avatar"}
             />
