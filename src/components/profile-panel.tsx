@@ -30,7 +30,7 @@ export function ProfilePanel() {
   const birthdayLabel = birthday
     ? `${pad2(birthday.getMonth() + 1)}/${pad2(birthday.getDate())}`
     : null;
-  const avatarSrc = user?.avatarUrl || "/lifeos/profile_avatar.png";
+  const avatarSrc = user ? user.avatarUrl || "/lifeos/profile_avatar.png" : null;
 
   return (
     <aside className="space-y-5 px-1">
@@ -49,17 +49,21 @@ export function ProfilePanel() {
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-[var(--gold)]">
             <Sparkles size={10} />
           </div>
-          <div className="relative h-[64px] w-[64px] overflow-hidden rounded-full border-2 border-[var(--gold)] shadow-[0_0_0_2px_var(--bg),inset_0_0_0_1px_rgba(255,255,255,0.4)]">
-            <Image
-              src={avatarSrc}
-              alt="avatar"
-              width={64}
-              height={64}
-              className="h-full w-full object-cover"
-              priority
-              unoptimized
-            />
-          </div>
+          {avatarSrc ? (
+            <div className="relative h-[64px] w-[64px] overflow-hidden rounded-full border-2 border-[var(--gold)] shadow-[0_0_0_2px_var(--bg),inset_0_0_0_1px_rgba(255,255,255,0.4)]">
+              <Image
+                src={avatarSrc}
+                alt="avatar"
+                width={64}
+                height={64}
+                className="h-full w-full object-cover"
+                priority
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className="h-[64px] w-[64px] rounded-full border-2 border-[var(--gold)] bg-[var(--gold-tint)] shadow-[0_0_0_2px_var(--bg),inset_0_0_0_1px_rgba(255,255,255,0.4)]" />
+          )}
         </div>
         <div className="min-w-0 flex-1 pt-1">
           <div className="flex items-center gap-1.5">
