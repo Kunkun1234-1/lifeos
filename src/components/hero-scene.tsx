@@ -20,14 +20,14 @@ export function HeroScene() {
   const weekday = new Date().toLocaleDateString("zh-CN", { weekday: "long" });
 
   return (
-    <section className="relative h-[480px] overflow-hidden rounded-sm">
+    <section className="relative h-[500px] overflow-hidden rounded-sm 2xl:h-[520px]">
       <Image
         src="/lifeos/main_character_scene.png"
         alt="Hero scene"
         fill
         className="object-cover object-center"
         priority
-        sizes="(min-width: 1280px) 760px, 100vw"
+        sizes="(min-width: 1536px) 980px, (min-width: 1280px) 760px, 100vw"
         suppressHydrationWarning
       />
 

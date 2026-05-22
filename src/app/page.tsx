@@ -12,8 +12,8 @@ import {
 
 export default function DashboardPage() {
   return (
-    <div className="mx-auto max-w-[1536px] space-y-5 px-8 py-6">
-      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] 2xl:grid-cols-[260px_minmax(0,1fr)_500px]">
+    <div className="mx-auto max-w-[1800px] space-y-5 px-8 py-6">
+      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)_520px]">
         <ProfilePanel />
 
         <div className="space-y-5 min-w-0">

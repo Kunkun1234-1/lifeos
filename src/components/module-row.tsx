@@ -44,7 +44,7 @@ export function ModuleRow() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {ordered.map((a, i) => {
           const meta = AREA_META[a.name];
           if (!meta) return null;
@@ -56,41 +56,44 @@ export function ModuleRow() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="panel-cream framed group overflow-hidden rounded-sm"
+              className="panel-cream framed group overflow-hidden rounded-sm transition-shadow hover:shadow-[0_18px_34px_-24px_rgba(70,48,24,0.45)]"
             >
-              <div className="relative mx-2 mt-2 aspect-[4/3] overflow-hidden rounded-sm border border-[var(--gold)]/70">
+              <div className="relative mx-3 mt-3 aspect-[16/9] overflow-hidden rounded-sm border border-[var(--gold)]/70">
                 <Image
                   src={meta.art}
                   alt={meta.cn}
                   fill
-                  sizes="170px"
+                  sizes="(min-width: 1536px) 300px, (min-width: 1024px) 28vw, 50vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-sm border border-[var(--gold)] bg-[rgba(252,247,234,0.9)] px-1.5 py-0.5">
-                  <Starburst size={10} />
+                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-sm border border-[var(--gold)] bg-[rgba(252,247,234,0.92)] px-2 py-1">
+                  <Starburst size={12} />
+                  <span className="font-display-en text-[9px] tracking-[0.18em] text-[var(--gold-deep)]">
+                    {a.attributeKey}
+                  </span>
                 </div>
               </div>
 
-              <div className="px-3 pt-2">
-                <div className="font-display text-[15px] font-bold tracking-[0.06em] text-[var(--fg-strong)]">
+              <div className="px-4 pt-3">
+                <div className="font-display text-[18px] font-bold tracking-[0.06em] text-[var(--fg-strong)]">
                   {meta.cn}
                 </div>
-                <div className="font-display-en text-[8px] tracking-[0.22em] text-[var(--gold-deep)]/70">
-                  {meta.en} · {a.attributeKey}
+                <div className="mt-0.5 font-display-en text-[9px] tracking-[0.22em] text-[var(--gold-deep)]/70">
+                  {meta.en}
                 </div>
               </div>
 
-              <div className="px-3 pb-2.5 pt-1.5">
+              <div className="px-4 pb-4 pt-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="font-display text-[11px] text-[var(--fg-muted)]">
+                  <span className="font-display text-[12px] text-[var(--fg-muted)]">
                     等级: <span className="text-[var(--fg-strong)] font-bold">Lv.{level}</span>
                   </span>
-                  <span className="font-mono text-[10px] text-[var(--fg-subtle)]">
+                  <span className="font-mono text-[11px] text-[var(--fg-subtle)]">
                     {xpIntoLevel}/{xpForNext}
                   </span>
                 </div>
-                <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-[var(--bg-panel-ink)]/15 border border-[var(--border)]">
+                <div className="mt-2 h-[6px] overflow-hidden rounded-full border border-[var(--border)] bg-[var(--bg-panel-ink)]/15">
                   <div
                     className="h-full rounded-full"
                     style={{
