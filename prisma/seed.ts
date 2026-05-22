@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { GACHA_PRESET_REWARDS } from "../src/lib/gacha-presets";
 
 const prisma = new PrismaClient();
 
@@ -250,26 +251,7 @@ const DEFAULT_PRINCIPLES = [
 /**
  * Default reward items — user can edit/add. Tier guides gacha rarity.
  */
-const REWARDS = [
-  // Common (Gold)
-  { name: "一杯精品咖啡", emoji: "☕", tier: "common", costGold: 30,  description: "犒劳自己一杯精品咖啡或奶茶。" },
-  { name: "30分钟自由时间", emoji: "🪁", tier: "common", costGold: 40,  description: "什么都不做，纯粹放空 30 分钟。" },
-  { name: "看一集喜欢的剧", emoji: "📺", tier: "common", costGold: 50,  description: "无负罪感地看一集你想看的剧。" },
-  { name: "外卖小奖励",   emoji: "🍱", tier: "common", costGold: 60,  description: "点一份你想吃的外卖。" },
-
-  // Rare (Gold + Gems)
-  { name: "买一本心仪的书", emoji: "📘", tier: "rare", costGold: 200, costGems: 1, description: "买你想读的那本书。" },
-  { name: "下馆子吃一顿", emoji: "🍣", tier: "rare", costGold: 300, costGems: 2, description: "去你最喜欢那家餐厅吃顿好的。" },
-  { name: "一次按摩",     emoji: "💆", tier: "rare", costGold: 400, costGems: 2, description: "去按摩放松一下。" },
-
-  // Epic (Gems heavy)
-  { name: "周末短途旅行", emoji: "🗺️", tier: "epic", costGold: 800, costGems: 8, description: "安排一个周末的小旅行。" },
-  { name: "买一件想要的好物", emoji: "🎁", tier: "epic", costGold: 1000, costGems: 10, description: "下单那件犹豫已久的好东西。" },
-
-  // Legendary (Big gems + fate)
-  { name: "换新设备", emoji: "💻", tier: "legendary", costGold: 3000, costGems: 30, description: "升级你需要的关键设备。" },
-  { name: "出国旅行预算", emoji: "✈️", tier: "legendary", costGold: 5000, costGems: 50, description: "为下一次出国旅行划拨预算。" },
-];
+const REWARDS = GACHA_PRESET_REWARDS;
 
 async function main() {
   // ---------- Achievements (global) ----------

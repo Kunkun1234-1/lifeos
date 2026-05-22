@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Moon Tea</title>
+  <desc id="desc">Original fantasy anime-style tea cup reward icon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#fff7cc"/>
+      <stop offset=".55" stop-color="#b8d8f7"/>
+      <stop offset="1" stop-color="#40557d"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="56" x2="196" y1="64" y2="205">
+      <stop stop-color="#fff2a8"/>
+      <stop offset=".45" stop-color="#d7aa48"/>
+      <stop offset="1" stop-color="#8a6124"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <path d="M35 211c34-18 151-20 187 0" fill="none" stroke="#fff3b2" stroke-width="3" opacity=".45"/>
+  <circle cx="197" cy="54" r="22" fill="#fff2b0" opacity=".92"/>
+  <path d="M206 38c-22 4-28 28-13 41-20-2-35-19-33-39 2-18 16-32 34-35-2 9 1 23 12 33z" fill="#40557d" opacity=".33"/>
+  <path d="M75 119h83c-2 39-17 66-41 66s-40-27-42-66z" fill="#f8fbff" stroke="#6a84ae" stroke-width="5"/>
+  <path d="M158 128h19c18 0 18 32 0 32h-20" fill="none" stroke="#f8fbff" stroke-width="13" stroke-linecap="round"/>
+  <path d="M158 128h19c18 0 18 32 0 32h-20" fill="none" stroke="#6a84ae" stroke-width="5" stroke-linecap="round"/>
+  <path d="M87 130c21 11 42 10 62 0-2 24-12 42-31 42-18 0-28-17-31-42z" fill="#8ad6ff" opacity=".65"/>
+  <path d="M74 117c23 12 62 12 86 0" fill="none" stroke="url(#gold)" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="116" cy="189" rx="52" ry="9" fill="#28354f" opacity=".3"/>
+  <g filter="url(#glow)" fill="#fff4ba">
+    <path d="M85 76l4 11 12 3-12 4-4 11-5-11-11-4 11-3z"/>
+    <path d="M174 91l3 8 8 2-8 3-3 8-3-8-9-3 9-2z"/>
+    <path d="M56 154l3 8 8 3-8 3-3 8-4-8-8-3 8-3z"/>
+  </g>
+</svg>

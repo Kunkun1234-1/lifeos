@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Dream Candle</title>
+  <desc id="desc">Original fantasy anime-style rest candle reward icon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%">
+      <stop offset="0" stop-color="#fff2bf"/>
+      <stop offset=".52" stop-color="#b9a4e8"/>
+      <stop offset="1" stop-color="#26304f"/>
+    </radialGradient>
+    <radialGradient id="flame" cx="48%" cy="35%" r="70%">
+      <stop stop-color="#fffbe4"/>
+      <stop offset=".45" stop-color="#ffd66c"/>
+      <stop offset="1" stop-color="#f06460"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <circle cx="128" cy="96" r="62" fill="#ffe9a6" opacity=".18"/>
+  <g filter="url(#glow)">
+    <path d="M132 44c31 28 18 58-6 69-25-17-28-45 6-69z" fill="url(#flame)"/>
+    <path d="M126 66c13 16 8 30-4 38-10-9-11-24 4-38z" fill="#fff7ca"/>
+  </g>
+  <path d="M93 110h71l-9 80c-1 12-11 21-23 21h-8c-12 0-22-9-23-21z" fill="#fff7e4" stroke="#8c6c42" stroke-width="5"/>
+  <path d="M101 133c14 8 39 9 54 1" fill="none" stroke="#ead2a0" stroke-width="7" stroke-linecap="round"/>
+  <path d="M103 165c13 6 36 6 50 0" fill="none" stroke="#e0c18c" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="128" cy="213" rx="52" ry="10" fill="#111a32" opacity=".35"/>
+  <g fill="#fff4bc">
+    <path d="M57 84l4 12 12 4-12 4-4 12-4-12-12-4 12-4z"/>
+    <path d="M202 121l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
+  </g>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Sakura Meal</title>
+  <desc id="desc">Original fantasy anime-style meal reward icon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%">
+      <stop offset="0" stop-color="#fff4d7"/>
+      <stop offset=".55" stop-color="#eda8c0"/>
+      <stop offset="1" stop-color="#5e557f"/>
+    </radialGradient>
+    <linearGradient id="bowl" x1="59" y1="113" x2="197" y2="203">
+      <stop stop-color="#fff9f2"/>
+      <stop offset="1" stop-color="#d9e8ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#4d2a55" flood-opacity=".32"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <g fill="#fff4cf" opacity=".75">
+    <path d="M59 59c10 2 16 8 18 18-12 0-20-6-18-18z"/>
+    <path d="M205 79c-3 10-10 16-20 16 1-12 8-19 20-16z"/>
+    <path d="M179 49c8 5 12 13 10 22-10-4-14-12-10-22z"/>
+  </g>
+  <g filter="url(#shadow)">
+    <ellipse cx="128" cy="113" rx="72" ry="27" fill="#ffffff" stroke="#8b6b3a" stroke-width="5"/>
+    <path d="M61 116h134c-5 43-32 73-67 73s-62-30-67-73z" fill="url(#bowl)" stroke="#8b6b3a" stroke-width="5"/>
+    <path d="M74 125c33 19 76 20 109 0" fill="none" stroke="#f1b6c8" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="109" cy="104" r="15" fill="#ff9fb3" stroke="#8b4d62" stroke-width="4"/>
+    <circle cx="139" cy="99" r="13" fill="#fff4cd" stroke="#a66d37" stroke-width="4"/>
+    <path d="M158 107c14-11 27-10 37 3" fill="none" stroke="#68a785" stroke-width="7" stroke-linecap="round"/>
+    <path d="M97 152c20 10 45 10 64 0" fill="none" stroke="#7da1cc" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+  </g>
+</svg>

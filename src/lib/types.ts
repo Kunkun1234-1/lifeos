@@ -293,6 +293,8 @@ export type GachaState = {
     pulledAt: string;
   }>;
   pool: RewardItemDTO[];
+  rewards: RewardItemDTO[];
+  fourStarPityAt: number;
   softPityAt: number;
   hardPityAt: number;
 };

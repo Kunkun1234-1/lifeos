@@ -7,7 +7,7 @@ import { getCurrentUserId } from "@/lib/user";
  */
 export async function GET() {
   const userId = await getCurrentUserId();
-  const [user, currency, recent, poolItems] = await Promise.all([
+  const [user, currency, recent, rewardItems] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.currency.findUnique({ where: { userId } }),
     prisma.gachaPull.findMany({
@@ -17,10 +17,11 @@ export async function GET() {
       take: 30,
     }),
     prisma.rewardItem.findMany({
-      where: { userId, inGachaPool: true, archived: false },
+      where: { userId, archived: false },
       orderBy: [{ tier: "asc" }, { name: "asc" }],
     }),
   ]);
+  const poolItems = rewardItems.filter((item) => item.inGachaPool);
 
   return NextResponse.json({
     fate: currency?.fate ?? 0,
@@ -29,7 +30,9 @@ export async function GET() {
     totalPulls: user?.totalPulls ?? 0,
     recent,
     pool: poolItems,
-    softPityAt: 30,
-    hardPityAt: 80,
+    rewards: rewardItems,
+    fourStarPityAt: 10,
+    softPityAt: 74,
+    hardPityAt: 90,
   });
 }

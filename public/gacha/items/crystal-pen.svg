@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Crystal Pen</title>
+  <desc id="desc">Original fantasy anime-style crystal pen reward icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="25" y1="20" x2="231" y2="232">
+      <stop stop-color="#f9eeff"/>
+      <stop offset=".48" stop-color="#b18de6"/>
+      <stop offset="1" stop-color="#384068"/>
+    </linearGradient>
+    <linearGradient id="pen" x1="66" y1="181" x2="180" y2="67">
+      <stop stop-color="#3f5790"/>
+      <stop offset=".48" stop-color="#d8c6ff"/>
+      <stop offset="1" stop-color="#fff8c3"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="6" flood-color="#251d40" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path d="M72 173l93-93 22 22-93 93-38 16z" fill="url(#pen)" stroke="#6b4a8f" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M154 75l18-18 32 32-18 18z" fill="#fff2a8" stroke="#7c5d25" stroke-width="5"/>
+    <path d="M82 165l20 20-21 9-9-9z" fill="#fff9df" stroke="#6b4a8f" stroke-width="4"/>
+    <path d="M97 148l53-53" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+    <path d="M58 209c31 7 62 4 92-9" fill="none" stroke="#fff0b9" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g fill="#fff4ba">
+    <path d="M62 60l4 12 12 4-12 4-4 12-4-12-12-4 12-4z"/>
+    <path d="M198 42l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
+    <path d="M204 149l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/>
+  </g>
+</svg>

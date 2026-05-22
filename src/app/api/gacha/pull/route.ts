@@ -4,16 +4,16 @@ import { getCurrentUserId } from "@/lib/user";
 import { GachaPullSchema } from "@/lib/validators";
 
 /**
- * Gacha pull — per design doc §4.5.
+ * Gacha pull — limited-banner style wish rules with original rewards.
  * Cost: 1 Fate per pull, 10 Fate for 10x.
  * Base rates (no pity):
- *   Common      72%
- *   Rare        22%
- *   Epic         5%
- *   Legendary    1%
+ *   Common / 3-star       94.3%
+ *   Rare+Epic / 4-star     5.1%
+ *   Legendary / 5-star     0.6%
  * Pity:
- *   Soft pity at 30 since last Rare+ → guaranteed Rare or above
- *   Hard pity at 80 since last Epic+ → guaranteed Epic or above
+ *   10 pulls since last 4-star+ → guaranteed 4-star or above
+ *   74 pulls since last 5-star → rising 5-star rate
+ *   90 pulls since last 5-star → guaranteed 5-star
  * Pool selection: weighted random within tier, restricted to user's
  * RewardItems where inGachaPool=true.
  *
@@ -21,29 +21,36 @@ import { GachaPullSchema } from "@/lib/validators";
  * as a RewardRedemption (source="gacha") so the user "owns" the prize.
  */
 
-const SOFT_PITY = 30;
-const HARD_PITY = 80;
+const FOUR_STAR_RATE = 0.051;
+const FIVE_STAR_RATE = 0.006;
+const FOUR_STAR_PITY = 10;
+const FIVE_STAR_SOFT_PITY = 74;
+const FIVE_STAR_HARD_PITY = 90;
 
 type Tier = "common" | "rare" | "epic" | "legendary";
 
-function rollTier(pullsSinceRare: number, pullsSinceEpic: number): Tier {
-  // Hard pity: epic+ guaranteed
-  if (pullsSinceEpic + 1 >= HARD_PITY) {
-    const r = Math.random();
-    return r < 0.85 ? "epic" : "legendary";
-  }
-  // Soft pity: rare+ guaranteed
-  if (pullsSinceRare + 1 >= SOFT_PITY) {
-    const r = Math.random();
-    if (r < 0.85) return "rare";
-    if (r < 0.98) return "epic";
+function rollFourStarTier(): Tier {
+  return Math.random() < 0.18 ? "epic" : "rare";
+}
+
+function currentFiveStarRate(pullsSinceFiveStar: number): number {
+  const nextPull = pullsSinceFiveStar + 1;
+  if (nextPull >= FIVE_STAR_HARD_PITY) return 1;
+  if (nextPull < FIVE_STAR_SOFT_PITY) return FIVE_STAR_RATE;
+  return Math.min(1, FIVE_STAR_RATE + (nextPull - FIVE_STAR_SOFT_PITY + 1) * 0.06);
+}
+
+function rollTier(pullsSinceFourStar: number, pullsSinceFiveStar: number): Tier {
+  if (Math.random() < currentFiveStarRate(pullsSinceFiveStar)) {
     return "legendary";
   }
-  const r = Math.random();
-  if (r < 0.72) return "common";
-  if (r < 0.94) return "rare";
-  if (r < 0.99) return "epic";
-  return "legendary";
+
+  if (pullsSinceFourStar + 1 >= FOUR_STAR_PITY) {
+    return rollFourStarTier();
+  }
+
+  if (Math.random() < FOUR_STAR_RATE) return rollFourStarTier();
+  return "common";
 }
 
 export async function POST(req: Request) {
@@ -77,15 +84,18 @@ export async function POST(req: Request) {
     legendary: poolItems.filter((p) => p.tier === "legendary"),
   };
 
-  // Fallback: if a tier is empty, downgrade to next available tier
-  const fallbackOrder: Tier[] = ["legendary", "epic", "rare", "common"];
+  const fallbackByTier: Record<Tier, Tier[]> = {
+    common: ["common", "rare", "epic", "legendary"],
+    rare: ["rare", "epic", "common", "legendary"],
+    epic: ["epic", "rare", "common", "legendary"],
+    legendary: ["legendary", "epic", "rare", "common"],
+  };
 
   function pickFromTier(tier: Tier): (typeof poolItems)[number] | null {
     let items = poolByTier[tier];
     if (items.length === 0) {
-      const idx = fallbackOrder.indexOf(tier);
-      for (let i = idx + 1; i < fallbackOrder.length; i++) {
-        const fb = poolByTier[fallbackOrder[i]];
+      for (const fallbackTier of fallbackByTier[tier]) {
+        const fb = poolByTier[fallbackTier];
         if (fb.length) {
           items = fb;
           break;
@@ -120,18 +130,26 @@ export async function POST(req: Request) {
     const reward = pickFromTier(tier);
 
     let pity: "soft" | "hard" | null = null;
-    if (beforeSinceEpic + 1 >= HARD_PITY) pity = "hard";
-    else if (beforeSinceRare + 1 >= SOFT_PITY) pity = "soft";
+    if (tier === "legendary" && beforeSinceEpic + 1 >= FIVE_STAR_HARD_PITY) {
+      pity = "hard";
+    } else if (
+      tier === "legendary" &&
+      beforeSinceEpic + 1 >= FIVE_STAR_SOFT_PITY
+    ) {
+      pity = "soft";
+    } else if (tier !== "common" && beforeSinceRare + 1 >= FOUR_STAR_PITY) {
+      pity = "soft";
+    }
 
     // Update counters
     if (tier === "common") {
       pullsSinceRare += 1;
       pullsSinceEpic += 1;
-    } else if (tier === "rare") {
+    } else if (tier === "rare" || tier === "epic") {
       pullsSinceRare = 0;
       pullsSinceEpic += 1;
     } else {
-      // epic / legendary
+      // legendary
       pullsSinceRare = 0;
       pullsSinceEpic = 0;
     }

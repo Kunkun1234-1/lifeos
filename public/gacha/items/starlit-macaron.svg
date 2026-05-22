@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Starlit Macaron</title>
+  <desc id="desc">Original fantasy anime-style dessert reward icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="23" y1="23" x2="229" y2="229">
+      <stop stop-color="#fff4d6"/>
+      <stop offset=".52" stop-color="#f7b6c8"/>
+      <stop offset="1" stop-color="#6b83b7"/>
+    </linearGradient>
+    <linearGradient id="cream" x1="62" y1="103" x2="193" y2="181">
+      <stop stop-color="#fff8ec"/>
+      <stop offset="1" stop-color="#ffd6e2"/>
+    </linearGradient>
+    <filter id="s" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="9" stdDeviation="6" flood-color="#22345a" flood-opacity=".3"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <path d="M32 205c45-14 148-14 193 0" fill="none" stroke="#fff8d6" stroke-width="3" opacity=".5"/>
+  <g filter="url(#s)">
+    <path d="M63 129c10-35 36-55 66-55s57 20 66 55c-32 17-97 17-132 0z" fill="#ffe27f" stroke="#8d6b30" stroke-width="5"/>
+    <path d="M62 131c25 20 105 21 134 0 0 25-30 47-67 47s-67-22-67-47z" fill="#f59db5" stroke="#8d4d6a" stroke-width="5"/>
+    <path d="M70 137c24 10 91 11 117 0" fill="none" stroke="url(#cream)" stroke-width="11" stroke-linecap="round"/>
+    <path d="M93 105c7-7 17-11 29-12" fill="none" stroke="#fff5c9" stroke-width="7" stroke-linecap="round" opacity=".95"/>
+    <path d="M146 160c15-3 26-10 34-20" fill="none" stroke="#ffcedb" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <g fill="#fff9bf">
+    <path d="M50 77l4 12 12 4-12 4-4 12-4-12-12-4 12-4z"/>
+    <path d="M201 85l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
+    <path d="M178 51l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/>
+  </g>
+</svg>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Azure Book</title>
+  <desc id="desc">Original fantasy anime-style book reward icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="24" y1="20" x2="230" y2="234">
+      <stop stop-color="#eafaff"/>
+      <stop offset=".48" stop-color="#6fa8e7"/>
+      <stop offset="1" stop-color="#304465"/>
+    </linearGradient>
+    <linearGradient id="cover" x1="74" y1="47" x2="185" y2="211">
+      <stop stop-color="#62d2ff"/>
+      <stop offset=".54" stop-color="#2f74bd"/>
+      <stop offset="1" stop-color="#243d72"/>
+    </linearGradient>
+    <filter id="shadow" x="-35%" y="-35%" width="170%" height="170%">
+      <feDropShadow dx="0" dy="9" stdDeviation="6" flood-color="#10243f" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path d="M76 48h83c15 0 28 12 28 28v122c0 6-5 10-11 8-24-8-49-8-76 0-13 4-24-6-24-19z" fill="url(#cover)" stroke="#d7b46d" stroke-width="6"/>
+    <path d="M96 54v148" stroke="#1f386a" stroke-width="7" opacity=".5"/>
+    <path d="M109 91l19-15 19 15-19 15z" fill="#fff0a8" stroke="#8d6728" stroke-width="4"/>
+    <path d="M123 106h10v39h-10z" fill="#fff0a8" stroke="#8d6728" stroke-width="3"/>
+    <path d="M114 159h51" stroke="#e8c878" stroke-width="5" stroke-linecap="round"/>
+    <path d="M114 177h43" stroke="#e8c878" stroke-width="4" stroke-linecap="round" opacity=".72"/>
+  </g>
+  <g fill="#fff5b8">
+    <path d="M61 79l4 13 13 4-13 4-4 13-4-13-13-4 13-4z"/>
+    <path d="M199 72l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
+  </g>
+</svg>

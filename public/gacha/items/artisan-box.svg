@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Artisan Box</title>
+  <desc id="desc">Original fantasy anime-style gift box reward icon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="72%">
+      <stop offset="0" stop-color="#fff2c4"/>
+      <stop offset=".47" stop-color="#d29fdc"/>
+      <stop offset="1" stop-color="#3c4269"/>
+    </radialGradient>
+    <linearGradient id="box" x1="67" y1="87" x2="190" y2="205">
+      <stop stop-color="#ffe1f0"/>
+      <stop offset=".52" stop-color="#c068b8"/>
+      <stop offset="1" stop-color="#703f94"/>
+    </linearGradient>
+    <filter id="shadow" x="-35%" y="-35%" width="170%" height="170%">
+      <feDropShadow dx="0" dy="10" stdDeviation="7" flood-color="#22193d" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path d="M58 104h140v33H58z" fill="#fff0a8" stroke="#7f5f24" stroke-width="5"/>
+    <path d="M71 137h114v64H71z" fill="url(#box)" stroke="#7f4d8c" stroke-width="5"/>
+    <path d="M118 104h22v97h-22z" fill="#ffe899" stroke="#7f5f24" stroke-width="4"/>
+    <path d="M128 103c-26-23-53-18-53 4 0 18 32 16 53-4z" fill="#ffeff7" stroke="#7f4d8c" stroke-width="5"/>
+    <path d="M130 103c27-23 54-18 54 4 0 18-33 16-54-4z" fill="#ffeff7" stroke="#7f4d8c" stroke-width="5"/>
+    <path d="M82 157h34M145 157h28" stroke="#ffcaed" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+  </g>
+  <g fill="#fff6bf">
+    <path d="M54 65l4 13 13 4-13 4-4 13-4-13-13-4 13-4z"/>
+    <path d="M203 65l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
+  </g>
+</svg>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Cloud Massage</title>
+  <desc id="desc">Original fantasy anime-style spa reward icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="33" y1="23" x2="224" y2="231">
+      <stop stop-color="#f8fff3"/>
+      <stop offset=".49" stop-color="#8ed1bf"/>
+      <stop offset="1" stop-color="#354e66"/>
+    </linearGradient>
+    <linearGradient id="jade" x1="72" y1="73" x2="183" y2="192">
+      <stop stop-color="#effff8"/>
+      <stop offset=".56" stop-color="#78c8af"/>
+      <stop offset="1" stop-color="#3c8d7c"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#183849" flood-opacity=".34"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <path d="M45 93c34-28 66-25 95 1 26-18 49-14 70 8" fill="none" stroke="#effff8" stroke-width="4" opacity=".72"/>
+  <g filter="url(#shadow)">
+    <path d="M70 148c5-33 32-55 63-55 30 0 53 19 58 47 18 3 30 17 30 34 0 20-17 36-37 36H76c-22 0-40-17-40-38 0-19 14-35 34-24z" fill="#f5fff8" stroke="#4c8a74" stroke-width="5"/>
+    <path d="M87 151c14-20 38-31 64-26 22 4 37 19 42 39" fill="none" stroke="url(#jade)" stroke-width="10" stroke-linecap="round"/>
+    <path d="M92 177h84" stroke="#c4a85c" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="99" cy="86" r="17" fill="url(#jade)" stroke="#2f6f62" stroke-width="4"/>
+    <circle cx="151" cy="76" r="13" fill="#fff0a9" stroke="#926e2d" stroke-width="4"/>
+  </g>
+  <g fill="#fff4ba">
+    <path d="M55 58l4 11 11 4-11 4-4 11-4-11-11-4 11-4z"/>
+    <path d="M207 60l3 8 8 3-8 3-3 8-3-8-8-3 8-3z"/>
+  </g>
+</svg>

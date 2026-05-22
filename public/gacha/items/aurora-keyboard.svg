@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Aurora Keyboard</title>
+  <desc id="desc">Original fantasy anime-style premium device reward icon.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%">
+      <stop offset="0" stop-color="#fff6c4"/>
+      <stop offset=".43" stop-color="#8fc9ff"/>
+      <stop offset="1" stop-color="#202948"/>
+    </radialGradient>
+    <linearGradient id="device" x1="55" y1="82" x2="199" y2="198">
+      <stop stop-color="#f8fbff"/>
+      <stop offset=".5" stop-color="#94b7d6"/>
+      <stop offset="1" stop-color="#41556f"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="80" y1="77" x2="178" y2="141">
+      <stop stop-color="#fff0b4"/>
+      <stop offset=".46" stop-color="#a8efff"/>
+      <stop offset="1" stop-color="#805ed8"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#fff0a8" flood-opacity=".62"/>
+      <feDropShadow dx="0" dy="12" stdDeviation="8" flood-color="#111a33" flood-opacity=".42"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <path d="M43 70c45 33 111-26 169 10" fill="none" stroke="#fff2a8" stroke-width="4" opacity=".72"/>
+  <g filter="url(#glow)">
+    <path d="M75 68h107c9 0 16 7 16 16v65H59V84c0-9 7-16 16-16z" fill="url(#device)" stroke="#d5b35c" stroke-width="5"/>
+    <rect x="75" y="84" width="107" height="50" rx="8" fill="url(#screen)" stroke="#40577e" stroke-width="4"/>
+    <path d="M51 150h154l18 42c2 6-2 12-9 12H43c-7 0-11-6-9-12z" fill="url(#device)" stroke="#d5b35c" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M72 169h112M66 187h125" stroke="#eff7ff" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+    <path d="M118 147h20l7 57h-34z" fill="#dcecff" opacity=".45"/>
+  </g>
+  <g fill="#fff6bf">
+    <path d="M54 44l4 13 13 4-13 4-4 13-4-13-13-4 13-4z"/>
+    <path d="M210 111l4 12 12 4-12 4-4 12-4-12-12-4 12-4z"/>
+  </g>
+</svg>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Glider Ticket</title>
+  <desc id="desc">Original fantasy anime-style free-time ticket icon.</desc>
+  <defs>
+    <linearGradient id="bg" x1="30" y1="20" x2="226" y2="235">
+      <stop stop-color="#d7fbff"/>
+      <stop offset=".54" stop-color="#7bb5e8"/>
+      <stop offset="1" stop-color="#35557f"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="68" y1="62" x2="190" y2="192">
+      <stop stop-color="#fff9e6"/>
+      <stop offset="1" stop-color="#ead7a9"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="7" flood-color="#1e3557" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="url(#bg)"/>
+  <path d="M37 184c55 24 120 23 181-2" fill="none" stroke="#dff8ff" stroke-width="4" opacity=".65"/>
+  <path d="M48 89c30-24 60-27 89-5 25-17 48-15 70 4" fill="none" stroke="#eefaff" stroke-width="3" opacity=".8"/>
+  <g filter="url(#shadow)">
+    <path d="M72 66h99c0 14 10 21 23 21v92c-13 0-23 8-23 21H72c0-13-10-21-23-21V87c13 0 23-7 23-21z" fill="url(#paper)" stroke="#926f2f" stroke-width="5"/>
+    <path d="M83 102c20-23 49-32 87-27-17 29-40 44-69 45l24 22" fill="none" stroke="#3a6b8e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M78 154h91" stroke="#c49b46" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+    <path d="M88 172h67" stroke="#c49b46" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+    <circle cx="184" cy="103" r="11" fill="#f7d879" stroke="#966c24" stroke-width="4"/>
+  </g>
+  <g fill="#fff4ba">
+    <path d="M201 44l4 12 12 4-12 4-4 12-4-12-12-4 12-4z"/>
+    <path d="M50 56l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/>
+  </g>
+</svg>
