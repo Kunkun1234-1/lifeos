@@ -181,18 +181,19 @@ const DIMENSIONS: Dimension[] = [
   { key: "GOLD", cn: "财富", icon: <Coins size={13} />,    color: "var(--attr-gold)" },
 ];
 
-/** Map raw XP → 0-100 score (level*10 + progress*10, capped). */
-function xpToScore(xp: number): number {
-  const { level, progress } = deriveLevel(xp);
-  return Math.min(100, level * 10 + Math.round(progress * 10));
+/** Map raw XP → current-level progress percent, matching module cards. */
+function xpToProgressScore(xp: number): number {
+  const { progress } = deriveLevel(xp);
+  return Math.min(100, Math.max(0, Math.round(progress * 100)));
 }
 
 function StatBar({ dim, xp }: { dim: Dimension; xp: number }) {
-  const value = xpToScore(xp);
+  const { level, xpIntoLevel, xpForNext } = deriveLevel(xp);
+  const value = xpToProgressScore(xp);
   return (
     <Link
       href={`/analytics`}
-      title={`${dim.cn} · ${dim.key} · ${xp} XP — 查看属性分布`}
+      title={`${dim.cn} · ${dim.key} · Lv.${level} ${xpIntoLevel}/${xpForNext} XP — 查看属性分布`}
       className="group flex items-center gap-2 rounded-sm px-1 py-0.5 transition-colors hover:bg-[var(--gold-tint)]"
     >
       <span className="shrink-0" style={{ color: dim.color }}>
@@ -232,7 +233,7 @@ function RadarChart({ xp }: { xp: Record<string, number> }) {
   const maxR = 78;
   const levels = 4;
 
-  const values = axes.map((a) => xpToScore(xp[a.key] ?? 0));
+  const values = axes.map((a) => xpToProgressScore(xp[a.key] ?? 0));
 
   const point = (i: number, r: number) => {
     const { angle } = axes[i];
