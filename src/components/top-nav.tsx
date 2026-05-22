@@ -145,12 +145,16 @@ export function TopNav() {
                 : undefined
             }
           >
-            <AvatarFrame
-              size={32}
-              src={mounted ? (user?.avatarUrl || undefined) : undefined}
-              style={mounted ? (user?.equippedFrame?.style ?? null) : null}
-              alt={mounted ? (user?.name ?? "avatar") : "avatar"}
-            />
+            {mounted && user ? (
+              <AvatarFrame
+                size={32}
+                src={user.avatarUrl || undefined}
+                style={user.equippedFrame?.style ?? null}
+                alt={user.name ?? "avatar"}
+              />
+            ) : (
+              <div className="h-9 w-9 shrink-0 rounded-full border border-[var(--gold)]/70 bg-[var(--gold-tint)]" />
+            )}
             <div className="hidden text-left leading-tight lg:block">
               <div className="flex items-baseline gap-1.5">
                 <span className="font-display text-[13px] font-semibold text-[var(--fg-strong)]">
