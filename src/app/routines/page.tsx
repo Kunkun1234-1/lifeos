@@ -190,6 +190,7 @@ function RoutineRow({
   routine: {
     id: string;
     title: string;
+    notes: string | null;
     daysOfWeek: string;
     xpReward: number;
     goldReward: number;
@@ -230,6 +231,11 @@ function RoutineRow({
             <Flame size={10} /> {streakEmoji(routine.streakCurrent)} {routine.streakCurrent}
           </Badge>
         </div>
+        {routine.notes?.trim() && (
+          <div className="mt-1 truncate text-xs text-[var(--fg-muted)]">
+            {routine.notes}
+          </div>
+        )}
         <div className="text-xs text-[var(--fg-subtle)]">
           {routine.area ? `${routine.area.icon} ${routine.area.name} · ` : ""}
           {days.map((d) => DAY_LABELS[d]).join(" ")} · Best {routine.streakBest}

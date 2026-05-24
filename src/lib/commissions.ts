@@ -6,6 +6,7 @@ export type CommissionItem = {
   sourceType: "task" | "habit" | "routine";
   sourceId: string;
   title: string;
+  notes?: string | null;
   done: boolean;
   xp: number;
   gold: number;
@@ -85,6 +86,7 @@ async function pickTodayItems(userId: string, date: string): Promise<CommissionI
       sourceType: "task",
       sourceId: t.id,
       title: t.title,
+      notes: t.notes,
       done: false,
       xp: t.xpReward,
       gold: t.goldReward,
@@ -101,6 +103,7 @@ async function pickTodayItems(userId: string, date: string): Promise<CommissionI
       sourceType: "routine",
       sourceId: r.id,
       title: r.title,
+      notes: r.notes,
       done: false,
       xp: r.xpReward,
       gold: r.goldReward,
@@ -113,6 +116,7 @@ async function pickTodayItems(userId: string, date: string): Promise<CommissionI
       sourceType: "habit",
       sourceId: h.id,
       title: h.title,
+      notes: h.notes,
       done: false,
       xp: h.xpPerTick,
       gold: h.goldPerTick,
@@ -140,6 +144,7 @@ async function pickTodayItems(userId: string, date: string): Promise<CommissionI
         sourceType: "task",
         sourceId: t.id,
         title: t.title,
+        notes: t.notes,
         done: false,
         xp: t.xpReward,
         gold: t.goldReward,
@@ -175,4 +180,62 @@ export function parseItems(raw: string): CommissionItem[] {
   } catch {
     return [];
   }
+}
+
+function isCommissionSourceType(sourceType: unknown): sourceType is CommissionItem["sourceType"] {
+  return sourceType === "task" || sourceType === "habit" || sourceType === "routine";
+}
+
+export async function hydrateCommissionItems(
+  items: CommissionItem[],
+  userId: string,
+): Promise<CommissionItem[]> {
+  const idsByType = items.reduce(
+    (acc, item) => {
+      if (isCommissionSourceType(item.sourceType) && typeof item.sourceId === "string") {
+        acc[item.sourceType].add(item.sourceId);
+      }
+      return acc;
+    },
+    {
+      task: new Set<string>(),
+      habit: new Set<string>(),
+      routine: new Set<string>(),
+    },
+  );
+
+  const [tasks, habits, routines] = await Promise.all([
+    idsByType.task.size
+      ? prisma.task.findMany({
+          where: { userId, id: { in: [...idsByType.task] } },
+          select: { id: true, notes: true },
+        })
+      : [],
+    idsByType.habit.size
+      ? prisma.habit.findMany({
+          where: { userId, id: { in: [...idsByType.habit] } },
+          select: { id: true, notes: true },
+        })
+      : [],
+    idsByType.routine.size
+      ? prisma.routine.findMany({
+          where: { userId, id: { in: [...idsByType.routine] } },
+          select: { id: true, notes: true },
+        })
+      : [],
+  ]);
+
+  const notesBySource = new Map<string, string | null>();
+  tasks.forEach((task) => notesBySource.set(`task:${task.id}`, task.notes));
+  habits.forEach((habit) => notesBySource.set(`habit:${habit.id}`, habit.notes));
+  routines.forEach((routine) => notesBySource.set(`routine:${routine.id}`, routine.notes));
+
+  return items.map((item) => {
+    if (!isCommissionSourceType(item.sourceType) || typeof item.sourceId !== "string") {
+      return item;
+    }
+    const key = `${item.sourceType}:${item.sourceId}`;
+    if (!notesBySource.has(key)) return item;
+    return { ...item, notes: notesBySource.get(key) ?? null };
+  });
 }

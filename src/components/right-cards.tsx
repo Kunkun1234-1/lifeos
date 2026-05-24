@@ -37,6 +37,7 @@ export function ScheduleCard() {
   const scheduleItems: Array<{
     id: string;
     title: string;
+    notes?: string | null;
     time: string;
     tag: string;
     tagColor: string;
@@ -53,6 +54,7 @@ export function ScheduleCard() {
     scheduleItems.push({
       id: c.id,
       title: c.title,
+      notes: c.notes,
       time: TIMES[i] ?? "",
       tag: `+${c.xp}xp`,
       tagColor: "var(--attr-int)",
@@ -69,6 +71,7 @@ export function ScheduleCard() {
         scheduleItems.push({
           id: r.id,
           title: r.title,
+          notes: r.notes,
           time: TIMES[scheduleItems.length + i] ?? "",
           tag: `+${r.xpReward}xp`,
           tagColor: r.area?.attributeKey ? colorFor(r.area.attributeKey) : "var(--attr-int)",
@@ -106,6 +109,11 @@ export function ScheduleCard() {
                 <div className={`font-display text-[12px] text-[var(--fg-strong)] ${it.done ? "line-through" : ""}`}>
                   {it.title}
                 </div>
+                {it.notes?.trim() && (
+                  <div className="mt-0.5 truncate text-[11px] leading-tight text-[var(--fg-muted)]">
+                    {it.notes}
+                  </div>
+                )}
               </div>
               <span
                 className="font-display-en text-[10px] font-bold"

@@ -615,6 +615,11 @@ function RoutineItem({ routine }: { routine: RoutineDTO }) {
       )}
       <div className="min-w-0 flex-1">
         <div className="truncate font-display text-[13px] text-[var(--fg-strong)]">{routine.title}</div>
+        {routine.notes?.trim() && (
+          <div className="mt-1 truncate text-[11px] text-[var(--fg-muted)]">
+            {routine.notes}
+          </div>
+        )}
         <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[var(--fg-muted)]">
           <span>连击 {routine.streakCurrent}</span>
           <span>最佳 {routine.streakBest}</span>

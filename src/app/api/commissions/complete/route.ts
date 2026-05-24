@@ -2,7 +2,12 @@ import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
-import { getOrGenerateTodayCommissions, parseItems, type CommissionItem } from "@/lib/commissions";
+import {
+  getOrGenerateTodayCommissions,
+  hydrateCommissionItems,
+  parseItems,
+  type CommissionItem,
+} from "@/lib/commissions";
 import { grantReward } from "@/lib/rewards";
 import { todayYMD, addDaysYMD } from "@/lib/date";
 import { safeCheck } from "@/lib/achievements";
@@ -22,7 +27,7 @@ export async function POST(req: Request) {
   const { itemId } = BodySchema.parse(body);
 
   const row = await getOrGenerateTodayCommissions(userId);
-  const items: CommissionItem[] = parseItems(row.items);
+  const items: CommissionItem[] = await hydrateCommissionItems(parseItems(row.items), userId);
   const idx = items.findIndex((it) => it.id === itemId);
   if (idx === -1) return NextResponse.json({ error: "Item not found" }, { status: 404 });
   if (items[idx].done) return NextResponse.json({ error: "Already done" }, { status: 400 });

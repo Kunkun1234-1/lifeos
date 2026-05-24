@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
-import { getOrGenerateTodayCommissions, parseItems } from "@/lib/commissions";
+import { getOrGenerateTodayCommissions, hydrateCommissionItems, parseItems } from "@/lib/commissions";
 
 export async function GET() {
   const userId = await getCurrentUserId();
   const row = await getOrGenerateTodayCommissions(userId);
-  const items = parseItems(row.items);
+  const items = await hydrateCommissionItems(parseItems(row.items), userId);
   return NextResponse.json({
     id: row.id,
     date: row.date,
@@ -34,10 +34,11 @@ export async function POST() {
     await prisma.dailyCommission.delete({ where: { id: existing.id } });
   }
   const row = await getOrGenerateTodayCommissions(userId);
+  const items = await hydrateCommissionItems(parseItems(row.items), userId);
   return NextResponse.json({
     id: row.id,
     date: row.date,
-    items: parseItems(row.items),
+    items,
     completedCount: row.completedCount,
     bonusClaimed: row.bonusClaimed,
   });
