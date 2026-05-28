@@ -7,6 +7,14 @@ const cookieJar = new Map();
 const serverLogs = [];
 let serverProcess = null;
 
+function timeoutSignal(timeoutMs) {
+  if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(timeoutMs);
+
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
 function splitSetCookie(value) {
   return value ? value.split(/,(?=\s*[^;,=\s]+=[^;,]+)/g).map((v) => v.trim()) : [];
 }
@@ -39,6 +47,7 @@ async function request(path, init = {}) {
     ...init,
     headers,
     redirect: "manual",
+    signal: init.signal || timeoutSignal(15_000),
   });
   setCookiesFrom(res.headers);
   return res;
@@ -59,7 +68,10 @@ async function waitForServer() {
 
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${baseUrl}/login`, { redirect: "manual" });
+      const res = await fetch(`${baseUrl}/login`, {
+        redirect: "manual",
+        signal: timeoutSignal(5_000),
+      });
       if (res.status < 500) return;
       lastError = new Error(`HTTP ${res.status}`);
     } catch (error) {
@@ -78,6 +90,7 @@ function startServer() {
     {
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, PORT: port },
+      detached: process.platform !== "win32",
     },
   );
 
@@ -88,6 +101,22 @@ function startServer() {
 
   serverProcess.stdout.on("data", remember);
   serverProcess.stderr.on("data", remember);
+}
+
+async function stopServer() {
+  if (!serverProcess) return;
+
+  try {
+    if (process.platform === "win32") {
+      serverProcess.kill("SIGTERM");
+    } else if (serverProcess.pid) {
+      process.kill(-serverProcess.pid, "SIGTERM");
+    }
+  } catch {
+    serverProcess.kill("SIGTERM");
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
 async function signInDev() {
@@ -181,8 +210,9 @@ async function main() {
     }
     process.exitCode = 1;
   } finally {
-    if (serverProcess) serverProcess.kill("SIGTERM");
+    await stopServer();
   }
 }
 
 await main();
+process.exit(process.exitCode ?? 0);
