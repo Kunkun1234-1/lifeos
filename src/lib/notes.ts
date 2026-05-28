@@ -1,5 +1,8 @@
 import type { NoteDTO, NoteKind } from "./types";
 
+export const NOTE_TITLE_MAX_LENGTH = 200;
+export const NOTE_BODY_MAX_LENGTH = 100_000;
+
 type DBNote = {
   id: string;
   kind: string;
@@ -20,6 +23,47 @@ type DBNote = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+type NoteTitleInput = {
+  title?: string | null;
+  body?: string | null;
+  sourceTitle?: string | null;
+  sourceUrl?: string | null;
+};
+
+function truncateTitle(value: string): string {
+  if (value.length <= NOTE_TITLE_MAX_LENGTH) return value;
+  return `${value.slice(0, NOTE_TITLE_MAX_LENGTH - 3)}...`;
+}
+
+function firstBodyLine(body?: string | null): string {
+  return (
+    body
+      ?.split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? ""
+  );
+}
+
+export function hasNoteWritableContent(input: NoteTitleInput): boolean {
+  return Boolean(
+    input.title?.trim() ||
+      input.body?.trim() ||
+      input.sourceTitle?.trim() ||
+      input.sourceUrl?.trim()
+  );
+}
+
+export function normalizeNoteTitle(input: NoteTitleInput): string {
+  const candidate =
+    input.title?.trim() ||
+    input.sourceTitle?.trim() ||
+    firstBodyLine(input.body) ||
+    input.sourceUrl?.trim() ||
+    "未命名笔记";
+
+  return truncateTitle(candidate);
+}
 
 /**
  * Tag storage uses leading + trailing commas so a SQL `LIKE '%,foo,%'` query

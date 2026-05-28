@@ -4,14 +4,29 @@ import { getCurrentUserId } from "@/lib/user";
 import { NoteCreateSchema } from "@/lib/validators";
 import { grantReward } from "@/lib/rewards";
 import { safeCheck } from "@/lib/achievements";
-import { serializeNote, tagsToString, tagFilterPattern } from "@/lib/notes";
+import {
+  hasNoteWritableContent,
+  normalizeNoteTitle,
+  serializeNote,
+  tagsToString,
+  tagFilterPattern,
+} from "@/lib/notes";
 import type { Prisma } from "@prisma/client";
+import type { ZodError } from "zod";
 
 const NOTE_INCLUDE = {
   area: { select: { id: true, name: true, icon: true, color: true } },
   project: { select: { id: true, title: true } },
   goal: { select: { id: true, objective: true } },
 };
+
+function firstValidationMessage(error: ZodError) {
+  const { fieldErrors } = error.flatten();
+  for (const [field, messages] of Object.entries(fieldErrors)) {
+    if (messages?.[0]) return `${field}: ${messages[0]}`;
+  }
+  return "Invalid body";
+}
 
 export async function GET(req: Request) {
   const userId = await getCurrentUserId();
@@ -54,11 +69,18 @@ export async function POST(req: Request) {
   const parsed = NoteCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid body", details: parsed.error.flatten() },
+      { error: firstValidationMessage(parsed.error), details: parsed.error.flatten() },
       { status: 400 }
     );
   }
   const data = parsed.data;
+
+  if (!hasNoteWritableContent(data)) {
+    return NextResponse.json(
+      { error: "请填写标题、正文或来源信息后再保存" },
+      { status: 400 }
+    );
+  }
 
   // Verify ownership of any cross-link IDs
   const ownership: Promise<unknown>[] = [];
@@ -89,7 +111,7 @@ export async function POST(req: Request) {
     data: {
       userId,
       kind: data.kind,
-      title: data.title,
+      title: normalizeNoteTitle(data),
       body: data.body,
       sourceUrl: data.sourceUrl ?? null,
       sourceTitle: data.sourceTitle ?? null,

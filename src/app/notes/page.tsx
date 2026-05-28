@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
 import { AreaSelect } from "@/components/area-select";
+import { hasNoteWritableContent, normalizeNoteTitle } from "@/lib/notes";
 import {
   useNotes,
   useCreateNote,
@@ -245,11 +246,17 @@ function NoteForm({ initial, onDone }: { initial: NoteDTO | null; onDone: () => 
   const [projectId, setProjectId] = useState<string | null>(initial?.projectId ?? null);
   const [goalId, setGoalId] = useState<string | null>(initial?.goalId ?? null);
   const [pinned, setPinned] = useState(initial?.pinned ?? false);
+  const [error, setError] = useState<string | null>(null);
 
   const editing = !!initial;
+  const hasContent = hasNoteWritableContent({ title, body, sourceTitle, sourceUrl });
 
   const submit = async () => {
-    if (!title.trim()) return;
+    if (!hasContent) {
+      setError("请先填写标题、正文或来源信息");
+      return;
+    }
+    setError(null);
     const tags = tagsInput
       .split(",")
       .map((t) => t.trim())
@@ -257,7 +264,7 @@ function NoteForm({ initial, onDone }: { initial: NoteDTO | null; onDone: () => 
       .slice(0, 12);
     const payload = {
       kind,
-      title: title.trim(),
+      title: normalizeNoteTitle({ title, body, sourceTitle, sourceUrl }),
       body: body.trim(),
       sourceUrl: sourceUrl.trim() || null,
       sourceTitle: sourceTitle.trim() || null,
@@ -268,12 +275,16 @@ function NoteForm({ initial, onDone }: { initial: NoteDTO | null; onDone: () => 
       goalId,
       pinned,
     };
-    if (editing && initial) {
-      await update.mutateAsync({ id: initial.id, body: payload });
-    } else {
-      await create.mutateAsync(payload);
+    try {
+      if (editing && initial) {
+        await update.mutateAsync({ id: initial.id, body: payload });
+      } else {
+        await create.mutateAsync(payload);
+      }
+      onDone();
+    } catch (e) {
+      setError((e as Error).message || "保存失败，请稍后重试");
     }
-    onDone();
   };
 
   return (
@@ -378,7 +389,7 @@ function NoteForm({ initial, onDone }: { initial: NoteDTO | null; onDone: () => 
             </Select>
           </div>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[var(--fg-muted)]">
             <input
               type="checkbox"
@@ -388,13 +399,18 @@ function NoteForm({ initial, onDone }: { initial: NoteDTO | null; onDone: () => 
             />
             <Pin size={12} /> 置顶
           </label>
+          {error && (
+            <div aria-live="polite" className="min-w-0 flex-1 text-right text-[12px] text-[var(--danger)]">
+              {error}
+            </div>
+          )}
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onDone}>
               Cancel
             </Button>
             <Button
               onClick={submit}
-              disabled={create.isPending || update.isPending || !title.trim()}
+              disabled={create.isPending || update.isPending || !hasContent}
             >
               {create.isPending || update.isPending
                 ? "Saving…"

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NOTE_BODY_MAX_LENGTH, NOTE_TITLE_MAX_LENGTH } from "./notes";
 
 // ---------- Task ----------
 export const TaskCreateSchema = z.object({
@@ -299,8 +300,8 @@ const optionalUrl = z.preprocess(
 
 export const NoteCreateSchema = z.object({
   kind: z.enum(NOTE_KINDS).default("note"),
-  title: z.string().min(1).max(200),
-  body: z.string().max(10_000).default(""),
+  title: z.string().max(NOTE_TITLE_MAX_LENGTH).optional().nullable(),
+  body: z.string().max(NOTE_BODY_MAX_LENGTH).default(""),
   sourceUrl: optionalUrl,
   sourceTitle: z.string().max(200).optional().nullable(),
   author: z.string().max(120).optional().nullable(),

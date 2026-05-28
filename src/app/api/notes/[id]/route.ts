@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { NoteUpdateSchema } from "@/lib/validators";
-import { serializeNote, tagsToString } from "@/lib/notes";
+import {
+  hasNoteWritableContent,
+  normalizeNoteTitle,
+  serializeNote,
+  tagsToString,
+} from "@/lib/notes";
+import type { ZodError } from "zod";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,6 +18,14 @@ const NOTE_INCLUDE = {
   goal: { select: { id: true, objective: true } },
 };
 
+function firstValidationMessage(error: ZodError) {
+  const { fieldErrors } = error.flatten();
+  for (const [field, messages] of Object.entries(fieldErrors)) {
+    if (messages?.[0]) return `${field}: ${messages[0]}`;
+  }
+  return "Invalid body";
+}
+
 export async function PATCH(req: Request, { params }: Params) {
   const userId = await getCurrentUserId();
   const { id } = await params;
@@ -19,7 +33,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const parsed = NoteUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid body", details: parsed.error.flatten() },
+      { error: firstValidationMessage(parsed.error), details: parsed.error.flatten() },
       { status: 400 }
     );
   }
@@ -27,6 +41,24 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const existing = await prisma.note.findFirst({ where: { id, userId } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const nextContent = {
+    title: data.title === undefined ? existing.title : data.title,
+    body: data.body === undefined ? existing.body : data.body,
+    sourceTitle: data.sourceTitle === undefined ? existing.sourceTitle : data.sourceTitle,
+    sourceUrl: data.sourceUrl === undefined ? existing.sourceUrl : data.sourceUrl,
+  };
+  const updatesContent =
+    data.title !== undefined ||
+    data.body !== undefined ||
+    data.sourceTitle !== undefined ||
+    data.sourceUrl !== undefined;
+  if (updatesContent && !hasNoteWritableContent(nextContent)) {
+    return NextResponse.json(
+      { error: "请填写标题、正文或来源信息后再保存" },
+      { status: 400 }
+    );
+  }
 
   // Verify ownership of any newly-linked cross-link IDs
   const ownership: Promise<unknown>[] = [];
@@ -57,7 +89,7 @@ export async function PATCH(req: Request, { params }: Params) {
     where: { id },
     data: {
       kind: data.kind,
-      title: data.title,
+      title: data.title === undefined ? undefined : normalizeNoteTitle(nextContent),
       body: data.body,
       sourceUrl: data.sourceUrl,
       sourceTitle: data.sourceTitle,
