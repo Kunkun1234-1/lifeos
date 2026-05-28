@@ -10,7 +10,34 @@ Path C from the deployment options. Total wall-clock: ~30 min if you've used Ver
 - Google Cloud Console account (for OAuth)
 - DeepSeek API key — get a fresh one at https://platform.deepseek.com (rotate the one in `.env`!)
 
-## 1. Push to GitHub
+## Release gate: test before production
+
+Production must not be updated directly from an unverified local change.
+
+This repository disables automatic Vercel deployments for `main` in `vercel.json`.
+Use this flow for every production change:
+
+1. Work on a feature branch, not directly on `main`.
+2. Point local `.env` at a reachable staging/local Postgres database.
+   The smoke test uses Dev Login, which reads/writes the database.
+3. Run the deployment gate:
+
+   ```bash
+   npm run verify:predeploy
+   ```
+
+   This runs lint, typecheck, production build, starts a local dev server,
+   signs in with Dev Login, creates a body-only Knowledge Base note, verifies
+   it can be found through `/api/notes`, then deletes the test note.
+
+4. Push the branch and inspect the Vercel Preview deployment.
+5. Only after local + preview verification passes, manually promote/deploy from
+   Vercel. Do not rely on a direct `main` push as the test step.
+
+## 1. Initial GitHub setup
+
+For normal production changes after initial setup, use the Release gate above
+instead of pushing directly to `main`.
 
 ```bash
 git add -A && git commit -m "Production-ready: auth + Postgres + Blob"
