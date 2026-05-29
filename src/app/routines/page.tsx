@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Check, Trash2, Flame } from "lucide-react";
+import { Plus, Check, Trash2, Flame, Pencil } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label } from "@/components/ui/input";
@@ -11,14 +11,17 @@ import { AreaSelect } from "@/components/area-select";
 import {
   useRoutines,
   useCreateRoutine,
+  useUpdateRoutine,
   useCompleteRoutine,
   useDeleteRoutine,
 } from "@/hooks/queries";
+import type { RoutineDTO } from "@/lib/types";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function RoutinesPage() {
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<RoutineDTO | null>(null);
   const { data: routines, isLoading } = useRoutines();
 
   return (
@@ -30,7 +33,12 @@ export default function RoutinesPage() {
             Daily / weekly recurring — tracks streaks.
           </p>
         </div>
-        <Button onClick={() => setShowForm((v) => !v)}>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setShowForm((v) => !v);
+          }}
+        >
           <Plus size={16} />
           {showForm ? "Close" : "New Routine"}
         </Button>
@@ -43,7 +51,14 @@ export default function RoutinesPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
           >
-            <RoutineForm onDone={() => setShowForm(false)} />
+            <RoutineForm
+              key={editing?.id ?? "new"}
+              initial={editing}
+              onDone={() => {
+                setShowForm(false);
+                setEditing(null);
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -59,7 +74,14 @@ export default function RoutinesPage() {
           ) : (
             <ul className="flex flex-col gap-2">
               {routines!.map((r) => (
-                <RoutineRow key={r.id} routine={r} />
+                <RoutineRow
+                  key={r.id}
+                  routine={r}
+                  onEdit={() => {
+                    setEditing(r);
+                    setShowForm(true);
+                  }}
+                />
               ))}
             </ul>
           )}
@@ -69,37 +91,59 @@ export default function RoutinesPage() {
   );
 }
 
-function RoutineForm({ onDone }: { onDone: () => void }) {
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [areaId, setAreaId] = useState<string | null>(null);
-  const [days, setDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
-  const [xpReward, setXpReward] = useState(15);
-  const [goldReward, setGoldReward] = useState(8);
+function parseRoutineDays(raw?: string) {
+  try {
+    const parsed = JSON.parse(raw ?? "");
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+    ) {
+      return parsed as number[];
+    }
+  } catch {}
+  return [0, 1, 2, 3, 4, 5, 6];
+}
+
+function RoutineForm({ initial, onDone }: { initial: RoutineDTO | null; onDone: () => void }) {
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [areaId, setAreaId] = useState<string | null>(initial?.areaId ?? null);
+  const [days, setDays] = useState<number[]>(parseRoutineDays(initial?.daysOfWeek));
+  const [xpReward, setXpReward] = useState(initial?.xpReward ?? 15);
+  const [goldReward, setGoldReward] = useState(initial?.goldReward ?? 8);
 
   const create = useCreateRoutine();
+  const update = useUpdateRoutine();
+  const editing = Boolean(initial);
 
   const toggleDay = (d: number) =>
     setDays((xs) => (xs.includes(d) ? xs.filter((x) => x !== d) : [...xs, d].sort()));
 
   const submit = async () => {
     if (!title.trim() || days.length === 0) return;
-    await create.mutateAsync({
+    const payload = {
       title: title.trim(),
       notes: notes.trim() || null,
       areaId,
       daysOfWeek: days,
       xpReward,
       goldReward,
-    });
+    };
+    if (initial) {
+      await update.mutateAsync({ id: initial.id, body: payload });
+    } else {
+      await create.mutateAsync(payload);
+    }
     onDone();
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Routine</CardTitle>
-        <CardDescription>A recurring daily beat — builds streaks.</CardDescription>
+        <CardTitle>{editing ? "Edit Routine" : "New Routine"}</CardTitle>
+        <CardDescription>
+          {editing ? "Update schedule, rewards, notes, and life area." : "A recurring daily beat — builds streaks."}
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid gap-1.5">
@@ -166,9 +210,9 @@ function RoutineForm({ onDone }: { onDone: () => void }) {
           </Button>
           <Button
             onClick={submit}
-            disabled={create.isPending || !title.trim() || days.length === 0}
+            disabled={create.isPending || update.isPending || !title.trim() || days.length === 0}
           >
-            {create.isPending ? "Saving…" : "Create"}
+            {create.isPending || update.isPending ? "Saving…" : editing ? "Save" : "Create"}
           </Button>
         </div>
       </CardContent>
@@ -186,26 +230,14 @@ function streakEmoji(streak: number) {
 
 function RoutineRow({
   routine,
+  onEdit,
 }: {
-  routine: {
-    id: string;
-    title: string;
-    notes: string | null;
-    daysOfWeek: string;
-    xpReward: number;
-    goldReward: number;
-    streakCurrent: number;
-    streakBest: number;
-    completedToday: boolean;
-    area: { name: string; icon: string } | null;
-  };
+  routine: RoutineDTO;
+  onEdit: () => void;
 }) {
   const complete = useCompleteRoutine();
   const remove = useDeleteRoutine();
-  let days: number[] = [0, 1, 2, 3, 4, 5, 6];
-  try {
-    days = JSON.parse(routine.daysOfWeek) as number[];
-  } catch {}
+  const days = parseRoutineDays(routine.daysOfWeek);
 
   return (
     <li
@@ -245,6 +277,9 @@ function RoutineRow({
         <span className="font-mono text-[var(--accent-glow)]">+{routine.xpReward}xp</span>
         <span className="font-mono text-[var(--attr-gold)]">+{routine.goldReward}⭐</span>
       </div>
+      <Button size="icon" variant="ghost" onClick={onEdit} title="Edit">
+        <Pencil size={14} />
+      </Button>
       <Button
         size="icon"
         variant="ghost"

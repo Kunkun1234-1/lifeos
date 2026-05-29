@@ -196,12 +196,88 @@ async function smokeNotes() {
   console.log(`Notes smoke passed: body-only note saved as "${firstLine}"`);
 }
 
+async function smokeRoutines() {
+  const stamp = new Date().toISOString();
+  const originalTitle = `Smoke routine ${stamp}`;
+  const updatedTitle = `Smoke routine updated ${stamp}`;
+
+  const createRes = await request("/api/routines", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: originalTitle,
+      notes: "Routine smoke create",
+      daysOfWeek: [1, 3, 5],
+      xpReward: 11,
+      goldReward: 7,
+    }),
+  });
+
+  if (createRes.status !== 201) {
+    throw new Error(`Create routine failed: ${createRes.status} ${JSON.stringify(await readResponse(createRes))}`);
+  }
+
+  const created = await readResponse(createRes);
+  if (!created?.id || created.title !== originalTitle) {
+    throw new Error(`Unexpected created routine payload: ${JSON.stringify(created)}`);
+  }
+
+  const updateRes = await request(`/api/routines/${created.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: updatedTitle,
+      notes: "Routine smoke update",
+      daysOfWeek: [2, 4],
+      xpReward: 21,
+      goldReward: 9,
+    }),
+  });
+
+  if (!updateRes.ok) {
+    throw new Error(`Update routine failed: ${updateRes.status} ${JSON.stringify(await readResponse(updateRes))}`);
+  }
+
+  const updated = await readResponse(updateRes);
+  if (
+    updated?.id !== created.id ||
+    updated.title !== updatedTitle ||
+    updated.notes !== "Routine smoke update" ||
+    updated.daysOfWeek !== JSON.stringify([2, 4]) ||
+    updated.xpReward !== 21 ||
+    updated.goldReward !== 9
+  ) {
+    throw new Error(`Unexpected updated routine payload: ${JSON.stringify(updated)}`);
+  }
+
+  const listRes = await request("/api/routines");
+  if (!listRes.ok) {
+    throw new Error(`List routines failed: ${listRes.status} ${JSON.stringify(await readResponse(listRes))}`);
+  }
+
+  const routines = await readResponse(listRes);
+  const listed = Array.isArray(routines)
+    ? routines.find((routine) => routine.id === created.id)
+    : null;
+  if (!listed || listed.title !== updatedTitle || listed.daysOfWeek !== JSON.stringify([2, 4])) {
+    throw new Error(`Updated routine was not returned by list: ${JSON.stringify(routines)}`);
+  }
+
+  const deleteRes = await request(`/api/routines/${created.id}`, { method: "DELETE" });
+  if (!deleteRes.ok) {
+    throw new Error(`Cleanup routine delete failed: ${deleteRes.status} ${JSON.stringify(await readResponse(deleteRes))}`);
+  }
+
+  console.log(`Routines smoke passed: routine edited as "${updatedTitle}"`);
+}
+
 async function main() {
   try {
     if (shouldStartServer) startServer();
     await waitForServer();
     await signInDev();
     await smokeNotes();
+    await smokeRoutines();
   } catch (error) {
     console.error(error.message);
     if (serverLogs.length) {

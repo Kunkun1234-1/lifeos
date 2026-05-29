@@ -276,6 +276,18 @@ export function useCreateRoutine() {
   });
 }
 
+export function useUpdateRoutine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<RoutineDTO>(`/api/routines/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.routines });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+    },
+  });
+}
+
 export function useCompleteRoutine() {
   const qc = useQueryClient();
   const push = useRewardsStore((s) => s.push);
