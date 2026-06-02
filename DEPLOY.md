@@ -20,6 +20,8 @@ Use this flow for every production change:
 1. Work on a feature branch, not directly on `main`.
 2. Point local `.env` at a reachable staging/local Postgres database.
    The smoke test uses Dev Login, which reads/writes the database.
+   Run `npm run db:check` first; it verifies DNS, TCP, PostgreSQL SSL,
+   and an actual Prisma `select 1`.
 3. Run the deployment gate:
 
    ```bash
@@ -145,6 +147,17 @@ After first deploy:
 
 **"PrismaClientInitializationError: Can't reach database server"** —
 Check Neon dashboard; the free tier auto-suspends after 5 min idle. First request will be slow (~1-3s) while it wakes.
+If this happens locally but production works, run `npm run db:check`.
+When the Neon host resolves to `198.18.x.x`, a local proxy/DNS fake-ip mode is
+intercepting the database host. Browser HTTPS may still work, but Prisma uses
+raw PostgreSQL over TCP/TLS and can fail during the protocol handshake. Use one
+of these fixes:
+
+- Use a local Postgres database for local development.
+- Configure the proxy/DNS tool to resolve and route `*.neon.tech` without fake-ip
+  interception for PostgreSQL traffic.
+- Use a Neon dev branch with the pooled connection string, but note that pooler
+  still requires working raw PostgreSQL TCP/TLS from this machine.
 
 **Google OAuth: redirect_uri_mismatch** —
 The redirect URI in Google Console must EXACTLY match the deploy URL, including https and `/api/auth/callback/google`.
@@ -160,6 +173,12 @@ After adding the domain in Vercel, also add it to Google OAuth's authorized orig
 
 ## Local dev after this change
 
-You can continue using SQLite locally — but you'll need to undo the schema swap in step 4. Recommended: use a Neon dev branch (`neon.tech` → Branches → New from `main`) and point your local `.env` at it. That way local + prod schemas always agree.
+This repo now uses the Postgres Prisma provider. Recommended local options:
+
+1. Use local Postgres and point `.env.local` at it.
+2. Use a Neon dev branch (`neon.tech` → Branches → New from `main`) and point
+   local `.env.local` at its pooled connection string.
+
+That way local + prod schemas always agree.
 
 For local sign-in without setting up Google: the **Dev Login** button on `/login` is enabled when `NODE_ENV !== "production"`. It skips OAuth and creates a `dev@local` user.

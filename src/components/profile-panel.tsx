@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useDashboardData } from "@/components/dashboard-data";
 import { useUser } from "@/hooks/queries";
 import { deriveLevel } from "@/lib/gamification";
 import {
@@ -22,7 +23,9 @@ import { motion } from "framer-motion";
  * Stat bars + radar both render real `xpByArea`. Both link to /analytics.
  */
 export function ProfilePanel() {
-  const { data: user } = useUser();
+  const dashboard = useDashboardData();
+  const { data: queryUser } = useUser({ enabled: !dashboard.active });
+  const user = dashboard.data?.user ?? queryUser;
   const xpByArea = user?.xpByArea ?? {};
 
   const birthday = user?.birthday ? new Date(user.birthday) : null;

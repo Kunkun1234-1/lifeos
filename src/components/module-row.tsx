@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useDashboardData } from "@/components/dashboard-data";
 import { useAreas, useUser } from "@/hooks/queries";
 import { deriveLevel } from "@/lib/gamification";
 import { AREA_META, AREA_ORDER, type AreaName } from "@/lib/area-meta";
@@ -13,8 +14,11 @@ import { AREA_META, AREA_ORDER, type AreaName } from "@/lib/area-meta";
  */
 
 export function ModuleRow() {
-  const { data: areas } = useAreas();
-  const { data: user } = useUser();
+  const dashboard = useDashboardData();
+  const { data: queryAreas } = useAreas({ enabled: !dashboard.active });
+  const { data: queryUser } = useUser({ enabled: !dashboard.active });
+  const areas = dashboard.data?.areas ?? queryAreas;
+  const user = dashboard.data?.user ?? queryUser;
 
   const xpByArea = user?.xpByArea ?? {};
   const ordered = AREA_ORDER

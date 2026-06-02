@@ -1,0 +1,224 @@
+import { NextResponse } from "next/server";
+import { todayYMD } from "@/lib/date";
+import { parseFrameStyle } from "@/lib/equipment";
+import { ensureFinanceDefaults, monthWindow } from "@/lib/finance";
+import { deriveLevel } from "@/lib/gamification";
+import { prisma } from "@/lib/prisma";
+import { getUserXpSnapshot } from "@/lib/rewards";
+import { getCurrentUser } from "@/lib/user";
+import {
+  getOrGenerateTodayCommissions,
+  hydrateCommissionItems,
+  parseItems,
+} from "@/lib/commissions";
+
+function parseList(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const value = JSON.parse(raw);
+    return Array.isArray(value)
+      ? value.filter((item) => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function currencySnapshot(
+  currency: { gold: number; gems: number; fate: number } | null,
+) {
+  return {
+    gold: currency?.gold ?? 0,
+    gems: currency?.gems ?? 0,
+    fate: currency?.fate ?? 0,
+  };
+}
+
+async function getDashboardAssets(
+  userId: string,
+  currency: { gold: number; gems: number; fate: number },
+) {
+  await ensureFinanceDefaults(userId);
+
+  const { start, end } = monthWindow();
+  const [accounts, expenseCategories, monthTransactions] = await Promise.all([
+    prisma.financeAccount.findMany({
+      where: { userId, archived: false },
+      select: { balanceCents: true, includeInNetWorth: true },
+    }),
+    prisma.financeCategory.findMany({
+      where: { userId, archived: false, kind: "expense" },
+      select: { monthlyBudgetCents: true },
+    }),
+    prisma.financeTransaction.findMany({
+      where: {
+        userId,
+        occurredAt: { gte: start, lt: end },
+      },
+      select: { type: true, amountCents: true },
+    }),
+  ]);
+
+  const includedBalances = accounts
+    .filter((account) => account.includeInNetWorth)
+    .map((account) => account.balanceCents);
+  const netWorthCents = includedBalances.reduce((sum, amount) => sum + amount, 0);
+  const assetsCents = includedBalances
+    .filter((amount) => amount > 0)
+    .reduce((sum, amount) => sum + amount, 0);
+  const liabilitiesCents = Math.abs(
+    includedBalances
+      .filter((amount) => amount < 0)
+      .reduce((sum, amount) => sum + amount, 0),
+  );
+
+  const monthIncomeCents = monthTransactions
+    .filter((item) => item.type === "income")
+    .reduce((sum, item) => sum + item.amountCents, 0);
+  const monthExpenseCents = monthTransactions
+    .filter((item) => item.type === "expense")
+    .reduce((sum, item) => sum + item.amountCents, 0);
+  const monthBudgetCents = expenseCategories.reduce(
+    (sum, category) => sum + category.monthlyBudgetCents,
+    0,
+  );
+
+  return {
+    summary: {
+      netWorthCents,
+      assetsCents,
+      liabilitiesCents,
+      monthIncomeCents,
+      monthExpenseCents,
+      monthNetCents: monthIncomeCents - monthExpenseCents,
+      monthBudgetCents,
+      monthBudgetUsedRate:
+        monthBudgetCents > 0 ? monthExpenseCents / monthBudgetCents : null,
+    },
+    currency,
+    accountCount: accounts.length,
+  };
+}
+
+export async function GET() {
+  const user = await getCurrentUser();
+  const userId = user.id;
+  const today = todayYMD();
+  const currency = currencySnapshot(user.currency);
+
+  const equippedTitlePromise = user.equippedTitleKey
+    ? prisma.title.findUnique({
+        where: { key: user.equippedTitleKey },
+        select: { key: true, name: true, emoji: true, tier: true },
+      })
+    : Promise.resolve(null);
+
+  const equippedFramePromise = user.equippedFrameKey
+    ? prisma.equipment.findUnique({
+        where: { key: user.equippedFrameKey },
+        select: { key: true, name: true, tier: true, style: true },
+      })
+    : Promise.resolve(null);
+
+  const [
+    xpSnapshot,
+    equippedTitle,
+    equippedFrameRaw,
+    areas,
+    routinesRaw,
+    commissionsRaw,
+    tasksTodo,
+    tasksDone,
+    assets,
+  ] = await Promise.all([
+    getUserXpSnapshot(userId),
+    equippedTitlePromise,
+    equippedFramePromise,
+    prisma.area.findMany({
+      where: { userId, archived: false },
+      orderBy: { order: "asc" },
+    }),
+    prisma.routine.findMany({
+      where: { userId, archived: false },
+      include: {
+        area: true,
+        completions: { where: { date: today } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    getOrGenerateTodayCommissions(userId).then(async (row) => ({
+      row,
+      items: await hydrateCommissionItems(parseItems(row.items), userId),
+    })),
+    prisma.task.findMany({
+      where: { userId, status: "TODO" },
+      include: { area: true, project: true },
+      orderBy: [
+        { status: "asc" },
+        { dueDate: "asc" },
+        { priority: "asc" },
+        { createdAt: "desc" },
+      ],
+      take: 4,
+    }),
+    prisma.task.findMany({
+      where: { userId, status: "DONE" },
+      include: { area: true, project: true },
+      orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
+      take: 3,
+    }),
+    getDashboardAssets(userId, currency),
+  ]);
+
+  const leveling = deriveLevel(xpSnapshot.totalXp);
+  const equippedFrame = equippedFrameRaw
+    ? {
+        key: equippedFrameRaw.key,
+        name: equippedFrameRaw.name,
+        tier: equippedFrameRaw.tier,
+        style: parseFrameStyle(equippedFrameRaw.style),
+      }
+    : null;
+  const routines = routinesRaw.map(({ completions, ...routine }) => ({
+    ...routine,
+    completedToday: completions.length > 0,
+  }));
+
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      name: user.name,
+      class: user.class,
+      visionStatement: user.visionStatement,
+      coreValues: parseList(user.coreValues),
+      identityStatements: parseList(user.identityStatements),
+      avatarUrl: user.avatarUrl ?? null,
+      gender: user.gender ?? null,
+      birthday: user.birthday ? user.birthday.toISOString() : null,
+      region: user.region ?? null,
+      motto: user.motto ?? null,
+      onboardedAt: user.onboardedAt ? user.onboardedAt.toISOString() : null,
+      totalXp: xpSnapshot.totalXp,
+      xpByArea: xpSnapshot.byArea,
+      level: leveling.level,
+      xpIntoLevel: leveling.xpIntoLevel,
+      xpForNext: leveling.xpForNext,
+      levelProgress: leveling.progress,
+      currency,
+      equippedTitle,
+      equippedFrame,
+    },
+    areas,
+    routines,
+    commissions: {
+      id: commissionsRaw.row.id,
+      date: commissionsRaw.row.date,
+      items: commissionsRaw.items,
+      completedCount: commissionsRaw.row.completedCount,
+      bonusClaimed: commissionsRaw.row.bonusClaimed,
+    },
+    tasksTodo,
+    tasksDone,
+    assets,
+  });
+}

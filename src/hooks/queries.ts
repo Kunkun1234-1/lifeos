@@ -28,12 +28,14 @@ import type {
   EventSnapshotDTO,
   EquipmentSnapshotDTO,
   AssetsSnapshotDTO,
+  DashboardSnapshotDTO,
   FinanceAccountDTO,
   FinanceTransactionDTO,
 } from "@/lib/types";
 import { useRewardsStore } from "@/stores/rewards";
 
 export const qk = {
+  dashboard: ["dashboard"] as const,
   user: ["user"] as const,
   areas: ["areas"] as const,
   tasks: (status?: string) => ["tasks", { status }] as const,
@@ -58,30 +60,59 @@ export const qk = {
   assets: ["assets"] as const,
 };
 
+type QueryOptions = {
+  enabled?: boolean;
+};
+
+function invalidateDashboard(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: qk.dashboard });
+}
+
 // ---------- queries ----------
-export const useUser = () =>
-  useQuery({ queryKey: qk.user, queryFn: () => api<UserSnapshot>("/api/user") });
+export const useDashboard = () =>
+  useQuery({
+    queryKey: qk.dashboard,
+    queryFn: () => api<DashboardSnapshotDTO>("/api/dashboard"),
+    staleTime: 30_000,
+  });
 
-export const useAreas = () =>
-  useQuery({ queryKey: qk.areas, queryFn: () => api<AreaDTO[]>("/api/areas") });
+export const useUser = (options: QueryOptions = {}) =>
+  useQuery({
+    queryKey: qk.user,
+    queryFn: () => api<UserSnapshot>("/api/user"),
+    enabled: options.enabled,
+  });
 
-export const useTasks = (status?: string) =>
+export const useAreas = (options: QueryOptions = {}) =>
+  useQuery({
+    queryKey: qk.areas,
+    queryFn: () => api<AreaDTO[]>("/api/areas"),
+    enabled: options.enabled,
+  });
+
+export const useTasks = (status?: string, options: QueryOptions = {}) =>
   useQuery({
     queryKey: qk.tasks(status),
     queryFn: () => api<TaskDTO[]>(`/api/tasks${status ? `?status=${status}` : ""}`),
+    enabled: options.enabled,
   });
 
 export const useHabits = () =>
   useQuery({ queryKey: qk.habits, queryFn: () => api<HabitDTO[]>("/api/habits") });
 
-export const useRoutines = () =>
-  useQuery({ queryKey: qk.routines, queryFn: () => api<RoutineDTO[]>("/api/routines") });
+export const useRoutines = (options: QueryOptions = {}) =>
+  useQuery({
+    queryKey: qk.routines,
+    queryFn: () => api<RoutineDTO[]>("/api/routines"),
+    enabled: options.enabled,
+  });
 
-export const useCommissions = () =>
+export const useCommissions = (options: QueryOptions = {}) =>
   useQuery({
     queryKey: qk.commissions,
     queryFn: () => api<CommissionsTodayDTO>("/api/commissions/today"),
     staleTime: 30_000,
+    enabled: options.enabled,
   });
 
 export const useReviews = (kind?: string) =>
@@ -97,7 +128,10 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       api("/api/user", { method: "PATCH", json: body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.user }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -109,6 +143,7 @@ export function useCreateTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -159,6 +194,7 @@ export function useCompleteTask() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -167,7 +203,10 @@ export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/tasks/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -179,6 +218,7 @@ export function useUpdateTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -191,6 +231,7 @@ export function useCreateHabit() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.habits });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -252,6 +293,7 @@ export function useTickHabit() {
       qc.invalidateQueries({ queryKey: qk.habits });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -260,7 +302,10 @@ export function useDeleteHabit() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/habits/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.habits }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.habits });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -272,6 +317,7 @@ export function useCreateRoutine() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.routines });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -284,6 +330,7 @@ export function useUpdateRoutine() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.routines });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -339,6 +386,7 @@ export function useCompleteRoutine() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
       qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -347,7 +395,10 @@ export function useDeleteRoutine() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/routines/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.routines }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.routines });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -371,8 +422,12 @@ export function useCompleteCommission() {
     // pre-claim the 4/4 bonus state so the schedule card responds
     // immediately. Reward toast still waits for the server confirm.
     onMutate: async (itemId) => {
-      await qc.cancelQueries({ queryKey: qk.commissions });
+      await Promise.all([
+        qc.cancelQueries({ queryKey: qk.commissions }),
+        qc.cancelQueries({ queryKey: qk.dashboard }),
+      ]);
       const snapshot = qc.getQueryData<CommissionsTodayDTO>(qk.commissions);
+      const dashboardSnapshot = qc.getQueryData<DashboardSnapshotDTO>(qk.dashboard);
       qc.setQueryData<CommissionsTodayDTO>(qk.commissions, (old) => {
         if (!old) return old;
         const nextItems = old.items.map((it) =>
@@ -388,10 +443,31 @@ export function useCompleteCommission() {
           bonusClaimed: allDone ? true : old.bonusClaimed,
         };
       });
-      return { snapshot };
+      qc.setQueryData<DashboardSnapshotDTO>(qk.dashboard, (old) => {
+        if (!old) return old;
+        const nextItems = old.commissions.items.map((it) =>
+          it.id === itemId ? { ...it, done: true } : it,
+        );
+        const completedCount = nextItems.filter((it) => it.done).length;
+        const allDone =
+          completedCount === nextItems.length && nextItems.length > 0;
+        return {
+          ...old,
+          commissions: {
+            ...old.commissions,
+            items: nextItems,
+            completedCount,
+            bonusClaimed: allDone ? true : old.commissions.bonusClaimed,
+          },
+        };
+      });
+      return { snapshot, dashboardSnapshot };
     },
     onError: (_err, _id, ctx) => {
       if (ctx?.snapshot) qc.setQueryData(qk.commissions, ctx.snapshot);
+      if (ctx?.dashboardSnapshot) {
+        qc.setQueryData(qk.dashboard, ctx.dashboardSnapshot);
+      }
     },
     onSuccess: (data) => {
       push({
@@ -420,6 +496,7 @@ export function useCompleteCommission() {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.habits });
       qc.invalidateQueries({ queryKey: qk.routines });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -428,7 +505,10 @@ export function useRegenerateCommissions() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api("/api/commissions/today", { method: "POST" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.commissions }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -446,15 +526,22 @@ export const useProjects = (status?: string) =>
 export const useRewards = () =>
   useQuery({ queryKey: qk.rewards, queryFn: () => api<RewardItemDTO[]>("/api/rewards") });
 
-export const useAssets = () =>
-  useQuery({ queryKey: qk.assets, queryFn: () => api<AssetsSnapshotDTO>("/api/assets") });
+export const useAssets = (options: QueryOptions = {}) =>
+  useQuery({
+    queryKey: qk.assets,
+    queryFn: () => api<AssetsSnapshotDTO>("/api/assets"),
+    enabled: options.enabled,
+  });
 
 export function useCreateFinanceAccount() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       api<FinanceAccountDTO>("/api/assets/accounts", { method: "POST", json: body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.assets });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -463,7 +550,10 @@ export function useCreateFinanceTransaction() {
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       api<FinanceTransactionDTO>("/api/assets/transactions", { method: "POST", json: body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.assets });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -472,7 +562,10 @@ export function useDeleteFinanceTransaction() {
   return useMutation({
     mutationFn: (id: string) =>
       api(`/api/assets/transactions/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assets }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.assets });
+      invalidateDashboard(qc);
+    },
   });
 }
 
@@ -505,6 +598,7 @@ export function useUnlockAchievement() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.achievements });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -547,6 +641,7 @@ export function useUpdateGoal() {
       qc.invalidateQueries({ queryKey: qk.goals });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -604,6 +699,7 @@ export function useUpdateProject() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
       qc.invalidateQueries({ queryKey: qk.goals });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -671,6 +767,7 @@ export function useRedeemReward() {
       });
       qc.invalidateQueries({ queryKey: qk.rewards });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -693,6 +790,7 @@ export function usePullGacha() {
       qc.invalidateQueries({ queryKey: qk.gacha });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.rewards });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -724,6 +822,7 @@ export function useClaimBPLevel() {
       });
       qc.invalidateQueries({ queryKey: qk.battlepass });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -733,10 +832,11 @@ export function useBuyFreeze() {
   const push = useRewardsStore((s) => s.push);
   return useMutation({
     mutationFn: () => api<{ stash: { count: number } }>("/api/freeze", { method: "POST" }),
-    onSuccess: (data) => {
+    onSuccess: () => {
       push({ xp: 0, gold: -50, gems: 0, fate: 0, areaKey: null, label: "🧊 Streak Freeze ×1" });
       qc.invalidateQueries({ queryKey: qk.freeze });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -758,6 +858,7 @@ export function useCreateReview() {
       });
       qc.invalidateQueries({ queryKey: ["reviews"] });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -799,6 +900,7 @@ export function useCreatePrinciple() {
       qc.invalidateQueries({ queryKey: ["principles"] });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -844,6 +946,7 @@ export function useCreateDecision() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
       qc.invalidateQueries({ queryKey: ["principles"] });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -892,6 +995,7 @@ export function useReviewDecision() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
       qc.invalidateQueries({ queryKey: qk.titles });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -968,6 +1072,7 @@ export function useCreateNote() {
       qc.invalidateQueries({ queryKey: ["notes"] });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -1046,6 +1151,7 @@ export function useClaimEventMission() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.equipment });
       qc.invalidateQueries({ queryKey: qk.achievements });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -1069,6 +1175,7 @@ export function useEquipFrame() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.equipment });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }
@@ -1084,6 +1191,7 @@ export function useEquipTitle() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.titles });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateDashboard(qc);
     },
   });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useDashboardData } from "@/components/dashboard-data";
 import { useUser } from "@/hooks/queries";
 import { Sun } from "lucide-react";
 
@@ -10,7 +11,9 @@ import { Sun } from "lucide-react";
  * Left overlay: bilingual motto quote.
  */
 export function HeroScene() {
-  const { data: user } = useUser();
+  const dashboard = useDashboardData();
+  const { data: queryUser } = useUser({ enabled: !dashboard.active });
+  const user = dashboard.data?.user ?? queryUser;
   const birthday = user?.birthday ? new Date(user.birthday) : null;
   const age = birthday ? deriveAge(birthday) : null;
   const date = new Date().toLocaleDateString("zh-CN", {

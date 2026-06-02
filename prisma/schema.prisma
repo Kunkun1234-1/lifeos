@@ -1,6 +1,6 @@
 // LifeOS Prisma schema
-// SQLite for local dev; schema designed to be Postgres-compatible
-// (switch datasource provider to "postgresql" when deploying to Neon/Supabase)
+// Postgres for local development and production.
+// Use a local Postgres database or a reachable Neon/Supabase branch.
 
 generator client {
   provider = "prisma-client-js"

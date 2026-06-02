@@ -260,6 +260,22 @@ export type AssetsSnapshotDTO = {
   }>;
 };
 
+export type DashboardAssetsDTO = {
+  summary: AssetsSnapshotDTO["summary"];
+  currency: { gold: number; gems: number; fate: number };
+  accountCount: number;
+};
+
+export type DashboardSnapshotDTO = {
+  user: UserSnapshot;
+  areas: AreaDTO[];
+  routines: RoutineDTO[];
+  commissions: CommissionsTodayDTO;
+  tasksTodo: TaskDTO[];
+  tasksDone: TaskDTO[];
+  assets: DashboardAssetsDTO;
+};
+
 export type AchievementDTO = {
   id: string;
   key: string;

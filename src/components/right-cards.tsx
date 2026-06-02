@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useDashboardData } from "@/components/dashboard-data";
 import { useAssets, useCommissions, useRoutines, useTasks, useCompleteCommission } from "@/hooks/queries";
 import type { CommissionItem } from "@/lib/commissions";
 import { Footprints, BookOpen, Sparkles, Dumbbell, Coffee, Trophy, Check, Loader2, ScrollText, Coins, Gem, Ticket, WalletCards } from "lucide-react";
@@ -29,8 +30,11 @@ function SectionHeader({ cn, en, more }: { cn: string; en: string; more?: string
 
 /* ---------- Schedule Card (time-blocked routines/commissions) ---------- */
 export function ScheduleCard() {
-  const { data: routines } = useRoutines();
-  const { data: commissions } = useCommissions();
+  const dashboard = useDashboardData();
+  const { data: queryRoutines } = useRoutines({ enabled: !dashboard.active });
+  const { data: queryCommissions } = useCommissions({ enabled: !dashboard.active });
+  const routines = dashboard.data?.routines ?? queryRoutines;
+  const commissions = dashboard.data?.commissions ?? queryCommissions;
   const complete = useCompleteCommission();
 
   // Use today's commissions that are routine-sourced as the "schedule"
@@ -131,7 +135,9 @@ export function ScheduleCard() {
 
 /* ---------- Tasks Card ---------- */
 export function TasksCard() {
-  const { data: tasks } = useTasks("TODO");
+  const dashboard = useDashboardData();
+  const { data: queryTasks } = useTasks("TODO", { enabled: !dashboard.active });
+  const tasks = dashboard.data?.tasksTodo ?? queryTasks;
   const top = (tasks ?? []).slice(0, 4);
 
   return (
@@ -174,10 +180,14 @@ export function TasksCard() {
 
 /* ---------- Assets Card ---------- */
 export function AssetsCard() {
-  const { data: assets } = useAssets();
+  const dashboard = useDashboardData();
+  const { data: queryAssets } = useAssets({ enabled: !dashboard.active });
+  const dashboardAssets = dashboard.data?.assets;
+  const assets = dashboardAssets ?? queryAssets;
   const netWorth = assets?.summary.netWorthCents ?? 0;
   const monthNet = assets?.summary.monthNetCents ?? 0;
-  const accountCount = assets?.accounts.length ?? 0;
+  const accountCount =
+    dashboardAssets?.accountCount ?? queryAssets?.accounts.length ?? 0;
   const gold = assets?.currency.gold ?? 0;
   const gems = assets?.currency.gems ?? 0;
   const fate = assets?.currency.fate ?? 0;
@@ -254,8 +264,10 @@ function formatCompactMoney(cents: number) {
 export function AchievementsCard() {
   // Recent "achievements" derived from the latest completed items — here
   // we use simple placeholders until Phase 3 achievements land.
-  const { data: tasks } = useTasks();
-  const doneRecent = (tasks ?? []).filter((t) => t.status === "DONE").slice(0, 3);
+  const dashboard = useDashboardData();
+  const { data: queryTasks } = useTasks("DONE", { enabled: !dashboard.active });
+  const tasks = dashboard.data?.tasksDone ?? queryTasks;
+  const doneRecent = (tasks ?? []).slice(0, 3);
 
   const STATIC = [
     { title: "初入学院", subtitle: "完成新生引导" },
