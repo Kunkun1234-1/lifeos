@@ -257,37 +257,43 @@ export default function AreaDetailPage() {
         />
       </div>
 
-      {isLoading ? (
-        <div className="panel-cream framed rounded-sm py-12 text-center text-sm text-[var(--fg-muted)]">
-          Loading area data...
-        </div>
-      ) : (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-          <div className="space-y-5">
-            <AreaSection
-              title="目标与关键结果"
-              en="Goals"
-              href="/goals"
-              action="管理目标"
-              empty="这个领域还没有目标。"
-            >
-              {areaGoals.length > 0 && (
+      {isLoading && (
+        <div className="text-right text-[11px] text-[var(--fg-subtle)]">正在同步领域数据...</div>
+      )}
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+        <div className="space-y-5">
+          <AreaSection
+            title="目标与关键结果"
+            en="Goals"
+            href="/goals"
+            action="管理目标"
+            empty="这个领域还没有目标。"
+          >
+            {goalsLoading ? (
+              <SectionLoading />
+            ) : (
+              areaGoals.length > 0 && (
                 <div className="space-y-3">
                   {areaGoals.map((goal) => (
                     <GoalItem key={goal.id} goal={goal} />
                   ))}
                 </div>
-              )}
-            </AreaSection>
+              )
+            )}
+          </AreaSection>
 
-            <AreaSection
-              title="项目推进"
-              en="Projects"
-              href="/projects"
-              action="管理项目"
-              empty="这个领域还没有项目。"
-            >
-              {areaProjects.length > 0 && (
+          <AreaSection
+            title="项目推进"
+            en="Projects"
+            href="/projects"
+            action="管理项目"
+            empty="这个领域还没有项目。"
+          >
+            {projectsLoading ? (
+              <SectionLoading />
+            ) : (
+              areaProjects.length > 0 && (
                 <div className="grid gap-3 md:grid-cols-2">
                   {areaProjects.map((project) => (
                     <ProjectItem
@@ -297,19 +303,23 @@ export default function AreaDetailPage() {
                     />
                   ))}
                 </div>
-              )}
-            </AreaSection>
-          </div>
+              )
+            )}
+          </AreaSection>
+        </div>
 
-          <div className="space-y-5">
-            <AreaSection
-              title="任务队列"
-              en="Tasks"
-              href="/tasks"
-              action="管理任务"
-              empty="这个领域还没有任务。"
-            >
-              {areaTasks.length > 0 && (
+        <div className="space-y-5">
+          <AreaSection
+            title="任务队列"
+            en="Tasks"
+            href="/tasks"
+            action="管理任务"
+            empty="这个领域还没有任务。"
+          >
+            {tasksLoading ? (
+              <SectionLoading />
+            ) : (
+              areaTasks.length > 0 && (
                 <div className="space-y-2">
                   <ProgressSummary
                     label="任务完成率"
@@ -327,33 +337,41 @@ export default function AreaDetailPage() {
                     )}
                   </div>
                 </div>
-              )}
-            </AreaSection>
+              )
+            )}
+          </AreaSection>
 
-            <AreaSection
-              title="习惯表现"
-              en="Habits"
-              href="/habits"
-              action="管理习惯"
-              empty="这个领域还没有习惯。"
-            >
-              {areaHabits.length > 0 && (
+          <AreaSection
+            title="习惯表现"
+            en="Habits"
+            href="/habits"
+            action="管理习惯"
+            empty="这个领域还没有习惯。"
+          >
+            {habitsLoading ? (
+              <SectionLoading />
+            ) : (
+              areaHabits.length > 0 && (
                 <div className="space-y-2">
                   {areaHabits.map((habit) => (
                     <HabitItem key={habit.id} habit={habit} />
                   ))}
                 </div>
-              )}
-            </AreaSection>
+              )
+            )}
+          </AreaSection>
 
-            <AreaSection
-              title="日程节奏"
-              en="Routines"
-              href="/routines"
-              action="管理日程"
-              empty="这个领域还没有日程。"
-            >
-              {areaRoutines.length > 0 && (
+          <AreaSection
+            title="日程节奏"
+            en="Routines"
+            href="/routines"
+            action="管理日程"
+            empty="这个领域还没有日程。"
+          >
+            {routinesLoading ? (
+              <SectionLoading />
+            ) : (
+              areaRoutines.length > 0 && (
                 <div className="space-y-2">
                   <ProgressSummary
                     label="今日日程"
@@ -364,11 +382,11 @@ export default function AreaDetailPage() {
                     <RoutineItem key={routine.id} routine={routine} />
                   ))}
                 </div>
-              )}
-            </AreaSection>
-          </div>
+              )
+            )}
+          </AreaSection>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -470,6 +488,14 @@ function AreaSection({
         </div>
       )}
     </section>
+  );
+}
+
+function SectionLoading() {
+  return (
+    <div className="rounded-sm border border-[var(--border)] bg-[var(--bg-card)]/70 px-4 py-5 text-center text-[12px] text-[var(--fg-muted)]">
+      Loading...
+    </div>
   );
 }
 

@@ -12,14 +12,25 @@ import { prisma } from "./prisma";
  */
 export async function provisionUserDefaults(userId: string): Promise<void> {
   // 1) Currency
-  await prisma.currency.upsert({
-    where: { userId },
-    create: { userId, gold: 100, gems: 0, fate: 5 },
-    update: {},
-  });
+  // Prefer reads before writes here: this helper can run during session
+  // bootstrap, and an empty upsert still costs a remote DB write.
+  const [currency, areaCount] = await Promise.all([
+    prisma.currency.findUnique({
+      where: { userId },
+      select: { userId: true },
+    }),
+    prisma.area.count({ where: { userId } }),
+  ]);
+
+  if (!currency) {
+    await prisma.currency.upsert({
+      where: { userId },
+      create: { userId, gold: 100, gems: 0, fate: 5 },
+      update: {},
+    });
+  }
 
   // 2) Life Areas — only seed if user has zero areas yet.
-  const areaCount = await prisma.area.count({ where: { userId } });
   if (areaCount === 0) {
     const defaults = [
       { name: "Health",        icon: "💪", color: "#c47a4f", attributeKey: "STR", weight: 1, order: 1 },

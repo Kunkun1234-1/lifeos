@@ -31,6 +31,8 @@ import type {
   DashboardSnapshotDTO,
   FinanceAccountDTO,
   FinanceTransactionDTO,
+  InventorySnapshotDTO,
+  InventoryRewardInstanceDTO,
 } from "@/lib/types";
 import { useRewardsStore } from "@/stores/rewards";
 
@@ -58,6 +60,7 @@ export const qk = {
   events: ["events"] as const,
   equipment: ["equipment"] as const,
   assets: ["assets"] as const,
+  inventory: ["inventory"] as const,
 };
 
 type QueryOptions = {
@@ -533,6 +536,35 @@ export const useAssets = (options: QueryOptions = {}) =>
     enabled: options.enabled,
   });
 
+export const useInventory = () =>
+  useQuery({
+    queryKey: qk.inventory,
+    queryFn: () => api<InventorySnapshotDTO>("/api/inventory"),
+    staleTime: 10_000,
+  });
+
+export function useUpdateInventoryReward() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      action,
+      note,
+    }: {
+      id: string;
+      action: "use" | "discard";
+      note?: string | null;
+    }) =>
+      api<InventoryRewardInstanceDTO>(`/api/inventory/rewards/${id}`, {
+        method: "PATCH",
+        json: { action, note },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.inventory });
+    },
+  });
+}
+
 export function useCreateFinanceAccount() {
   const qc = useQueryClient();
   return useMutation({
@@ -766,6 +798,7 @@ export function useRedeemReward() {
         label: `${data.reward.emoji} ${data.reward.name}`,
       });
       qc.invalidateQueries({ queryKey: qk.rewards });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       qc.invalidateQueries({ queryKey: qk.user });
       invalidateDashboard(qc);
     },
@@ -790,6 +823,7 @@ export function usePullGacha() {
       qc.invalidateQueries({ queryKey: qk.gacha });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.rewards });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       invalidateDashboard(qc);
     },
   });
@@ -822,6 +856,7 @@ export function useClaimBPLevel() {
       });
       qc.invalidateQueries({ queryKey: qk.battlepass });
       qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       invalidateDashboard(qc);
     },
   });
@@ -836,6 +871,7 @@ export function useBuyFreeze() {
       push({ xp: 0, gold: -50, gems: 0, fate: 0, areaKey: null, label: "🧊 Streak Freeze ×1" });
       qc.invalidateQueries({ queryKey: qk.freeze });
       qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       invalidateDashboard(qc);
     },
   });
@@ -1151,6 +1187,7 @@ export function useClaimEventMission() {
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.equipment });
       qc.invalidateQueries({ queryKey: qk.achievements });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       invalidateDashboard(qc);
     },
   });
@@ -1174,6 +1211,7 @@ export function useEquipFrame() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.equipment });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       qc.invalidateQueries({ queryKey: qk.user });
       invalidateDashboard(qc);
     },
@@ -1190,6 +1228,7 @@ export function useEquipTitle() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.titles });
+      qc.invalidateQueries({ queryKey: qk.inventory });
       qc.invalidateQueries({ queryKey: qk.user });
       invalidateDashboard(qc);
     },

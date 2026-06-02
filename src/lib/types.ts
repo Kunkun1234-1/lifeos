@@ -183,6 +183,36 @@ export type RewardItemDTO = {
   redeemedCount: number;
 };
 
+export type InventoryRewardStatus = "available" | "used" | "discarded";
+export type InventoryRewardSource = "store" | "gacha";
+
+export type InventoryRewardInstanceDTO = {
+  id: string;
+  status: InventoryRewardStatus;
+  source: InventoryRewardSource;
+  costGold: number;
+  costGems: number;
+  redeemedAt: string;
+  usedAt: string | null;
+  discardedAt: string | null;
+  note: string | null;
+  reward: RewardItemDTO & { archived: boolean };
+};
+
+export type InventoryAchievementDTO = {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  emoji: string;
+  imageUrl: string | null;
+  tier: "bronze" | "silver" | "gold" | "legendary";
+  category: string;
+  isCustom: boolean;
+  unlockedAt: string;
+  reward: { gold: number; gems: number; fate: number };
+};
+
 export type FinanceAccountType =
   | "cash"
   | "bank"
@@ -487,6 +517,19 @@ export type EquipmentSnapshotDTO = {
   equippedKey: string | null;
   unlockedCount: number;
   totalCount: number;
+};
+
+export type InventorySnapshotDTO = {
+  currency: { gold: number; gems: number; fate: number };
+  freeze: FreezeState;
+  rewards: InventoryRewardInstanceDTO[];
+  equipment: EquipmentSnapshotDTO;
+  titles: TitlesSnapshot;
+  achievements: {
+    items: InventoryAchievementDTO[];
+    unlockedCount: number;
+    totalCount: number;
+  };
 };
 
 export type NoteKind = "note" | "highlight" | "quote" | "link" | "inspiration";

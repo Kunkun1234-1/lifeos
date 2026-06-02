@@ -108,15 +108,23 @@ export async function deductReward(input: GrantRewardInput) {
 
 /** Sum XpLedger and derive {totalXp, byArea}. Snapshot for the header. */
 export async function getUserXpSnapshot(userId: string) {
-  const entries = await prisma.xpLedger.findMany({
-    where: { userId },
-    select: { amount: true, areaKey: true },
-  });
-  let totalXp = 0;
+  const [totalRow, areaRows] = await Promise.all([
+    prisma.xpLedger.aggregate({
+      where: { userId },
+      _sum: { amount: true },
+    }),
+    prisma.xpLedger.groupBy({
+      by: ["areaKey"],
+      where: { userId, areaKey: { not: null } },
+      _sum: { amount: true },
+    }),
+  ]);
+
   const byArea: Record<string, number> = {};
-  for (const e of entries) {
-    totalXp += e.amount;
-    if (e.areaKey) byArea[e.areaKey] = (byArea[e.areaKey] ?? 0) + e.amount;
+  for (const row of areaRows) {
+    if (row.areaKey) byArea[row.areaKey] = row._sum.amount ?? 0;
   }
+
+  const totalXp = totalRow._sum.amount ?? 0;
   return { totalXp: Math.max(0, totalXp), byArea };
 }

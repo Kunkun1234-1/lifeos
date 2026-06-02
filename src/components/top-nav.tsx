@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Trophy, Settings as SettingsIcon, HelpCircle, LayoutGrid, Mail, Bell, Zap } from "lucide-react";
+import { Home, Trophy, Settings as SettingsIcon, HelpCircle, LayoutGrid, Mail, Bell, Zap, Backpack } from "lucide-react";
 import { useUser, useResin } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 import { AvatarFrame } from "@/components/avatar-frame";
@@ -130,6 +130,18 @@ export function TopNav() {
               </span>
             </div>
           )}
+          <Link
+            href="/inventory"
+            className={cn(
+              "hidden h-10 w-10 place-items-center rounded-full border bg-[var(--bg-card)]/70 transition-colors md:grid",
+              path.startsWith("/inventory")
+                ? "border-[var(--gold)] text-[var(--gold-deep)]"
+                : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--gold)] hover:text-[var(--gold-deep)]",
+            )}
+            title="背包"
+          >
+            <Backpack size={16} />
+          </Link>
           <div className="hidden md:block">
             <InboxButton />
           </div>

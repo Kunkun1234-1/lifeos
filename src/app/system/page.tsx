@@ -20,6 +20,7 @@ import {
   Library,
   CalendarHeart,
   Frame,
+  Backpack,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -70,6 +71,7 @@ const SECTIONS = [
     items: [
       { href: "/rewards",      cn: "商店",     en: "Rewards",      desc: "Mora/Gems 兑换真实奖品",     icon: Gift },
       { href: "/gacha",        cn: "祈愿",     en: "Wish · Gacha", desc: "Fate 抽卡 · 软/硬保底",       icon: Sparkles },
+      { href: "/inventory",    cn: "背包",     en: "Inventory",    desc: "资源 / 奖品 / 装备统一归档",    icon: Backpack },
       { href: "/achievements", cn: "成就",     en: "Achievements", desc: "32 项徽章 · 自动解锁",         icon: Trophy },
       { href: "/titles",       cn: "称号",     en: "Titles",       desc: "20 称号 · 装备显示在导航",      icon: Crown },
       { href: "/battle-pass",  cn: "战令",     en: "Battle Pass",  desc: "本周 9 任务 · 20 级奖励轨",   icon: Award },
