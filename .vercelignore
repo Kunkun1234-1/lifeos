@@ -1,0 +1,7 @@
+.env*
+client_secret_*.json
+.next
+node_modules
+coverage
+prisma/dev.db
+prisma/dev.db-journal
