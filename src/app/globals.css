@@ -11,13 +11,14 @@
 :root {
   color-scheme: light;
 
-  /* Parchment surfaces */
-  --bg:            #efe6d0;        /* deep warm parchment */
-  --bg-page:       #f4ecd9;        /* page tint */
-  --bg-raised:     #faf3e2;        /* light card */
-  --bg-card:       #fcf7ea;        /* top card */
+  /* Parchment surfaces tuned for the sky-city wallpaper */
+  --bg:            #10233a;        /* deep lower vignette */
+  --bg-page:       #edf5ff;
+  --bg-raised:     #faf3e2;
+  --bg-card:       #fffaf0;
   --bg-elevated:   #ffffff;
   --bg-panel-ink:  #2a3648;        /* dark ink panel (for stat bars bg) */
+  --bg-panel:      #fffaf0;
 
   /* Ink typography */
   --fg:          #2c3e52;          /* deep ink navy */
@@ -88,37 +89,87 @@
 }
 
 body {
-  background: var(--bg);
+  background: #10233a;
   color: var(--fg);
   font-family: var(--font-geist-sans), "Noto Serif SC", system-ui, sans-serif;
   min-height: 100vh;
   position: relative;
+  overflow-x: hidden;
 }
 
-/* Parchment background texture — subtle floral ornament watermark */
+/* Full-page wallpaper with top light and lower blue vignette for legibility. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   background-image:
-    radial-gradient(ellipse at 15% 10%, rgba(182, 136, 56, 0.06) 0, transparent 55%),
-    radial-gradient(ellipse at 85% 90%, rgba(58, 107, 142, 0.04) 0, transparent 55%),
-    radial-gradient(ellipse at 50% 50%, rgba(255, 244, 194, 0.12) 0, transparent 70%);
+    linear-gradient(180deg, rgba(247, 250, 255, 0.08) 0%, rgba(247, 250, 255, 0.02) 36%, rgba(9, 23, 42, 0.52) 100%),
+    linear-gradient(90deg, rgba(8, 22, 38, 0.4) 0%, rgba(8, 22, 38, 0.04) 18%, rgba(8, 22, 38, 0.02) 70%, rgba(8, 22, 38, 0.46) 100%),
+    url("/lifeos/background-wallpaper.png");
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
   pointer-events: none;
   z-index: 0;
 }
 
-/* Gentle paper noise (data-URI micro SVG for durability) */
+/* Blue-gold atmosphere and micro texture that sits behind the app chrome. */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   background-image:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.34), transparent 30%),
+    radial-gradient(circle at 82% 28%, rgba(91, 153, 217, 0.18), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(7, 20, 36, 0.48)),
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.5  0 0 0 0 0.3  0 0 0 0.08 0'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>");
-  mix-blend-mode: multiply;
-  opacity: 0.4;
+  mix-blend-mode: normal;
+  opacity: 0.82;
   pointer-events: none;
   z-index: 0;
+}
+
+::selection {
+  background: rgba(212, 169, 77, 0.34);
+  color: var(--fg-strong);
+}
+
+.top-brand-panel {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: clamp(320px, 24vw, 520px);
+  background:
+    linear-gradient(105deg, rgba(255, 252, 242, 0.98) 0%, rgba(255, 252, 242, 0.92) 66%, rgba(255, 252, 242, 0) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(232, 220, 192, 0.58));
+  clip-path: polygon(0 0, calc(100% - 64px) 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+.top-brand-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 14% 18%, rgba(182, 136, 56, 0.18), transparent 30%),
+    linear-gradient(90deg, rgba(182, 136, 56, 0.18), transparent 70%);
+  opacity: 0.5;
+}
+
+.nav-plaque {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 242, 0.98), rgba(233, 224, 203, 0.96));
+  border: 1px solid rgba(182, 136, 56, 0.58);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 12px 28px -22px rgba(4, 12, 24, 0.9);
+  clip-path: polygon(13px 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 13px 100%, 0 50%);
+}
+
+@media (max-width: 767px) {
+  .top-brand-panel {
+    width: 126px;
+    clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 100%, 0 100%);
+  }
 }
 
 /* ============================================================
@@ -171,22 +222,30 @@ body::after {
 
 .panel-cream {
   position: relative;
-  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-raised) 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 242, 0.96) 0%, rgba(239, 232, 211, 0.9) 100%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.12));
+  backdrop-filter: blur(22px) saturate(1.08);
   border: 1px solid var(--border);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-    0 1px 2px rgba(43, 34, 15, 0.04),
-    0 12px 32px -16px rgba(43, 34, 15, 0.15);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(138, 104, 32, 0.08),
+    0 1px 2px rgba(43, 34, 15, 0.05),
+    0 18px 42px -24px rgba(7, 20, 36, 0.55);
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
 }
 
 /* Gold double-line inset frame (adds 6px inside gold hairline) */
 .panel-cream.framed {
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-    inset 0 0 0 6px var(--bg-card),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.64),
+    inset 0 0 0 6px rgba(255, 251, 240, 0.36),
     inset 0 0 0 7px var(--gold-tint),
-    0 1px 2px rgba(43, 34, 15, 0.04),
-    0 12px 32px -16px rgba(43, 34, 15, 0.15);
+    0 1px 2px rgba(43, 34, 15, 0.05),
+    0 18px 42px -24px rgba(7, 20, 36, 0.55);
 }
 
 /* Ornate corner markers — for headline panels */
@@ -210,7 +269,10 @@ body::after {
 /* Dark ink card (for hero banner / assets card style) */
 .panel-ink {
   position: relative;
-  background: linear-gradient(160deg, #2f3e55 0%, #1e2938 100%);
+  background:
+    linear-gradient(160deg, rgba(46, 67, 98, 0.92) 0%, rgba(18, 31, 51, 0.92) 100%),
+    linear-gradient(45deg, rgba(212, 169, 77, 0.08), transparent 55%);
+  backdrop-filter: blur(18px) saturate(1.08);
   border: 1px solid var(--gold-deep);
   color: var(--fg-on-ink);
   box-shadow:
@@ -330,6 +392,23 @@ body::after {
   border: 2px solid var(--bg-page);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(182, 136, 56, 0.62) rgba(255, 255, 255, 0.16);
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(212, 169, 77, 0.75), rgba(138, 104, 32, 0.7));
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+}
 
 /* ============================================================
    Animations

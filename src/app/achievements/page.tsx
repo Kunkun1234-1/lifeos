@@ -53,8 +53,8 @@ export default function AchievementsPage() {
   const TIERS = ["bronze", "silver", "gold", "legendary"];
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6 px-8 py-8">
-      <div className="flex items-end justify-between">
+    <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 md:px-8 md:py-8">
+      <div className="panel-cream framed flex flex-col gap-4 rounded-sm p-5 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="section-label">
             <span className="cn text-2xl">成就</span>
@@ -249,7 +249,7 @@ function AchievementCard({ a, index }: { a: AchievementDTO; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       className={`relative panel-cream framed rounded-sm p-4 ${
-        a.unlocked ? "" : "opacity-65 grayscale-[0.4]"
+        a.unlocked ? "" : "grayscale-[0.35]"
       }`}
     >
       <div className="flex items-start gap-3">

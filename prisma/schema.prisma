@@ -185,7 +185,7 @@ model Task {
 
   title    String
   notes    String?
-  status   String    @default("TODO") // TODO | DONE | CANCELED
+  status   String    @default("TODO") // TODO | IN_PROGRESS | DONE | CANCELED
   priority Int       @default(2) // 1=high, 2=normal, 3=low
   dueDate  DateTime?
 

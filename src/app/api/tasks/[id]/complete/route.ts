@@ -20,7 +20,7 @@ export async function POST(_req: Request, { params }: Params) {
     prisma.task.update({
       where: { id },
       data: { status: "DONE", completedAt: new Date() },
-      include: { area: true },
+      include: { area: true, project: true },
     }),
     grantReward({
       userId,

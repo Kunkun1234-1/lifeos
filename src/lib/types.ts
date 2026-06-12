@@ -52,7 +52,7 @@ export type TaskDTO = {
   id: string;
   title: string;
   notes: string | null;
-  status: "TODO" | "DONE" | "CANCELED";
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "CANCELED";
   priority: number;
   dueDate: string | null;
   xpReward: number;

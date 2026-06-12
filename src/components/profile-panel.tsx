@@ -4,23 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useDashboardData } from "@/components/dashboard-data";
 import { useUser } from "@/hooks/queries";
-import { deriveLevel } from "@/lib/gamification";
-import {
-  Heart,
-  BookOpen,
-  Users,
-  Brain,
-  Palette,
-  Coins,
-  Sparkles,
-} from "lucide-react";
-import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 
 /**
  * Left profile — flat on parchment (no outer panel).
  * Six attributes match the project's 6 dimensions (per docs §4.1 + /help):
  *   STR→健康  INT→学习  CHA→关系  WIS→心智  CRE→创造  GOLD→财富
- * Stat bars + radar both render real `xpByArea`. Both link to /analytics.
+ * The radar renders cumulative `xpByArea` and links to /analytics.
  */
 export function ProfilePanel() {
   const dashboard = useDashboardData();
@@ -98,13 +88,6 @@ export function ProfilePanel() {
         </div>
       </div>
 
-      {/* 6 attribute stat bars — STR/INT/CHA/WIS/CRE/GOLD */}
-      <div className="space-y-1">
-        {DIMENSIONS.map((d) => (
-          <StatBar key={d.key} dim={d} xp={xpByArea[d.key] ?? 0} />
-        ))}
-      </div>
-
       <div className="divider-gold text-[10px] font-display-en tracking-[0.3em]">
         <span className="font-display text-[13px] font-bold tracking-[0.08em] text-[var(--fg-strong)]">
           六维属性
@@ -175,57 +158,28 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 type Dimension = {
   key: "STR" | "INT" | "CHA" | "WIS" | "CRE" | "GOLD";
   cn: string;
-  icon: React.ReactNode;
-  color: string;
 };
 
 const DIMENSIONS: Dimension[] = [
-  { key: "STR",  cn: "健康", icon: <Heart size={13} />,    color: "var(--attr-str)" },
-  { key: "INT",  cn: "学习", icon: <BookOpen size={13} />, color: "var(--attr-int)" },
-  { key: "CHA",  cn: "关系", icon: <Users size={13} />,    color: "var(--attr-cha)" },
-  { key: "WIS",  cn: "心智", icon: <Brain size={13} />,    color: "var(--attr-wis)" },
-  { key: "CRE",  cn: "创造", icon: <Palette size={13} />,  color: "var(--attr-cre)" },
-  { key: "GOLD", cn: "财富", icon: <Coins size={13} />,    color: "var(--attr-gold)" },
+  { key: "STR", cn: "健康" },
+  { key: "INT", cn: "学习" },
+  { key: "CHA", cn: "关系" },
+  { key: "WIS", cn: "心智" },
+  { key: "CRE", cn: "创造" },
+  { key: "GOLD", cn: "财富" },
 ];
 
-/** Map raw XP → current-level progress percent, matching module cards. */
-function xpToProgressScore(xp: number): number {
-  const { progress } = deriveLevel(xp);
-  return Math.min(100, Math.max(0, Math.round(progress * 100)));
+function normalizeXp(xp: number): number {
+  return Math.max(0, Math.round(xp));
 }
 
-function StatBar({ dim, xp }: { dim: Dimension; xp: number }) {
-  const { level, xpIntoLevel, xpForNext } = deriveLevel(xp);
-  const value = xpToProgressScore(xp);
-  return (
-    <Link
-      href={`/analytics`}
-      title={`${dim.cn} · ${dim.key} · Lv.${level} ${xpIntoLevel}/${xpForNext} XP — 查看属性分布`}
-      className="group flex items-center gap-2 rounded-sm px-1 py-0.5 transition-colors hover:bg-[var(--gold-tint)]"
-    >
-      <span className="shrink-0" style={{ color: dim.color }}>
-        {dim.icon}
-      </span>
-      <span className="w-9 shrink-0 font-display text-[13px] font-semibold text-[var(--fg-strong)]">
-        {dim.cn}
-      </span>
-      <div className="relative h-[6px] flex-1 overflow-hidden rounded-full bg-[var(--bg-panel-ink)]/15 border border-[var(--border)]">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className="h-full rounded-full"
-          style={{
-            background: `linear-gradient(90deg, ${dim.color}CC, ${dim.color})`,
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)",
-          }}
-        />
-      </div>
-      <span className="w-12 shrink-0 text-right font-mono text-[11px] text-[var(--fg)]">
-        {value}/100
-      </span>
-    </Link>
-  );
+function xpToAttributeScore(xp: number, maxXp: number): number {
+  if (maxXp <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((normalizeXp(xp) / maxXp) * 100)));
+}
+
+function formatXp(xp: number): string {
+  return normalizeXp(xp).toLocaleString("zh-CN");
 }
 
 /** 6-axis attribute radar — one axis per dimension, real data only. */
@@ -240,7 +194,9 @@ function RadarChart({ xp }: { xp: Record<string, number> }) {
   const maxR = 78;
   const levels = 4;
 
-  const values = axes.map((a) => xpToProgressScore(xp[a.key] ?? 0));
+  const rawValues = axes.map((a) => normalizeXp(xp[a.key] ?? 0));
+  const maxXp = Math.max(0, ...rawValues);
+  const values = rawValues.map((v) => xpToAttributeScore(v, maxXp));
 
   const point = (i: number, r: number) => {
     const { angle } = axes[i];
@@ -254,7 +210,7 @@ function RadarChart({ xp }: { xp: Record<string, number> }) {
   return (
     <Link
       href="/analytics"
-      title="查看 90 天属性分布"
+      title="累计属性 XP · 最大值映射到外圈 · 查看 90 天属性分布"
       className="block transition-opacity hover:opacity-90"
     >
       <div
@@ -309,7 +265,7 @@ function RadarChart({ xp }: { xp: Record<string, number> }) {
               <div className="font-display text-[11px] font-bold text-[var(--fg-strong)]">
                 {a.cn}
               </div>
-              <div className="font-mono text-[10px] text-[var(--fg)]">{values[i]}</div>
+              <div className="font-mono text-[10px] text-[var(--fg)]">{formatXp(rawValues[i])}</div>
             </div>
           );
         })}

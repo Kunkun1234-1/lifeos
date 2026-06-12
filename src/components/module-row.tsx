@@ -26,8 +26,8 @@ export function ModuleRow() {
     .filter((a): a is NonNullable<typeof a> => !!a);
 
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
+    <section className="h-full min-h-0">
+      <div className="mb-3 flex items-center gap-2 xl:mb-2">
         <span className="diamond-gold" />
         <div className="section-label">
           <span className="cn text-[15px]">人生模块</span>
@@ -35,7 +35,7 @@ export function ModuleRow() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:h-[calc(100%-28px)] xl:grid-cols-6 xl:gap-3 2xl:gap-4">
         {ordered.map((a, i) => {
           const meta = AREA_META[a.name as AreaName];
           if (!meta) return null;
@@ -47,9 +47,9 @@ export function ModuleRow() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="panel-cream framed group overflow-hidden rounded-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_34px_-24px_rgba(70,48,24,0.45)]"
+              className="panel-cream framed group flex h-full min-h-0 flex-col overflow-hidden rounded-sm transition-all hover:-translate-y-0.5 hover:border-[var(--gold)] hover:shadow-[0_22px_42px_-28px_rgba(5,18,36,0.72)]"
             >
-              <div className="relative mx-3 mt-3 aspect-[16/9] overflow-hidden rounded-sm border border-[var(--gold)]/70">
+              <div className="relative mx-3 mt-3 aspect-[16/9] shrink-0 overflow-hidden rounded-sm border border-[var(--gold)]/70 xl:mx-2 xl:mt-2 2xl:mx-3 2xl:mt-3">
                 <Image
                   src={meta.art}
                   alt={meta.cn}
@@ -66,8 +66,8 @@ export function ModuleRow() {
                 </div>
               </div>
 
-              <div className="px-4 pt-3">
-                <div className="font-display text-[18px] font-bold tracking-[0.06em] text-[var(--fg-strong)]">
+              <div className="px-4 pt-3 xl:px-3 xl:pt-2 2xl:px-4">
+                <div className="font-display text-[18px] font-bold tracking-[0.06em] text-[var(--fg-strong)] xl:text-[15px] 2xl:text-[18px]">
                   {meta.cn}
                 </div>
                 <div className="mt-0.5 font-display-en text-[9px] tracking-[0.22em] text-[var(--gold-deep)]/70">
@@ -75,7 +75,7 @@ export function ModuleRow() {
                 </div>
               </div>
 
-              <div className="px-4 pb-4 pt-3">
+              <div className="mt-auto px-4 pb-4 pt-3 xl:px-3 xl:pb-3 xl:pt-2 2xl:px-4 2xl:pb-4">
                 <div className="flex items-baseline justify-between">
                   <span className="font-display text-[12px] text-[var(--fg-muted)]">
                     等级: <span className="text-[var(--fg-strong)] font-bold">Lv.{level}</span>
@@ -105,7 +105,7 @@ export function ModuleRow() {
               key={a.id}
               href={`/areas/${a.id}`}
               aria-label={`查看${meta.cn}领域`}
-              className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)]/70"
+              className="block h-full min-h-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--gold)]/70"
             >
               {card}
             </Link>

@@ -15,7 +15,7 @@ export const TaskCreateSchema = z.object({
 export type TaskCreateInput = z.infer<typeof TaskCreateSchema>;
 
 export const TaskUpdateSchema = TaskCreateSchema.partial().extend({
-  status: z.enum(["TODO", "DONE", "CANCELED"]).optional(),
+  status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELED"]).optional(),
 });
 
 // ---------- Habit ----------

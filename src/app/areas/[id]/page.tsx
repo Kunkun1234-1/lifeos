@@ -47,6 +47,7 @@ const PROJECT_STATUS_LABEL: Record<ProjectDTO["status"], string> = {
 
 const TASK_STATUS_LABEL: Record<TaskDTO["status"], string> = {
   TODO: "待处理",
+  IN_PROGRESS: "进行中",
   DONE: "完成",
   CANCELED: "取消",
 };
@@ -110,7 +111,9 @@ export default function AreaDetailPage() {
     ["idea", "active", "paused"].includes(project.status),
   );
   const doneProjects = areaProjects.filter((project) => project.status === "done");
-  const openTasks = areaTasks.filter((task) => task.status === "TODO");
+  const openTasks = areaTasks.filter(
+    (task) => task.status === "TODO" || task.status === "IN_PROGRESS",
+  );
   const doneTasks = areaTasks.filter((task) => task.status === "DONE");
   const overdueTasks = openTasks.filter((task) => isOverdue(task.dueDate));
   const dueSoonTasks = openTasks.filter((task) => isDueSoon(task.dueDate));
@@ -543,7 +546,9 @@ function GoalItem({ goal }: { goal: GoalDTO }) {
 function ProjectItem({ project, tasks }: { project: ProjectDTO; tasks: TaskDTO[] }) {
   const taskProgress =
     project.taskCount > 0 ? project.taskDoneCount / project.taskCount : 0;
-  const nextTasks = tasks.filter((task) => task.status === "TODO").slice(0, 3);
+  const nextTasks = tasks
+    .filter((task) => task.status === "TODO" || task.status === "IN_PROGRESS")
+    .slice(0, 3);
 
   return (
     <div className="rounded-sm border border-[var(--border)] bg-[var(--bg-card)]/70 p-4">

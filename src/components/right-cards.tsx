@@ -87,13 +87,13 @@ export function ScheduleCard() {
   }
 
   return (
-    <div className="panel-cream framed rounded-sm p-4 space-y-3">
+    <div className="panel-cream framed h-full min-h-0 overflow-hidden rounded-sm p-4 space-y-3 hover:-translate-y-0.5 hover:border-[var(--gold)] xl:p-3 2xl:p-4">
       <SectionHeader cn="今日安排" en="Schedule" more="/routines" />
 
       {scheduleItems.length === 0 ? (
         <EmptyHint text="尚未设定日程。去添加日常。" href="/routines" />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2 xl:space-y-1.5">
           {scheduleItems.map((it) => (
             <li key={it.id} className="group flex items-center gap-2 text-sm">
               <button
@@ -141,12 +141,12 @@ export function TasksCard() {
   const top = (tasks ?? []).slice(0, 4);
 
   return (
-    <div className="panel-cream framed rounded-sm p-4 space-y-3">
+    <div className="panel-cream framed h-full min-h-0 overflow-hidden rounded-sm p-4 space-y-3 hover:-translate-y-0.5 hover:border-[var(--gold)] xl:p-3 2xl:p-4">
       <SectionHeader cn="待办事项" en="Tasks" more="/tasks" />
       {top.length === 0 ? (
         <EmptyHint text="暂无待办。" href="/tasks" />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2 xl:space-y-1.5">
           {top.map((t) => (
             <li key={t.id} className="flex items-start gap-2 text-sm">
               <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-[var(--gold)]" />
@@ -198,20 +198,20 @@ export function AssetsCard() {
   ];
 
   return (
-    <div className="panel-cream framed relative overflow-hidden rounded-sm p-4">
+    <div className="panel-cream framed relative h-full min-h-0 overflow-hidden rounded-sm p-4 hover:-translate-y-0.5 hover:border-[var(--gold)] xl:p-3 2xl:p-4">
       <SectionHeader cn="人生资产" en="Assets" more="/assets" />
 
       <Link href="/assets" className="group mt-3 block">
-        <div className="relative aspect-[2.35/1] overflow-hidden rounded-sm border border-[var(--gold)]/35 bg-[var(--bg-page)]">
+        <div className="relative aspect-[2.35/1] overflow-hidden rounded-sm border border-[var(--gold)]/40 bg-[#dfeaf5] xl:aspect-[2.5/1] 2xl:aspect-[2.2/1]">
           <Image
-            src="/lifeos/assets_card_v2.png"
-            alt="资产账本与钱包"
+            src="/gacha/items/artisan-box.png"
+            alt="星辉宝箱资产"
             fill
-            className="object-cover object-left transition-transform duration-500 group-hover:scale-[1.03]"
+            className="object-contain object-left transition-transform duration-500 group-hover:scale-[1.06]"
             sizes="(min-width: 1536px) 220px, (min-width: 1024px) 25vw, 50vw"
             priority
           />
-          <div className="absolute inset-y-0 right-0 w-[48%] bg-gradient-to-l from-[var(--bg-panel)] via-[var(--bg-panel)]/88 to-transparent" />
+          <div className="absolute inset-y-0 left-[34%] right-0 bg-gradient-to-r from-transparent via-[var(--bg-panel)]/88 to-[var(--bg-panel)]" />
           <div className="absolute right-3 top-3 text-right">
             <div className="font-display text-[11px] text-[var(--fg-muted)]">净资产</div>
             <div className="font-display text-2xl font-bold leading-none text-[var(--gold-deep)]">
@@ -284,7 +284,7 @@ export function AchievementsCard() {
       : STATIC;
 
   return (
-    <div className="panel-cream framed rounded-sm p-4 space-y-3">
+    <div className="panel-cream framed h-full min-h-0 overflow-hidden rounded-sm p-4 space-y-3 hover:-translate-y-0.5 hover:border-[var(--gold)] xl:p-3 2xl:p-4">
       <SectionHeader cn="近期成就" en="Recent Achievements" more="/achievements" />
       <ul className="space-y-2.5">
         {items.map((it, i) => (

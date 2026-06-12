@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import Image from "next/image";
 import {
   Backpack,
   Check,
@@ -49,6 +50,7 @@ type InventoryRow =
       subtitle: string;
       value: string;
       icon: ReactNode;
+      imageSrc: string;
       tone: string;
     }
   | { id: string; kind: "reward"; reward: InventoryRewardInstanceDTO }
@@ -110,6 +112,8 @@ const STATUS_TONE: Record<InventoryRewardStatus, string> = {
   discarded: "border-[var(--danger)]/35 bg-[var(--danger)]/10 text-[var(--danger)]",
 };
 
+const INVENTORY_CAPACITY = 1000;
+
 export default function InventoryPage() {
   const { data, isLoading, isError, error } = useInventory();
   const [category, setCategory] = useState<Category>("all");
@@ -133,6 +137,7 @@ export default function InventoryPage() {
         subtitle: "金币 · 完成行动获得",
         value: data.currency.gold.toLocaleString(),
         icon: <Coins size={18} />,
+        imageSrc: "/lifeos/inventory/resource-gold.png",
         tone: "text-[var(--attr-gold)]",
       },
       {
@@ -142,6 +147,7 @@ export default function InventoryPage() {
         subtitle: "宝石 · 高价值奖励",
         value: data.currency.gems.toLocaleString(),
         icon: <Gem size={18} />,
+        imageSrc: "/lifeos/inventory/resource-gems.png",
         tone: "text-[var(--attr-cha)]",
       },
       {
@@ -151,6 +157,7 @@ export default function InventoryPage() {
         subtitle: "命运券 · 用于祈愿",
         value: data.currency.fate.toLocaleString(),
         icon: <Ticket size={18} />,
+        imageSrc: "/lifeos/inventory/resource-fate.png",
         tone: "text-[var(--attr-cre)]",
       },
       {
@@ -160,6 +167,7 @@ export default function InventoryPage() {
         subtitle: `已使用 ${data.freeze.totalUsed} 次`,
         value: data.freeze.count.toLocaleString(),
         icon: <Snowflake size={18} />,
+        imageSrc: "/lifeos/inventory/resource-freeze.png",
         tone: "text-[#3a6b8e]",
       },
     ];
@@ -215,136 +223,125 @@ export default function InventoryPage() {
     };
   }, [data]);
 
-  return (
-    <div className="mx-auto max-w-[1500px] space-y-5 px-4 py-6 md:px-8">
-      <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <div className="section-label">
-            <span className="cn text-2xl">背包</span>
-            <span className="en text-[11px]">Inventory</span>
-          </div>
-          <div className="mt-2 h-px max-w-xl bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/40 to-transparent" />
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--fg-muted)]">
-            已获得的现实奖励、虚拟资源、装备、称号与成就都会归档在这里。
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-4 xl:w-[620px]">
-          <SummaryTile label="Gold" value={data?.currency.gold ?? 0} icon={<Coins size={16} />} />
-          <SummaryTile label="Gems" value={data?.currency.gems ?? 0} icon={<Gem size={16} />} />
-          <SummaryTile label="Fate" value={data?.currency.fate ?? 0} icon={<Ticket size={16} />} />
-          <SummaryTile label="Rewards" value={data?.rewards.filter((r) => r.status === "available").length ?? 0} icon={<Gift size={16} />} />
-        </div>
-      </header>
+  const activeCategory = CATEGORIES.find((item) => item.key === category) ?? CATEGORIES[0];
 
-      {isError ? (
-        <div className="panel-cream framed rounded-sm p-6 text-sm text-[var(--danger)]">
-          {(error as Error).message}
-        </div>
-      ) : (
-        <div className="grid gap-5 xl:grid-cols-[220px_minmax(0,1fr)_360px]">
-          <aside className="panel-cream framed h-fit rounded-sm p-3">
-            <div className="mb-3 flex items-center gap-2 border-b border-[var(--gold)]/30 pb-3">
-              <Backpack size={18} className="text-[var(--gold-deep)]" />
-              <div>
-                <div className="font-display text-[14px] font-bold text-[var(--fg-strong)]">分类</div>
-                <div className="font-display-en text-[9px] text-[var(--gold-deep)]">Categories</div>
+  return (
+    <div className="mx-auto max-w-[1680px] px-4 py-5 md:px-8">
+      <section className="relative overflow-hidden rounded-sm border border-[var(--gold)]/55 bg-[linear-gradient(135deg,rgba(255,252,242,0.2)_0%,rgba(64,91,122,0.14)_42%,rgba(7,20,36,0.22)_100%)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.24),inset_0_0_0_6px_rgba(255,251,240,0.06),0_26px_80px_-42px_rgba(4,12,24,0.9)] backdrop-blur-[6px]">
+        <header className="flex flex-col gap-4 border-b border-[var(--gold)]/38 bg-[rgba(255,252,242,0.4)] px-4 py-4 shadow-[inset_0_-1px_0_rgba(255,255,255,0.3)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-sm border border-[var(--gold)]/60 bg-[linear-gradient(145deg,rgba(42,54,72,0.94),rgba(18,30,48,0.9))] text-[var(--gold-pale)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_12px_24px_-18px_rgba(4,12,24,0.8)]">
+              <Backpack size={23} />
+            </div>
+            <div>
+              <div className="section-label">
+                <span className="cn text-2xl">背包</span>
+                <span className="en text-[11px]">Inventory</span>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--fg-muted)]">
+                <span className="font-display text-[13px] font-bold text-[var(--fg-strong)]">
+                  {activeCategory.cn}
+                </span>
+                <span className="font-mono text-[var(--gold-deep)]">
+                  {rows.length}/{INVENTORY_CAPACITY}
+                </span>
               </div>
             </div>
-            <div className="space-y-1">
-              {CATEGORIES.map((item) => {
-                const Icon = item.icon;
-                const active = item.key === category;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => {
-                      setCategory(item.key);
-                      setSelectedId(null);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left transition-colors",
-                      active
-                        ? "bg-[var(--bg-panel-ink)] text-[var(--fg-on-ink)]"
-                        : "text-[var(--fg-muted)] hover:bg-[var(--gold-tint)] hover:text-[var(--fg-strong)]",
-                    )}
-                  >
-                    <Icon size={15} className={active ? "text-[var(--gold-pale)]" : "text-[var(--gold-deep)]"} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-[13px]">{item.cn}</span>
-                      <span className="block font-display-en text-[8px]">{item.en}</span>
-                    </span>
-                    <span className="font-mono text-[11px]">{counts[item.key]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
+          </div>
 
-          <section className="min-w-0 space-y-3">
-            <div className="panel-cream framed rounded-sm p-3">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid gap-2 sm:grid-cols-3 lg:w-[560px]">
+            <CurrencyCapsule
+              label="Gold"
+              value={data?.currency.gold ?? 0}
+              icon={<Coins size={16} />}
+              imageSrc="/lifeos/inventory/resource-gold.png"
+              tone="text-[var(--attr-gold)]"
+            />
+            <CurrencyCapsule
+              label="Fate"
+              value={data?.currency.fate ?? 0}
+              icon={<Ticket size={16} />}
+              imageSrc="/lifeos/inventory/resource-fate.png"
+              tone="text-[var(--attr-cre)]"
+            />
+            <CurrencyCapsule
+              label="Gems"
+              value={data?.currency.gems ?? 0}
+              icon={<Gem size={16} />}
+              imageSrc="/lifeos/inventory/resource-gems.png"
+              tone="text-[var(--attr-cha)]"
+            />
+          </div>
+        </header>
+
+        {isError ? (
+          <div className="p-6 text-sm text-[var(--danger)]">
+            {(error as Error).message}
+          </div>
+        ) : (
+          <div className="grid min-h-[calc(100vh-190px)] grid-cols-[68px_minmax(0,1fr)] bg-transparent xl:grid-cols-[82px_minmax(0,1fr)_420px]">
+            <CategoryRail
+              category={category}
+              counts={counts}
+              onChange={(next) => {
+                setCategory(next);
+                setSelectedId(null);
+              }}
+            />
+
+            <section className="relative min-w-0 overflow-hidden border-l border-[var(--gold)]/28 bg-[rgba(10,24,42,0.12)] p-4 shadow-[inset_1px_0_0_rgba(255,255,255,0.18),inset_-1px_0_0_rgba(138,104,32,0.16)] backdrop-blur-[2px] xl:border-r">
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(232,201,119,0.13)_1px,transparent_1px),linear-gradient(180deg,rgba(232,201,119,0.09)_1px,transparent_1px)] bg-[length:36px_36px] opacity-45" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_24%_0%,rgba(255,255,255,0.26),transparent_48%)]" />
+              <div className="relative z-10 mb-4 flex flex-col gap-3 rounded-sm border border-[var(--gold)]/28 bg-[rgba(255,252,242,0.28)] px-3 py-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22),0_14px_34px_-30px_rgba(4,12,24,0.82)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <div className="font-display text-[15px] font-bold text-[var(--fg-strong)]">
-                    {CATEGORIES.find((item) => item.key === category)?.cn ?? "全部"}
+                  <div className="font-display text-[20px] font-bold leading-none text-[var(--fg-strong)]">
+                    {activeCategory.cn}
                   </div>
-                  <div className="font-display-en text-[9px] text-[var(--gold-deep)]">
+                  <div className="mt-1 font-display-en text-[9px] text-[var(--gold-deep)]">
                     {rows.length} ITEMS
                   </div>
                 </div>
                 {(category === "rewards" || category === "all") && (
-                  <div className="grid gap-2 sm:grid-cols-3 lg:w-[520px]">
-                    <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as RewardStatusFilter)}>
-                      <option value="available">可用</option>
-                      <option value="used">已使用</option>
-                      <option value="discarded">已丢弃</option>
-                      <option value="all">全部状态</option>
-                    </Select>
-                    <Select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as RewardSourceFilter)}>
-                      <option value="all">全部来源</option>
-                      <option value="store">商店</option>
-                      <option value="gacha">祈愿</option>
-                    </Select>
-                    <Select value={tierFilter} onChange={(event) => setTierFilter(event.target.value as RewardTierFilter)}>
-                      <option value="all">全部稀有度</option>
-                      <option value="common">通常</option>
-                      <option value="rare">稀有</option>
-                      <option value="epic">史诗</option>
-                      <option value="legendary">传说</option>
-                    </Select>
-                  </div>
+                  <InventoryFilters
+                    statusFilter={statusFilter}
+                    sourceFilter={sourceFilter}
+                    tierFilter={tierFilter}
+                    onStatusChange={setStatusFilter}
+                    onSourceChange={setSourceFilter}
+                    onTierChange={setTierFilter}
+                  />
                 )}
               </div>
-            </div>
 
-            <div className="grid gap-2">
-              {isLoading ? (
-                <div className="panel-cream framed rounded-sm py-16 text-center text-sm text-[var(--fg-muted)]">
-                  Loading...
-                </div>
-              ) : rows.length === 0 ? (
-                <div className="panel-cream framed rounded-sm py-16 text-center text-sm text-[var(--fg-muted)]">
-                  当前分类没有物品。
-                </div>
-              ) : (
-                rows.map((row) => (
-                  <InventoryListRow
-                    key={row.id}
-                    row={row}
-                    selected={selected?.id === row.id}
-                    onClick={() => setSelectedId(row.id)}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+              <div className="relative z-10 grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-3 2xl:grid-cols-[repeat(auto-fill,minmax(124px,1fr))]">
+                {isLoading ? (
+                  <div className="col-span-full rounded-sm border border-dashed border-[var(--gold)]/48 bg-[rgba(13,28,47,0.28)] py-20 text-center text-sm text-[var(--fg-on-ink)]/82 backdrop-blur-md">
+                    Loading...
+                  </div>
+                ) : rows.length === 0 ? (
+                  <div className="col-span-full rounded-sm border border-dashed border-[var(--gold)]/48 bg-[rgba(13,28,47,0.28)] py-20 text-center text-sm text-[var(--fg-on-ink)]/82 backdrop-blur-md">
+                    当前分类没有物品。
+                  </div>
+                ) : (
+                  rows.map((row) => (
+                    <InventoryGridCard
+                      key={row.id}
+                      row={row}
+                      selected={selected?.id === row.id}
+                      onClick={() => setSelectedId(row.id)}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
 
-          <DetailPanel
-            selected={selected}
-            onRewardAction={(reward, action) => setPendingAction({ reward, action })}
-          />
-        </div>
-      )}
+            <DetailPanel
+              selected={selected}
+              onRewardAction={(reward, action) => setPendingAction({ reward, action })}
+            />
+          </div>
+        )}
+      </section>
 
       {pendingAction && (
         <RewardActionDialog
@@ -357,21 +354,145 @@ export default function InventoryPage() {
   );
 }
 
-function SummaryTile({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
+function CurrencyCapsule({
+  label,
+  value,
+  icon,
+  imageSrc,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: ReactNode;
+  imageSrc?: string;
+  tone: string;
+}) {
   return (
-    <div className="panel-cream framed rounded-sm p-3">
-      <div className="flex items-center justify-between text-[var(--gold-deep)]">
-        <span className="font-display-en text-[9px]">{label}</span>
-        {icon}
+    <div className="flex min-w-0 items-center gap-2.5 rounded-sm border border-[var(--gold)]/45 bg-[rgba(255,252,242,0.54)] px-3 py-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.24),0_14px_28px_-24px_rgba(4,12,24,0.9)] backdrop-blur-xl">
+      <div
+        className={cn(
+          "grid h-9 w-9 shrink-0 place-items-center overflow-hidden border border-[var(--gold)]/48 bg-[rgba(255,252,242,0.28)] shadow-[0_8px_18px_-14px_rgba(4,12,24,0.85)]",
+          imageSrc ? "rounded-sm" : "rounded-full",
+          tone,
+        )}
+      >
+        {imageSrc ? (
+          <Image src={imageSrc} alt="" width={72} height={72} className="h-full w-full object-cover" />
+        ) : (
+          icon
+        )}
       </div>
-      <div className="mt-2 truncate font-mono text-xl font-bold text-[var(--fg-strong)]">
-        {value.toLocaleString()}
+      <div className="min-w-0">
+        <div className="font-display-en text-[8px] text-[var(--gold-deep)]">{label}</div>
+        <div className="truncate font-mono text-[20px] font-bold leading-none text-[var(--fg-strong)] drop-shadow-[0_1px_0_rgba(255,255,255,0.45)]">
+          {value.toLocaleString()}
+        </div>
       </div>
     </div>
   );
 }
 
-function InventoryListRow({
+function CategoryRail({
+  category,
+  counts,
+  onChange,
+}: {
+  category: Category;
+  counts: Record<Category, number>;
+  onChange: (category: Category) => void;
+}) {
+  return (
+    <aside className="flex flex-col items-center gap-2 border-r border-[var(--gold)]/32 bg-[rgba(13,27,45,0.42)] px-2 py-4 shadow-[inset_-1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+      {CATEGORIES.map((item) => {
+        const Icon = item.icon;
+        const active = item.key === category;
+        return (
+          <button
+            key={item.key}
+            type="button"
+            title={`${item.cn} · ${counts[item.key]}`}
+            aria-label={`${item.cn} ${counts[item.key]}`}
+            onClick={() => onChange(item.key)}
+            className={cn(
+              "group relative grid h-12 w-12 place-items-center rounded-sm border transition-all",
+              active
+                ? "border-[var(--gold)] bg-[rgba(255,252,242,0.18)] text-[var(--gold-pale)] shadow-[0_0_0_2px_rgba(232,201,119,0.18),0_12px_28px_-20px_rgba(0,0,0,0.9)]"
+                : "border-transparent text-[var(--gold-pale)]/64 hover:border-[var(--gold)]/45 hover:bg-white/10 hover:text-[var(--gold-pale)]",
+            )}
+          >
+            <Icon size={22} />
+            <span
+              className={cn(
+                "absolute -right-1 -top-1 min-w-5 rounded-full border px-1 font-mono text-[9px]",
+                active
+                  ? "border-[var(--gold)] bg-[var(--gold-pale)] text-[var(--bg-panel-ink)]"
+                  : "border-[var(--gold)]/28 bg-[rgba(255,252,242,0.92)] text-[var(--gold-deep)]",
+              )}
+            >
+              {counts[item.key]}
+            </span>
+          </button>
+        );
+      })}
+    </aside>
+  );
+}
+
+function InventoryFilters({
+  statusFilter,
+  sourceFilter,
+  tierFilter,
+  onStatusChange,
+  onSourceChange,
+  onTierChange,
+}: {
+  statusFilter: RewardStatusFilter;
+  sourceFilter: RewardSourceFilter;
+  tierFilter: RewardTierFilter;
+  onStatusChange: (value: RewardStatusFilter) => void;
+  onSourceChange: (value: RewardSourceFilter) => void;
+  onTierChange: (value: RewardTierFilter) => void;
+}) {
+  const selectClassName =
+    "border-[var(--gold)]/35 bg-[rgba(24,38,58,0.7)] text-[var(--fg-on-ink)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]";
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-3 lg:w-[520px]">
+      <Select
+        value={statusFilter}
+        className={selectClassName}
+        onChange={(event) => onStatusChange(event.target.value as RewardStatusFilter)}
+      >
+        <option value="available">可用</option>
+        <option value="used">已使用</option>
+        <option value="discarded">已丢弃</option>
+        <option value="all">全部状态</option>
+      </Select>
+      <Select
+        value={sourceFilter}
+        className={selectClassName}
+        onChange={(event) => onSourceChange(event.target.value as RewardSourceFilter)}
+      >
+        <option value="all">全部来源</option>
+        <option value="store">商店</option>
+        <option value="gacha">祈愿</option>
+      </Select>
+      <Select
+        value={tierFilter}
+        className={selectClassName}
+        onChange={(event) => onTierChange(event.target.value as RewardTierFilter)}
+      >
+        <option value="all">全部稀有度</option>
+        <option value="common">通常</option>
+        <option value="rare">稀有</option>
+        <option value="epic">史诗</option>
+        <option value="legendary">传说</option>
+      </Select>
+    </div>
+  );
+}
+
+function InventoryGridCard({
   row,
   selected,
   onClick,
@@ -381,35 +502,69 @@ function InventoryListRow({
   onClick: () => void;
 }) {
   const content = rowContent(row);
+  const quantity = rowQuantity(row);
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "panel-cream framed grid min-h-[78px] w-full grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 rounded-sm p-3 text-left transition-all",
-        selected ? "shadow-[0_0_0_2px_var(--gold)]" : "hover:border-[var(--gold)]",
+        "group relative aspect-square min-h-[104px] overflow-hidden rounded-sm border bg-[rgba(12,27,46,0.34)] p-2 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),inset_0_-18px_34px_rgba(4,12,24,0.18),0_16px_34px_-26px_rgba(4,12,24,0.88)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-[var(--gold)] hover:bg-[rgba(18,34,55,0.46)]",
+        selected
+          ? "border-[var(--gold)] bg-[rgba(26,42,63,0.5)] shadow-[0_0_0_2px_rgba(232,201,119,0.42),0_0_30px_rgba(212,169,77,0.2),0_18px_40px_-26px_rgba(7,20,36,0.9)]"
+          : "border-[rgba(232,201,119,0.34)]",
       )}
     >
-      <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-sm border border-[var(--gold)]/50 bg-[var(--bg-card)] text-2xl">
-        {content.visual}
-      </div>
-      <div className="min-w-0">
-        <div className="truncate font-display text-[14px] font-bold text-[var(--fg-strong)]">
+      <div className="pointer-events-none absolute inset-1 rounded-[2px] border border-white/10" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.18),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 flex items-end justify-between gap-2">
+        <span className="min-w-0 truncate rounded-sm border border-[var(--gold)]/32 bg-[rgba(255,252,242,0.9)] px-1.5 py-0.5 font-display text-[11px] font-bold leading-none text-[var(--fg-strong)] shadow-[0_8px_18px_-16px_rgba(4,12,24,0.75)] backdrop-blur-md">
           {content.title}
-        </div>
-        <div className="mt-1 truncate text-[11px] text-[var(--fg-muted)]">{content.subtitle}</div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">{content.chips}</div>
+        </span>
+        <span className="rounded-sm border border-[var(--gold)]/20 bg-[rgba(28,40,58,0.9)] px-1.5 py-0.5 font-mono text-[12px] font-bold leading-none text-[var(--gold-pale)]">
+          {quantity}
+        </span>
       </div>
-      <div className="text-right">{content.trailing}</div>
+      <div className="absolute left-2 top-2 z-10">
+        {rowKindIcon(row)}
+      </div>
+      <div className="grid h-full place-items-center pb-7 pt-4">
+        <div className="grid h-[74%] min-h-16 w-[80%] max-w-28 place-items-center overflow-hidden rounded-sm border border-[var(--gold)]/42 bg-[rgba(255,252,242,0.24)] text-[34px] shadow-[inset_0_0_18px_rgba(255,252,242,0.16),0_12px_26px_-22px_rgba(4,12,24,0.95)] backdrop-blur-sm transition-transform group-hover:scale-[1.05]">
+          {content.visual}
+        </div>
+      </div>
     </button>
   );
+}
+
+function rowQuantity(row: InventoryRow) {
+  if (row.kind === "resource") return row.value;
+  if (row.kind === "reward") return "1";
+  if (row.kind === "equipment") return row.item.equipped ? "E" : "1";
+  if (row.kind === "title") return row.item.equipped ? "E" : "1";
+  return "1";
+}
+
+function rowKindIcon(row: InventoryRow) {
+  if (row.kind === "resource") return <Chip>RES</Chip>;
+  if (row.kind === "reward") return <Chip style={{ color: REWARD_TIER_COLOR[row.reward.reward.tier] }}>{REWARD_TIER_LABEL[row.reward.reward.tier]}</Chip>;
+  if (row.kind === "equipment") return <Chip>{row.item.tier}</Chip>;
+  if (row.kind === "title") return <Chip>{TITLE_TIER_LABEL[row.item.tier]}</Chip>;
+  return <Chip>{ACHIEVEMENT_TIER_LABEL[row.item.tier]}</Chip>;
 }
 
 function rowContent(row: InventoryRow) {
   if (row.kind === "resource") {
     return {
-      visual: <span className={row.tone}>{row.icon}</span>,
-      title: row.title,
+      visual: (
+        <Image
+          src={row.imageSrc}
+          alt=""
+          width={160}
+          height={160}
+          className="h-full w-full object-cover"
+        />
+      ),
+      title: row.id === "resource:freeze" ? "Freeze" : row.title,
       subtitle: row.subtitle,
       chips: <Chip>RESOURCE</Chip>,
       trailing: <div className={`font-mono text-lg font-bold ${row.tone}`}>{row.value}</div>,
@@ -496,7 +651,7 @@ function DetailPanel({
   const equipTitle = useEquipTitle();
 
   return (
-    <aside className="panel-ink ornate h-fit rounded-sm p-5 xl:sticky xl:top-24">
+    <aside className="col-span-2 min-h-[360px] rounded-none border border-y-0 border-r-0 border-[var(--gold)]/42 bg-[rgba(15,29,48,0.54)] p-5 text-[var(--fg-on-ink)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),inset_24px_0_60px_rgba(255,255,255,0.04)] backdrop-blur-xl xl:col-span-1 xl:min-h-full">
       <div className="mb-4 flex items-center justify-between border-b border-[var(--gold)]/35 pb-3">
         <div>
           <div className="font-display text-[15px] font-bold text-[var(--fg-on-ink)]">详情</div>
@@ -535,8 +690,14 @@ function DetailPanel({
 function ResourceDetail({ row }: { row: Extract<InventoryRow, { kind: "resource" }> }) {
   return (
     <div>
-      <div className={`grid h-16 w-16 place-items-center rounded-sm border border-[var(--gold)]/50 bg-white/5 ${row.tone}`}>
-        {row.icon}
+      <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-sm border border-[var(--gold)]/55 bg-white/10 shadow-[0_16px_34px_-24px_rgba(4,12,24,0.9)]">
+        <Image
+          src={row.imageSrc}
+          alt={row.title}
+          width={192}
+          height={192}
+          className="h-full w-full object-cover"
+        />
       </div>
       <h2 className="mt-4 font-display text-2xl font-bold text-[var(--fg-on-ink)]">{row.title}</h2>
       <p className="mt-1 text-sm text-[var(--fg-on-ink)]/70">{row.subtitle}</p>

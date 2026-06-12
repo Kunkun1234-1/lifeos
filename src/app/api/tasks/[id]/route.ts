@@ -20,13 +20,20 @@ export async function PATCH(req: Request, { params }: Params) {
       title: data.title,
       notes: data.notes,
       areaId: data.areaId,
+      projectId: data.projectId,
       priority: data.priority,
       dueDate: data.dueDate ? new Date(data.dueDate) : data.dueDate === null ? null : undefined,
       status: data.status,
+      completedAt:
+        data.status === "DONE"
+          ? existing.completedAt ?? new Date()
+          : data.status === "TODO" || data.status === "IN_PROGRESS" || data.status === "CANCELED"
+          ? null
+          : undefined,
       xpReward: data.xpReward,
       goldReward: data.goldReward,
     },
-    include: { area: true },
+    include: { area: true, project: true },
   });
   return NextResponse.json(updated);
 }
