@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { RewardToasts } from "@/components/reward-toasts";
-import { AppShell } from "@/components/app-shell";
+import { TopNav } from "@/components/top-nav";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -28,7 +28,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
       >
         <Providers>
-          <AppShell>{children}</AppShell>
+          <div className="relative min-h-screen">
+            <TopNav />
+            <main className="relative z-10">{children}</main>
+          </div>
           <RewardToasts />
         </Providers>
       </body>
