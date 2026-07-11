@@ -71,6 +71,7 @@ export default function GachaPage() {
   const { data: state, isLoading, error: loadError } = useGacha();
   const pull = usePullGacha();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const revealTimerRef = useRef<number | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [phase, setPhase] = useState<"idle" | "rolling" | "reveal">("idle");
@@ -82,6 +83,22 @@ export default function GachaPage() {
   const fourStarLeft = Math.max(0, (state?.fourStarPityAt ?? 10) - (state?.pullsSinceRare ?? 0));
   const fiveStarLeft = Math.max(0, (state?.hardPityAt ?? 90) - (state?.pullsSinceEpic ?? 0));
   const poolReady = state?.ready ?? false;
+
+  const clearRevealTimer = () => {
+    if (revealTimerRef.current !== null) {
+      window.clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  };
+
+  const revealResults = () => {
+    clearRevealTimer();
+    setPhase("reveal");
+  };
+
+  useEffect(() => () => {
+    if (revealTimerRef.current !== null) window.clearTimeout(revealTimerRef.current);
+  }, []);
 
   const doPull = async (count: 1 | 10) => {
     setError(null);
@@ -95,7 +112,11 @@ export default function GachaPage() {
         void audioRef.current.play().catch(() => undefined);
       }
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.setTimeout(() => setPhase("reveal"), reduceMotion ? 250 : count === 10 ? 2600 : 2100);
+      clearRevealTimer();
+      revealTimerRef.current = window.setTimeout(() => {
+        revealTimerRef.current = null;
+        setPhase("reveal");
+      }, reduceMotion ? 250 : 6500);
     } catch (reason) {
       setError((reason as Error).message);
       setPhase("idle");
@@ -103,6 +124,7 @@ export default function GachaPage() {
   };
 
   const dismissResults = () => {
+    clearRevealTimer();
     audioRef.current?.pause();
     setPhase("idle");
     setResult(null);
@@ -210,9 +232,10 @@ export default function GachaPage() {
 
       {phase === "rolling" && result ? (
         <RollingOverlay
-          count={result.results.length}
+          count={result.results.length === 10 ? 10 : 1}
           highestTier={highestTier(result.results)}
-          onSkip={() => setPhase("reveal")}
+          onSkip={revealResults}
+          onComplete={revealResults}
         />
       ) : null}
       {phase === "reveal" && result ? <ResultOverlay result={result} onClose={dismissResults} /> : null}
@@ -420,26 +443,52 @@ function RateBox({ label, rate, detail }: { label: string; rate: string; detail:
   );
 }
 
-function RollingOverlay({ count, highestTier, onSkip }: { count: number; highestTier: RewardItemDTO["tier"]; onSkip: () => void }) {
+function RollingOverlay({
+  count,
+  highestTier,
+  onSkip,
+  onComplete,
+}: {
+  count: 1 | 10;
+  highestTier: RewardItemDTO["tier"];
+  onSkip: () => void;
+  onComplete: () => void;
+}) {
   const meta = TIER_META[highestTier];
+  const videoSrc = getWishVideoSrc(highestTier, count);
   return createPortal(
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-[#040a13]/96 text-white" aria-label="祈愿进行中">
-      <div className={cn("absolute inset-0 bg-gradient-to-t via-transparent to-transparent", meta.glow)} />
-      <div className="relative grid place-items-center text-center">
-        <div className="absolute h-64 w-64 animate-ping rounded-full border border-white/12 motion-reduce:animate-none" />
-        <div className="absolute h-44 w-44 animate-spin rounded-full border border-dashed border-[#e8c977]/30 [animation-duration:9s] motion-reduce:animate-none" />
-        <div className="grid h-28 w-28 place-items-center rounded-full border border-[#e8c977]/55 bg-[#101b2b] shadow-[0_0_80px_-20px_rgba(232,201,119,.72)]">
-          <Sparkles size={40} className={meta.color} />
-        </div>
-        <div className="mt-8 font-display text-2xl text-white">星轨正在回应</div>
-        <div className="mt-2 text-xs text-white/42">{count === 10 ? "十次祈愿已写入命轨" : "祈愿结果已写入命轨"}</div>
+    <div className="fixed inset-0 z-[90] overflow-hidden bg-[#040a13] text-white" aria-label="祈愿进行中">
+      <video
+        key={videoSrc}
+        src={videoSrc}
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        onEnded={onComplete}
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div className="pointer-events-none absolute inset-0 bg-black/10" />
+      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-t via-transparent to-transparent", meta.glow)} />
+      <div className="pointer-events-none absolute inset-x-0 bottom-8 text-center drop-shadow-[0_2px_12px_rgba(0,0,0,.9)]">
+        <div className="font-display text-xl text-white">{count === 10 ? "十连祈愿" : "单次祈愿"}</div>
+        <div className={cn("mt-2 text-xs uppercase", meta.color)}>{meta.label} · Astral Shift</div>
       </div>
-      <button type="button" onClick={onSkip} className="absolute right-5 top-5 flex h-9 items-center gap-2 border border-white/15 px-3 text-xs text-white/62 hover:text-white">
+      <button type="button" onClick={onSkip} className="absolute right-5 top-5 z-10 flex h-9 items-center gap-2 border border-white/25 bg-black/25 px-3 text-xs text-white/75 backdrop-blur-sm hover:border-white/55 hover:text-white">
         <SkipForward size={14} /> 跳过
       </button>
     </div>,
     document.body,
   );
+}
+
+function getWishVideoSrc(tier: RewardItemDTO["tier"], count: 1 | 10) {
+  if (count === 10) {
+    return tier === "legendary" ? "/gacha/videos/ten-gold.mp4" : "/gacha/videos/ten-purple.mp4";
+  }
+  if (tier === "legendary") return "/gacha/videos/single-gold.mp4";
+  if (tier === "rare" || tier === "epic") return "/gacha/videos/single-purple.mp4";
+  return "/gacha/videos/single-blue.mp4";
 }
 
 function ResultOverlay({ result, onClose }: { result: GachaPullResult; onClose: () => void }) {
