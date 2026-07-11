@@ -61,33 +61,34 @@ model User {
   resin          Int      @default(200)
   resinUpdatedAt DateTime @default(now())
 
-  areas               Area[]
-  tasks               Task[]
-  habits              Habit[]
-  routines            Routine[]
-  xpEntries           XpLedger[]
-  currency            Currency?
-  financeAccounts     FinanceAccount[]
-  financeCategories   FinanceCategory[]
-  financeTransactions FinanceTransaction[]
-  commissions         DailyCommission[]
-  reviews             Review[]
-  goals               Goal[]
-  projects            Project[]
-  rewards             RewardItem[]
-  redemptions         RewardRedemption[]
-  pulls               GachaPull[]
-  unlocks             AchievementUnlock[]
-  freezeStash         StreakFreeze?
-  battlePasses        BattlePass[]
-  principles          Principle[]
-  decisions           Decision[]
-  titles              UserTitle[]
-  notes               Note[]
-  eventClaims         UserEventClaim[]
-  equipment           UserEquipment[]
-  customAchievements  Achievement[]        @relation("UserCustomAchievements")
-  customEvents        Event[]              @relation("UserCustomEvents")
+  areas              Area[]
+  tasks              Task[]
+  habits             Habit[]
+  routines           Routine[]
+  xpEntries          XpLedger[]
+  currency           Currency?
+  walletPools        WalletPool[]
+  walletMonthlyPlans WalletMonthlyPlan[]
+  walletTransactions WalletTransaction[]
+  commissions        DailyCommission[]
+  reviews            Review[]
+  goals              Goal[]
+  projects           Project[]
+  rewards            RewardItem[]
+  redemptions        RewardRedemption[]
+  pulls              GachaPull[]
+  pullBatches        GachaPullBatch[]
+  unlocks            AchievementUnlock[]
+  freezeStash        StreakFreeze?
+  battlePasses       BattlePass[]
+  principles         Principle[]
+  decisions          Decision[]
+  titles             UserTitle[]
+  notes              Note[]
+  eventClaims        UserEventClaim[]
+  equipment          UserEquipment[]
+  customAchievements Achievement[]       @relation("UserCustomAchievements")
+  customEvents       Event[]             @relation("UserCustomEvents")
 
   // Auth.js (next-auth v5) relations
   accounts Account[]
@@ -306,101 +307,107 @@ model Currency {
   updatedAt DateTime @updatedAt
 }
 
-enum FinanceAccountType {
-  cash
-  bank
-  wallet
-  credit
-  investment
-  debt
-  receivable
-  virtual
+enum WalletPoolType {
+  living
+  savings
+  flexible
 }
 
-enum FinanceTransactionType {
+enum WalletTransactionType {
   income
   expense
+  refund
   transfer
 }
 
+enum WalletNecessity {
+  essential
+  optional
+}
+
 // ============================================================
-// Finance Ledger — real-world accounts, categories, transactions
+// Wallet — purpose-based money pools and an auditable ledger
 // ============================================================
 
-model FinanceAccount {
+model WalletPool {
   id     String @id @default(cuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name                String
-  type                FinanceAccountType @default(cash)
-  currencyCode        String             @default("CNY")
-  initialBalanceCents Int                @default(0)
-  balanceCents        Int                @default(0)
-  includeInNetWorth   Boolean            @default(true)
-  color               String             @default("#b68838")
-  icon                String             @default("wallet")
-  archived            Boolean            @default(false)
+  type         WalletPoolType
+  balanceCents Int            @default(0)
+  currencyCode String         @default("CNY")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  outgoingTransactions FinanceTransaction[] @relation("FinanceSourceAccount")
-  incomingTransactions FinanceTransaction[] @relation("FinanceTargetAccount")
+  allocations WalletAllocation[]
 
-  @@index([userId, archived])
-  @@index([userId, type])
+  @@unique([userId, type])
+  @@index([userId])
 }
 
-model FinanceCategory {
+model WalletMonthlyPlan {
   id     String @id @default(cuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name               String
-  kind               FinanceTransactionType
-  color              String                 @default("#b68838")
-  monthlyBudgetCents Int                    @default(0)
-  order              Int                    @default(0)
-  archived           Boolean                @default(false)
+  month             String
+  livingTargetCents Int       @default(0)
+  savingsRateBps    Int       @default(5000)
+  carryLivingTarget Boolean   @default(true)
+  initialized       Boolean   @default(false)
+  rolloverCompleted Boolean   @default(true)
+  rolloverAt        DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions FinanceTransaction[]
-
-  @@unique([userId, kind, name])
-  @@index([userId, kind, archived])
+  @@unique([userId, month])
+  @@index([userId, month])
 }
 
-model FinanceTransaction {
+model WalletTransaction {
   id     String @id @default(cuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type         FinanceTransactionType
+  type         WalletTransactionType
   amountCents  Int
-  currencyCode String                 @default("CNY")
+  currencyCode String                @default("CNY")
 
-  sourceAccountId String?
-  sourceAccount   FinanceAccount?  @relation("FinanceSourceAccount", fields: [sourceAccountId], references: [id], onDelete: SetNull)
-  targetAccountId String?
-  targetAccount   FinanceAccount?  @relation("FinanceTargetAccount", fields: [targetAccountId], references: [id], onDelete: SetNull)
-  categoryId      String?
-  category        FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  necessity      WalletNecessity?
+  sourcePoolType WalletPoolType?
+  targetPoolType WalletPoolType?
+  counterparty   String?
+  note           String?
+  refundOfId     String?            @unique
+  refundOf       WalletTransaction? @relation("WalletRefund", fields: [refundOfId], references: [id], onDelete: Restrict)
+  refund         WalletTransaction? @relation("WalletRefund")
+  occurredAt     DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
-  payee      String?
-  note       String?
-  tags       String   @default("[]")
-  occurredAt DateTime @default(now())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  allocations      WalletAllocation[]
+  rewardRedemption RewardRedemption?
 
   @@index([userId, occurredAt])
   @@index([userId, type, occurredAt])
-  @@index([sourceAccountId])
-  @@index([targetAccountId])
-  @@index([categoryId])
+  @@index([userId, necessity, occurredAt])
+}
+
+model WalletAllocation {
+  id                String            @id @default(cuid())
+  transactionId     String
+  transaction       WalletTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  poolId            String
+  pool              WalletPool        @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  amountCents       Int
+  balanceAfterCents Int
+  createdAt         DateTime          @default(now())
+
+  @@index([transactionId])
+  @@index([poolId, createdAt])
 }
 
 // ============================================================
@@ -531,6 +538,12 @@ model Project {
 // Phase 3: Rewards Store (currency outlet)
 // ============================================================
 
+enum RewardCategory {
+  virtual
+  physical_small
+  physical_large
+}
+
 model RewardItem {
   id     String @id @default(cuid())
   userId String
@@ -538,12 +551,14 @@ model RewardItem {
 
   name        String
   description String?
-  emoji       String  @default("🎁")
+  emoji       String         @default("🎁")
   imageUrl    String? // optional user-uploaded image (overrides emoji visually in gacha + store)
-  tier        String  @default("common") // common | rare | epic | legendary
+  tier        String         @default("common") // common | rare | epic | legendary
+  category    RewardCategory @default(virtual)
 
-  costGold Int @default(0)
-  costGems Int @default(0)
+  costMoneyCents Int @default(0)
+  costGold       Int @default(0)
+  costGems       Int @default(0) // legacy only; new store and wish flows ignore this field
 
   inGachaPool Boolean @default(true)
   weight      Int     @default(1) // gacha pool weight within tier
@@ -567,15 +582,21 @@ model RewardRedemption {
   rewardId String
   reward   RewardItem @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 
-  costGold    Int       @default(0)
-  costGems    Int       @default(0)
-  source      String    @default("store") // store | gacha
-  status      String    @default("available") // available | used | discarded
-  usedAt      DateTime?
-  discardedAt DateTime?
-  note        String?
-  redeemedAt  DateTime  @default(now())
+  costMoneyCents      Int                @default(0)
+  costGold            Int                @default(0)
+  costGems            Int                @default(0) // legacy snapshot
+  source              String             @default("store") // store | gacha
+  status              String             @default("available") // pending_fulfillment | available | used | discarded
+  idempotencyKey      String?
+  walletTransactionId String?            @unique
+  walletTransaction   WalletTransaction? @relation(fields: [walletTransactionId], references: [id], onDelete: SetNull)
+  fulfilledAt         DateTime?
+  usedAt              DateTime?
+  discardedAt         DateTime?
+  note                String?
+  redeemedAt          DateTime           @default(now())
 
+  @@unique([userId, idempotencyKey])
   @@index([userId, redeemedAt])
   @@index([userId, status])
 }
@@ -631,18 +652,40 @@ model AchievementUnlock {
 // ============================================================
 
 model GachaPull {
-  id       String      @id @default(cuid())
+  id       String          @id @default(cuid())
   userId   String
-  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   rewardId String?
-  reward   RewardItem? @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  reward   RewardItem?     @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  batchId  String?
+  batch    GachaPullBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
-  tier      String // common | rare | epic | legendary
-  fateSpent Int      @default(1)
-  pity      String? // "soft" | "hard" — for analytics
-  pulledAt  DateTime @default(now())
+  tier           String // common | rare | epic | legendary
+  fateSpent      Int      @default(0) // legacy only
+  goldSpent      Int      @default(160)
+  pity           String? // "soft" | "hard" — for analytics
+  rulesVersion   String   @default("legacy")
+  probabilityBps Int?
+  pulledAt       DateTime @default(now())
 
   @@index([userId, pulledAt])
+  @@index([batchId])
+}
+
+model GachaPullBatch {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idempotencyKey String
+  count          Int
+  goldSpent      Int
+  rulesVersion   String
+  createdAt      DateTime @default(now())
+
+  pulls GachaPull[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt])
 }
 
 // ============================================================

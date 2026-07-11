@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cinzel, Noto_Serif_SC } from "next/font/google";
+import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { TopNav } from "@/components/top-nav";
@@ -11,13 +11,6 @@ const cinzel = Cinzel({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
-});
-const notoSerifSC = Noto_Serif_SC({
-  variable: "--font-display-cn",
-  subsets: ["latin"],
-  weight: ["500", "700", "900"],
-  preload: false,
-  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -32,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} ${notoSerifSC.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
       >
         <Providers>
           <div className="relative min-h-screen">

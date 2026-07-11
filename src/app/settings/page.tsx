@@ -8,6 +8,7 @@ import { Input, Textarea, Label, Select } from "@/components/ui/input";
 import { useUser, useUpdateUser, useFreeze, useBuyFreeze } from "@/hooks/queries";
 import { Snowflake, Upload } from "lucide-react";
 import { signOutAction } from "@/app/login/actions";
+import { api } from "@/lib/fetcher";
 
 const CLASSES = ["Scholar", "Athlete", "Artist", "Engineer", "Connector"] as const;
 
@@ -248,12 +249,11 @@ function AvatarPicker({
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error ?? `Upload failed (${res.status})`);
-      }
-      const { url } = (await res.json()) as { url: string };
+      const { url } = await api<{ url: string }>("/api/upload", {
+        method: "POST",
+        body: form,
+        backend: true,
+      });
       await onChange(url);
     } catch (e) {
       setErr((e as Error).message);

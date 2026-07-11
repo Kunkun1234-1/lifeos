@@ -184,10 +184,9 @@ export function AssetsCard() {
   const { data: queryAssets } = useAssets({ enabled: !dashboard.active });
   const dashboardAssets = dashboard.data?.assets;
   const assets = dashboardAssets ?? queryAssets;
-  const netWorth = assets?.summary.netWorthCents ?? 0;
+  const walletTotal = assets?.summary.totalBalanceCents ?? 0;
   const monthNet = assets?.summary.monthNetCents ?? 0;
-  const accountCount =
-    dashboardAssets?.accountCount ?? queryAssets?.accounts.length ?? 0;
+  const poolCount = dashboardAssets?.poolCount ?? queryAssets?.pools.length ?? 0;
   const gold = assets?.currency.gold ?? 0;
   const gems = assets?.currency.gems ?? 0;
   const fate = assets?.currency.fate ?? 0;
@@ -199,7 +198,7 @@ export function AssetsCard() {
 
   return (
     <div className="panel-cream framed relative h-full min-h-0 overflow-hidden rounded-sm p-4 hover:-translate-y-0.5 hover:border-[var(--gold)] xl:p-3 2xl:p-4">
-      <SectionHeader cn="人生资产" en="Assets" more="/assets" />
+      <SectionHeader cn="我的钱包" en="Money Pools" more="/assets" />
 
       <Link href="/assets" className="group mt-3 block">
         <div className="relative aspect-[2.35/1] overflow-hidden rounded-sm border border-[var(--gold)]/40 bg-[#dfeaf5] xl:aspect-[2.5/1] 2xl:aspect-[2.2/1]">
@@ -213,14 +212,14 @@ export function AssetsCard() {
           />
           <div className="absolute inset-y-0 left-[34%] right-0 bg-gradient-to-r from-transparent via-[var(--bg-panel)]/88 to-[var(--bg-panel)]" />
           <div className="absolute right-3 top-3 text-right">
-            <div className="font-display text-[11px] text-[var(--fg-muted)]">净资产</div>
+            <div className="font-display text-[11px] text-[var(--fg-muted)]">钱包总额</div>
             <div className="font-display text-2xl font-bold leading-none text-[var(--gold-deep)]">
-              {formatCompactMoney(netWorth)}
+              {formatCompactMoney(walletTotal)}
             </div>
           </div>
           <div className="absolute bottom-3 right-3 flex items-center gap-1.5 font-display text-[11px] text-[var(--fg-muted)]">
             <WalletCards size={13} className="text-[var(--gold-deep)]" />
-            <span>{accountCount} 个账户</span>
+            <span>{poolCount} 个资金池</span>
           </div>
         </div>
       </Link>

@@ -169,6 +169,8 @@ export type ProjectDTO = {
   taskDoneCount: number;
 };
 
+export type RewardCategory = "virtual" | "physical_small" | "physical_large";
+
 export type RewardItemDTO = {
   id: string;
   name: string;
@@ -176,22 +178,26 @@ export type RewardItemDTO = {
   emoji: string;
   imageUrl: string | null;
   tier: "common" | "rare" | "epic" | "legendary";
+  category: RewardCategory;
+  costMoneyCents: number;
   costGold: number;
-  costGems: number;
+  costGems: number; // legacy compatibility
   inGachaPool: boolean;
   weight: number;
   redeemedCount: number;
 };
 
-export type InventoryRewardStatus = "available" | "used" | "discarded";
+export type InventoryRewardStatus = "pending_fulfillment" | "available" | "used" | "discarded";
 export type InventoryRewardSource = "store" | "gacha";
 
 export type InventoryRewardInstanceDTO = {
   id: string;
   status: InventoryRewardStatus;
   source: InventoryRewardSource;
+  costMoneyCents: number;
   costGold: number;
   costGems: number;
+  fulfilledAt: string | null;
   redeemedAt: string;
   usedAt: string | null;
   discardedAt: string | null;
@@ -213,87 +219,74 @@ export type InventoryAchievementDTO = {
   reward: { gold: number; gems: number; fate: number };
 };
 
-export type FinanceAccountType =
-  | "cash"
-  | "bank"
-  | "wallet"
-  | "credit"
-  | "investment"
-  | "debt"
-  | "receivable"
-  | "virtual";
+export type WalletPoolType = "living" | "savings" | "flexible";
+export type WalletTransactionType = "income" | "expense" | "refund" | "transfer";
+export type WalletNecessity = "essential" | "optional";
 
-export type FinanceTransactionType = "income" | "expense" | "transfer";
-
-export type FinanceAccountDTO = {
+export type WalletPoolDTO = {
   id: string;
-  name: string;
-  type: FinanceAccountType;
+  type: WalletPoolType;
   currencyCode: string;
-  initialBalanceCents: number;
   balanceCents: number;
-  includeInNetWorth: boolean;
-  color: string;
-  icon: string;
-  archived: boolean;
   createdAt: string;
 };
 
-export type FinanceCategoryDTO = {
+export type WalletAllocationDTO = {
   id: string;
-  name: string;
-  kind: FinanceTransactionType;
-  color: string;
-  monthlyBudgetCents: number;
-  order: number;
+  poolId: string;
+  amountCents: number;
+  balanceAfterCents: number;
+  pool: { id: string; type: WalletPoolType };
 };
 
-export type FinanceTransactionDTO = {
+export type WalletTransactionDTO = {
   id: string;
-  type: FinanceTransactionType;
+  type: WalletTransactionType;
   amountCents: number;
   currencyCode: string;
-  sourceAccountId: string | null;
-  targetAccountId: string | null;
-  categoryId: string | null;
-  sourceAccount: { id: string; name: string; type: FinanceAccountType } | null;
-  targetAccount: { id: string; name: string; type: FinanceAccountType } | null;
-  category: { id: string; name: string; kind: FinanceTransactionType; color: string } | null;
-  payee: string | null;
+  necessity: WalletNecessity | null;
+  sourcePoolType: WalletPoolType | null;
+  targetPoolType: WalletPoolType | null;
+  counterparty: string | null;
   note: string | null;
-  tags: string[];
+  refundOfId: string | null;
+  refund: { id: string } | null;
+  refundOf: { id: string; counterparty: string | null; necessity: WalletNecessity | null } | null;
   occurredAt: string;
   createdAt: string;
+  allocations: WalletAllocationDTO[];
 };
 
 export type AssetsSnapshotDTO = {
   summary: {
-    netWorthCents: number;
-    assetsCents: number;
-    liabilitiesCents: number;
+    totalBalanceCents: number;
     monthIncomeCents: number;
     monthExpenseCents: number;
+    monthRefundCents: number;
     monthNetCents: number;
-    monthBudgetCents: number;
-    monthBudgetUsedRate: number | null;
+    monthEssentialExpenseCents: number;
+    monthOptionalExpenseCents: number;
   };
   currency: { gold: number; gems: number; fate: number };
-  accounts: FinanceAccountDTO[];
-  categories: FinanceCategoryDTO[];
-  transactions: FinanceTransactionDTO[];
-  expenseByCategory: Array<{
-    categoryId: string | null;
-    name: string;
-    color: string;
-    amountCents: number;
-    budgetCents: number;
-  }>;
+  pools: WalletPoolDTO[];
+  plan: {
+    id: string;
+    month: string;
+    livingTargetCents: number;
+    livingGapCents: number;
+    savingsRateBps: number;
+    flexibleRateBps: number;
+    carryLivingTarget: boolean;
+    initialized: boolean;
+    rolloverCompleted: boolean;
+  };
+  transactions: WalletTransactionDTO[];
 };
 
 export type DashboardAssetsDTO = {
   summary: AssetsSnapshotDTO["summary"];
   currency: { gold: number; gems: number; fate: number };
-  accountCount: number;
+  poolCount: number;
 };
 
 export type DashboardSnapshotDTO = {
@@ -328,7 +321,6 @@ export type AchievementDTO = {
 
 export type GachaState = {
   gold: number;
-  fate: number;
   pullsSinceRare: number;
   pullsSinceEpic: number;
   totalPulls: number;
@@ -342,6 +334,9 @@ export type GachaState = {
   pool: RewardItemDTO[];
   rewards: RewardItemDTO[];
   goldPerPull: number;
+  rulesVersion: string;
+  ready: boolean;
+  missingTiers: Array<"common" | "rare" | "epic" | "legendary">;
   fourStarPityAt: number;
   softPityAt: number;
   hardPityAt: number;
@@ -355,10 +350,8 @@ export type GachaPullResult = {
     reward: RewardItemDTO | null;
   }>;
   goldRemaining: number;
-  fateRemaining: number;
   goldSpent: number;
-  fateSpent: number;
-  currency: "fate" | "gold";
+  batchId: string;
   pullsSinceRare: number;
   pullsSinceEpic: number;
   totalPulls: number;

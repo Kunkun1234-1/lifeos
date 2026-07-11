@@ -29,8 +29,7 @@ import type {
   EquipmentSnapshotDTO,
   AssetsSnapshotDTO,
   DashboardSnapshotDTO,
-  FinanceAccountDTO,
-  FinanceTransactionDTO,
+  WalletTransactionDTO,
   InventorySnapshotDTO,
   InventoryRewardInstanceDTO,
 } from "@/lib/types";
@@ -60,6 +59,8 @@ export const qk = {
   events: ["events"] as const,
   equipment: ["equipment"] as const,
   assets: ["assets"] as const,
+  walletTransactions: (filters?: WalletTransactionFilters) =>
+    ["wallet-transactions", filters ?? {}] as const,
   inventory: ["inventory"] as const,
 };
 
@@ -70,6 +71,19 @@ type QueryOptions = {
 function invalidateDashboard(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: qk.dashboard });
 }
+
+function invalidateWallet(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: qk.assets });
+  qc.invalidateQueries({ queryKey: ["wallet-transactions"] });
+  invalidateDashboard(qc);
+}
+
+export type WalletTransactionFilters = {
+  type?: string;
+  necessity?: string;
+  pool?: string;
+  month?: string;
+};
 
 // ---------- queries ----------
 export const useDashboard = () =>
@@ -89,14 +103,17 @@ export const useUser = (options: QueryOptions = {}) =>
 export const useAreas = (options: QueryOptions = {}) =>
   useQuery({
     queryKey: qk.areas,
-    queryFn: () => api<AreaDTO[]>("/api/areas"),
+    queryFn: () => api<AreaDTO[]>("/api/areas", { backend: true }),
     enabled: options.enabled,
   });
 
 export const useTasks = (status?: string, options: QueryOptions = {}) =>
   useQuery({
     queryKey: qk.tasks(status),
-    queryFn: () => api<TaskDTO[]>(`/api/tasks${status ? `?status=${status}` : ""}`),
+    queryFn: () =>
+      api<TaskDTO[]>(`/api/tasks${status ? `?status=${status}` : ""}`, {
+        backend: true,
+      }),
     enabled: options.enabled,
   });
 
@@ -142,7 +159,11 @@ export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
-      api<TaskDTO>("/api/tasks", { method: "POST", json: body }),
+      api<TaskDTO>("/api/tasks", {
+        method: "POST",
+        json: body,
+        backend: true,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.commissions });
@@ -158,6 +179,7 @@ export function useCompleteTask() {
     mutationFn: (id: string) =>
       api<{ task: TaskDTO; reward: RewardResult }>(`/api/tasks/${id}/complete`, {
         method: "POST",
+        backend: true,
       }),
     // Optimistic: flip the row to DONE in every cached tasks list before
     // the server confirms. Eliminates the visible Neon-roundtrip stall
@@ -205,7 +227,8 @@ export function useCompleteTask() {
 export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api(`/api/tasks/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) =>
+      api(`/api/tasks/${id}`, { method: "DELETE", backend: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       invalidateDashboard(qc);
@@ -217,7 +240,11 @@ export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
-      api<TaskDTO>(`/api/tasks/${id}`, { method: "PATCH", json: body }),
+      api<TaskDTO>(`/api/tasks/${id}`, {
+        method: "PATCH",
+        json: body,
+        backend: true,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.commissions });
@@ -536,6 +563,17 @@ export const useAssets = (options: QueryOptions = {}) =>
     enabled: options.enabled,
   });
 
+export const useWalletTransactions = (filters: WalletTransactionFilters) => {
+  const query = new URLSearchParams(
+    Object.entries(filters).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  ).toString();
+  return useQuery({
+    queryKey: qk.walletTransactions(filters),
+    queryFn: () =>
+      api<WalletTransactionDTO[]>(`/api/assets/transactions${query ? `?${query}` : ""}`),
+  });
+};
+
 export const useInventory = () =>
   useQuery({
     queryKey: qk.inventory,
@@ -552,51 +590,93 @@ export function useUpdateInventoryReward() {
       note,
     }: {
       id: string;
-      action: "use" | "discard";
+      action: "fulfill" | "use" | "discard";
       note?: string | null;
     }) =>
       api<InventoryRewardInstanceDTO>(`/api/inventory/rewards/${id}`, {
         method: "PATCH",
         json: { action, note },
       }),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: qk.inventory });
+      if (variables.action === "fulfill") invalidateWallet(qc);
     },
   });
 }
 
-export function useCreateFinanceAccount() {
+export function useInitializeWallet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
-      api<FinanceAccountDTO>("/api/assets/accounts", { method: "POST", json: body }),
+      api<{ ok: true }>("/api/assets/initialize", { method: "POST", json: body }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assets });
-      invalidateDashboard(qc);
+      invalidateWallet(qc);
     },
   });
 }
 
-export function useCreateFinanceTransaction() {
+export function useCreateWalletTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
-      api<FinanceTransactionDTO>("/api/assets/transactions", { method: "POST", json: body }),
+      api<WalletTransactionDTO>("/api/assets/transactions", { method: "POST", json: body }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assets });
-      invalidateDashboard(qc);
+      invalidateWallet(qc);
     },
   });
 }
 
-export function useDeleteFinanceTransaction() {
+export function useDeleteWalletTransaction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
       api(`/api/assets/transactions/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.assets });
-      invalidateDashboard(qc);
+      invalidateWallet(qc);
+    },
+  });
+}
+
+export function useUpdateWalletTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<WalletTransactionDTO>(`/api/assets/transactions/${id}`, {
+        method: "PATCH",
+        json: body,
+      }),
+    onSuccess: () => invalidateWallet(qc),
+  });
+}
+
+export function useRefundWalletTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<WalletTransactionDTO>(`/api/assets/transactions/${id}/refund`, {
+        method: "POST",
+      }),
+    onSuccess: () => invalidateWallet(qc),
+  });
+}
+
+export function useUpdateWalletSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api("/api/assets/settings", { method: "PUT", json: body }),
+    onSuccess: () => {
+      invalidateWallet(qc);
+    },
+  });
+}
+
+export function useRolloverWallet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<{ ok: true; amountCents: number }>("/api/assets/rollover", { method: "POST" }),
+    onSuccess: () => {
+      invalidateWallet(qc);
     },
   });
 }
@@ -784,15 +864,49 @@ export function useRedeemReward() {
   const push = useRewardsStore((s) => s.push);
   return useMutation({
     mutationFn: (id: string) =>
-      api<{ redemption: { id: string }; reward: RewardItemDTO }>(
+      api<{
+        redemption: { id: string; costMoneyCents: number; costGold: number };
+        reward: RewardItemDTO;
+        balances: { gold: number; moneyAvailableCents: number };
+      }>(
         `/api/rewards/${id}/redeem`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": crypto.randomUUID() },
+        }
       ),
     onSuccess: (data) => {
+      qc.setQueryData<UserSnapshot>(qk.user, (current) =>
+        current
+          ? {
+              ...current,
+              currency: { ...current.currency, gold: data.balances.gold },
+            }
+          : current,
+      );
+      qc.setQueryData<AssetsSnapshotDTO>(qk.assets, (current) => {
+        if (!current) return current;
+        const previousFlexible =
+          current.pools.find((pool) => pool.type === "flexible")?.balanceCents ??
+          data.balances.moneyAvailableCents;
+        const balanceDelta = data.balances.moneyAvailableCents - previousFlexible;
+        return {
+          ...current,
+          summary: {
+            ...current.summary,
+            totalBalanceCents: current.summary.totalBalanceCents + balanceDelta,
+          },
+          pools: current.pools.map((pool) =>
+            pool.type === "flexible"
+              ? { ...pool, balanceCents: data.balances.moneyAvailableCents }
+              : pool,
+          ),
+        };
+      });
       push({
         xp: 0,
         gold: -data.reward.costGold,
-        gems: -data.reward.costGems,
+        gems: 0,
         fate: 0,
         areaKey: null,
         label: `${data.reward.emoji} ${data.reward.name}`,
@@ -800,6 +914,7 @@ export function useRedeemReward() {
       qc.invalidateQueries({ queryKey: qk.rewards });
       qc.invalidateQueries({ queryKey: qk.inventory });
       qc.invalidateQueries({ queryKey: qk.user });
+      invalidateWallet(qc);
       invalidateDashboard(qc);
     },
   });
@@ -808,18 +923,32 @@ export function useRedeemReward() {
 export function usePullGacha() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      count,
-      currency,
-    }: {
-      count: 1 | 10;
-      currency: "fate" | "gold";
-    }) =>
+    mutationFn: ({ count }: { count: 1 | 10 }) =>
       api<GachaPullResult>("/api/gacha/pull", {
         method: "POST",
-        json: { count, currency },
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        json: { count },
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      qc.setQueryData<GachaState>(qk.gacha, (current) =>
+        current
+          ? {
+              ...current,
+              gold: data.goldRemaining,
+              pullsSinceRare: data.pullsSinceRare,
+              pullsSinceEpic: data.pullsSinceEpic,
+              totalPulls: data.totalPulls,
+            }
+          : current,
+      );
+      qc.setQueryData<UserSnapshot>(qk.user, (current) =>
+        current
+          ? {
+              ...current,
+              currency: { ...current.currency, gold: data.goldRemaining },
+            }
+          : current,
+      );
       qc.invalidateQueries({ queryKey: qk.gacha });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.rewards });

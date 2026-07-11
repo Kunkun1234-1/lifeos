@@ -25,6 +25,7 @@ jobs:
           --health-retries 5
     env:
       AUTH_SECRET: ci-auth-secret
+      API_JWT_SECRET: ci-api-jwt-secret-at-least-32-characters
       DATABASE_URL: postgresql://ci:ci@localhost:5432/lifeos?schema=public
       DEEPSEEK_BASE_URL: https://api.deepseek.com
       DEEPSEEK_MODEL: deepseek-chat
@@ -39,5 +40,8 @@ jobs:
       - run: npm run db:seed
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run typecheck:api
       - run: npm run build
+      - run: npm run build:api
+      - run: npm run smoke:api
       - run: npm run smoke:notes

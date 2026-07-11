@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { useCreateReview, useReviews } from "@/hooks/queries";
 import type { ReviewDTO } from "@/lib/types";
+import { api } from "@/lib/fetcher";
 
 type Tab = "daily" | "weekly" | "monthly" | "quarterly";
 
@@ -249,11 +250,11 @@ export default function ReviewPage() {
     try {
       const form = new FormData();
       form.set("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? "图片上传失败");
-      }
+      const data = await api<{ url: string }>("/api/upload", {
+        method: "POST",
+        body: form,
+        backend: true,
+      });
       const image = {
         id: `${Date.now()}-${file.name}`,
         url: data.url,

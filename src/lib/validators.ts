@@ -2,21 +2,11 @@ import { z } from "zod";
 import { NOTE_BODY_MAX_LENGTH, NOTE_TITLE_MAX_LENGTH } from "./notes";
 
 // ---------- Task ----------
-export const TaskCreateSchema = z.object({
-  title: z.string().min(1).max(200),
-  notes: z.string().max(2000).optional().nullable(),
-  areaId: z.string().optional().nullable(),
-  projectId: z.string().optional().nullable(),
-  priority: z.number().int().min(1).max(3).optional(),
-  dueDate: z.string().datetime().optional().nullable(),
-  xpReward: z.number().int().min(0).max(1000).optional(),
-  goldReward: z.number().int().min(0).max(1000).optional(),
-});
-export type TaskCreateInput = z.infer<typeof TaskCreateSchema>;
-
-export const TaskUpdateSchema = TaskCreateSchema.partial().extend({
-  status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELED"]).optional(),
-});
+export {
+  TaskCreateSchema,
+  TaskUpdateSchema,
+  type TaskCreateInput,
+} from "@lifeos/contracts/tasks";
 
 // ---------- Habit ----------
 export const HabitCreateSchema = z.object({
@@ -187,50 +177,101 @@ export const ProjectCreateSchema = z.object({
 export const ProjectUpdateSchema = ProjectCreateSchema.partial();
 
 // ---------- Reward ----------
-export const RewardItemSchema = z.object({
+const RewardItemBaseSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional().nullable(),
   emoji: z.string().max(8).default("🎁"),
   imageUrl: z.string().max(500).optional().nullable(),
   tier: z.enum(["common", "rare", "epic", "legendary"]).default("common"),
+  category: z.enum(["virtual", "physical_small", "physical_large"]).default("virtual"),
+  costMoneyCents: z.number().int().min(0).max(1_000_000_000).default(0),
   costGold: z.number().int().min(0).max(100000).default(0),
-  costGems: z.number().int().min(0).max(100).default(0),
   inGachaPool: z.boolean().default(true),
   weight: z.number().int().min(1).max(10).default(1),
 });
 
-export const RewardItemUpdateSchema = RewardItemSchema.partial();
+function validateRewardPricing(
+  value: z.infer<typeof RewardItemBaseSchema>,
+  context: z.RefinementCtx,
+) {
+  if (value.costMoneyCents === 0 && value.costGold === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["costGold"],
+      message: "money 和 gold 不能同时为 0",
+    });
+  }
+  if (value.category === "physical_small" && value.costMoneyCents >= 50_000) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["costMoneyCents"],
+      message: "小额实物商品的 money 必须小于 500 元",
+    });
+  }
+  if (value.category === "physical_large" && value.costMoneyCents < 50_000) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["costMoneyCents"],
+      message: "大额实物商品的 money 必须大于等于 500 元",
+    });
+  }
+}
 
-// ---------- Finance ----------
-export const FinanceAccountCreateSchema = z.object({
-  name: z.string().min(1).max(80),
-  type: z
-    .enum(["cash", "bank", "wallet", "credit", "investment", "debt", "receivable", "virtual"])
-    .default("cash"),
-  currencyCode: z.string().min(3).max(3).default("CNY"),
-  initialBalanceCents: z.number().int().min(-1_000_000_000).max(1_000_000_000).default(0),
-  includeInNetWorth: z.boolean().default(true),
-  color: z.string().max(20).default("#b68838"),
-  icon: z.string().max(30).default("wallet"),
+export const RewardItemSchema = RewardItemBaseSchema.superRefine(validateRewardPricing);
+export const RewardItemUpdateSchema = RewardItemBaseSchema.partial();
+
+// ---------- Wallet ----------
+const MoneyCentsSchema = z.number().int().min(0).max(1_000_000_000);
+const PositiveMoneyCentsSchema = MoneyCentsSchema.min(1);
+const WalletPoolTypeSchema = z.enum(["living", "savings", "flexible"]);
+const WalletTransactionCommonSchema = z.object({
+  amountCents: PositiveMoneyCentsSchema,
+  currencyCode: z.string().length(3).default("CNY"),
+  counterparty: z.string().max(120).optional().nullable(),
+  note: z.string().max(500).optional().nullable(),
+  occurredAt: z.string().datetime().optional(),
 });
 
-export const FinanceTransactionCreateSchema = z.object({
-  type: z.enum(["income", "expense", "transfer"]),
-  amountCents: z.number().int().min(1).max(1_000_000_000),
-  currencyCode: z.string().min(3).max(3).default("CNY"),
-  sourceAccountId: z.string().optional().nullable(),
-  targetAccountId: z.string().optional().nullable(),
-  categoryId: z.string().optional().nullable(),
-  payee: z.string().max(120).optional().nullable(),
-  note: z.string().max(500).optional().nullable(),
-  tags: z.array(z.string().max(40)).max(12).default([]),
-  occurredAt: z.string().datetime().optional(),
+export const WalletTransactionCreateSchema = z.discriminatedUnion("type", [
+  WalletTransactionCommonSchema.extend({
+    type: z.literal("income"),
+    allocations: z
+      .object({
+        livingCents: MoneyCentsSchema,
+        savingsCents: MoneyCentsSchema,
+        flexibleCents: MoneyCentsSchema,
+      })
+      .optional(),
+  }),
+  WalletTransactionCommonSchema.extend({
+    type: z.literal("expense"),
+    necessity: z.enum(["essential", "optional"]),
+    sourcePoolType: z.enum(["living", "flexible"]),
+    acknowledgeWarning: z.boolean().default(false),
+  }),
+  WalletTransactionCommonSchema.extend({
+    type: z.literal("transfer"),
+    sourcePoolType: WalletPoolTypeSchema,
+    targetPoolType: WalletPoolTypeSchema,
+    acknowledgeWarning: z.boolean().default(false),
+  }),
+]);
+
+export const WalletSettingsUpdateSchema = z.object({
+  livingTargetCents: MoneyCentsSchema,
+  savingsRateBps: z.number().int().min(0).max(10_000),
+  carryLivingTarget: z.boolean().default(true),
+});
+
+export const WalletInitializationSchema = WalletSettingsUpdateSchema.extend({
+  livingBalanceCents: MoneyCentsSchema,
+  savingsBalanceCents: MoneyCentsSchema,
+  flexibleBalanceCents: MoneyCentsSchema,
 });
 
 // ---------- Gacha ----------
 export const GachaPullSchema = z.object({
   count: z.union([z.literal(1), z.literal(10)]).default(1),
-  currency: z.enum(["fate", "gold"]).default("fate"),
 });
 
 // ---------- Phase 4: Principles ----------

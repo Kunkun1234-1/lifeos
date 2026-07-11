@@ -9,11 +9,9 @@ import {
   Coins,
   Crown,
   Frame,
-  Gem,
   Gift,
   Shield,
   Snowflake,
-  Ticket,
   Trash2,
   Trophy,
   X,
@@ -68,6 +66,7 @@ const CATEGORIES: Array<{ key: Category; cn: string; en: string; icon: typeof Ba
 ];
 
 const STATUS_LABEL: Record<InventoryRewardStatus, string> = {
+  pending_fulfillment: "待兑现",
   available: "可用",
   used: "已使用",
   discarded: "已丢弃",
@@ -107,6 +106,7 @@ const REWARD_TIER_COLOR: Record<RewardTier, string> = {
 };
 
 const STATUS_TONE: Record<InventoryRewardStatus, string> = {
+  pending_fulfillment: "border-[#6ea7c8]/45 bg-[#6ea7c8]/10 text-[#bfe8ff]",
   available: "border-[var(--gold)] bg-[var(--gold-tint)] text-[var(--gold-deep)]",
   used: "border-[var(--success)]/40 bg-[var(--success)]/10 text-[var(--success)]",
   discarded: "border-[var(--danger)]/35 bg-[var(--danger)]/10 text-[var(--danger)]",
@@ -117,13 +117,13 @@ const INVENTORY_CAPACITY = 1000;
 export default function InventoryPage() {
   const { data, isLoading, isError, error } = useInventory();
   const [category, setCategory] = useState<Category>("all");
-  const [statusFilter, setStatusFilter] = useState<RewardStatusFilter>("available");
+  const [statusFilter, setStatusFilter] = useState<RewardStatusFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<RewardSourceFilter>("all");
   const [tierFilter, setTierFilter] = useState<RewardTierFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<{
     reward: InventoryRewardInstanceDTO;
-    action: "use" | "discard";
+    action: "fulfill" | "use" | "discard";
   } | null>(null);
 
   const rows = useMemo<InventoryRow[]>(() => {
@@ -139,26 +139,6 @@ export default function InventoryPage() {
         icon: <Coins size={18} />,
         imageSrc: "/lifeos/inventory/resource-gold.png",
         tone: "text-[var(--attr-gold)]",
-      },
-      {
-        id: "resource:gems",
-        kind: "resource",
-        title: "Gems",
-        subtitle: "宝石 · 高价值奖励",
-        value: data.currency.gems.toLocaleString(),
-        icon: <Gem size={18} />,
-        imageSrc: "/lifeos/inventory/resource-gems.png",
-        tone: "text-[var(--attr-cha)]",
-      },
-      {
-        id: "resource:fate",
-        kind: "resource",
-        title: "Fate",
-        subtitle: "命运券 · 用于祈愿",
-        value: data.currency.fate.toLocaleString(),
-        icon: <Ticket size={18} />,
-        imageSrc: "/lifeos/inventory/resource-fate.png",
-        tone: "text-[var(--attr-cre)]",
       },
       {
         id: "resource:freeze",
@@ -249,27 +229,13 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3 lg:w-[560px]">
+          <div className="w-full sm:w-[210px]">
             <CurrencyCapsule
               label="Gold"
               value={data?.currency.gold ?? 0}
               icon={<Coins size={16} />}
               imageSrc="/lifeos/inventory/resource-gold.png"
               tone="text-[var(--attr-gold)]"
-            />
-            <CurrencyCapsule
-              label="Fate"
-              value={data?.currency.fate ?? 0}
-              icon={<Ticket size={16} />}
-              imageSrc="/lifeos/inventory/resource-fate.png"
-              tone="text-[var(--attr-cre)]"
-            />
-            <CurrencyCapsule
-              label="Gems"
-              value={data?.currency.gems ?? 0}
-              icon={<Gem size={16} />}
-              imageSrc="/lifeos/inventory/resource-gems.png"
-              tone="text-[var(--attr-cha)]"
             />
           </div>
         </header>
@@ -464,6 +430,7 @@ function InventoryFilters({
         onChange={(event) => onStatusChange(event.target.value as RewardStatusFilter)}
       >
         <option value="available">可用</option>
+        <option value="pending_fulfillment">待兑现</option>
         <option value="used">已使用</option>
         <option value="discarded">已丢弃</option>
         <option value="all">全部状态</option>
@@ -645,7 +612,7 @@ function DetailPanel({
   onRewardAction,
 }: {
   selected: InventoryRow | null;
-  onRewardAction: (reward: InventoryRewardInstanceDTO, action: "use" | "discard") => void;
+  onRewardAction: (reward: InventoryRewardInstanceDTO, action: "fulfill" | "use" | "discard") => void;
 }) {
   const equipFrame = useEquipFrame();
   const equipTitle = useEquipTitle();
@@ -714,7 +681,7 @@ function RewardDetail({
   onAction,
 }: {
   row: InventoryRewardInstanceDTO;
-  onAction: (reward: InventoryRewardInstanceDTO, action: "use" | "discard") => void;
+  onAction: (reward: InventoryRewardInstanceDTO, action: "fulfill" | "use" | "discard") => void;
 }) {
   const reward = row.reward;
   return (
@@ -741,12 +708,26 @@ function RewardDetail({
         <p className="mt-3 text-sm leading-6 text-[var(--fg-on-ink)]/74">{reward.description}</p>
       )}
       <InfoLine label="获得时间" value={formatDateTime(row.redeemedAt)} />
-      <InfoLine label="花费" value={`${row.costGold} Gold / ${row.costGems} Gems`} />
+      <InfoLine
+        label="取得成本"
+        value={`${formatMoney(row.costMoneyCents)} + ${row.costGold} Gold`}
+      />
+      {row.fulfilledAt && <InfoLine label="兑现时间" value={formatDateTime(row.fulfilledAt)} />}
       {row.usedAt && <InfoLine label="使用时间" value={formatDateTime(row.usedAt)} />}
       {row.discardedAt && <InfoLine label="丢弃时间" value={formatDateTime(row.discardedAt)} />}
       {row.note && <InfoLine label="备注" value={row.note} />}
 
-      {row.status === "available" ? (
+      {row.status === "pending_fulfillment" ? (
+        <div className="mt-5 space-y-2">
+          <div className="rounded-sm border border-[#6ea7c8]/35 bg-[#6ea7c8]/10 p-3 text-[12px] leading-6 text-[var(--fg-on-ink)]/78">
+            兑现将从流动资金扣除 {formatMoney(row.costMoneyCents)}，不会再次扣除 Gold。
+          </div>
+          <Button className="w-full" variant="primary" onClick={() => onAction(row, "fulfill")}>
+            <CheckCircle2 size={15} />
+            现在兑现
+          </Button>
+        </div>
+      ) : row.status === "available" ? (
         <div className="mt-5 grid grid-cols-2 gap-2">
           <Button variant="primary" onClick={() => onAction(row, "use")}>
             <CheckCircle2 size={15} />
@@ -829,13 +810,13 @@ function RewardActionDialog({
   onClose,
 }: {
   reward: InventoryRewardInstanceDTO;
-  action: "use" | "discard";
+  action: "fulfill" | "use" | "discard";
   onClose: () => void;
 }) {
   const update = useUpdateInventoryReward();
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const label = action === "use" ? "使用" : "丢弃";
+  const label = action === "fulfill" ? "兑现" : action === "use" ? "使用" : "丢弃";
 
   const submit = async () => {
     setError(null);
@@ -881,8 +862,8 @@ function RewardActionDialog({
           <Button variant="outline" onClick={onClose} disabled={update.isPending}>
             取消
           </Button>
-          <Button variant={action === "use" ? "primary" : "secondary"} onClick={submit} disabled={update.isPending}>
-            {action === "use" ? <CheckCircle2 size={15} /> : <Trash2 size={15} />}
+          <Button variant={action === "discard" ? "secondary" : "primary"} onClick={submit} disabled={update.isPending}>
+            {action === "discard" ? <Trash2 size={15} /> : <CheckCircle2 size={15} />}
             确认{label}
           </Button>
         </div>
@@ -898,6 +879,15 @@ function InfoLine({ label, value }: { label: string; value: ReactNode }) {
       <div className="mt-1 break-words text-sm text-[var(--fg-on-ink)]">{value}</div>
     </div>
   );
+}
+
+function formatMoney(cents: number) {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: "CNY",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
 }
 
 function Chip({

@@ -19,6 +19,7 @@
 
 # production
 /build
+/apps/api/.next/
 
 # misc
 .DS_Store

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@lifeos/contracts", "@lifeos/domain"],
   images: {
     remotePatterns: [
       // Vercel Blob — used when BLOB_READ_WRITE_TOKEN is set in production.

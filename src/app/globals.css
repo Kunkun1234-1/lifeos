@@ -10,6 +10,7 @@
 
 :root {
   color-scheme: light;
+  --font-display-cn: "Noto Serif SC", "Songti SC", serif;
 
   /* Parchment surfaces tuned for the sky-city wallpaper */
   --bg:            #10233a;        /* deep lower vignette */

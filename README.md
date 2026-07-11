@@ -1,4 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LifeOS
+
+LifeOS uses separately deployable Web and API applications.
+
+- Web: Next.js at the repository root during the gradual migration
+- API: Next.js Route Handler service in `apps/api`
+- Shared request contracts: `packages/contracts`
+- Database: Prisma + PostgreSQL
+
+All business API routes now live in the independent API application. See
+[`docs/Backend_Migration.md`](docs/Backend_Migration.md) for architecture,
+environment variables, local commands, rollback behavior, and the next stages.
+
+Database models, ownership boundaries, relationships, migrations, and operational
+commands are documented in [`docs/Database_Design.md`](docs/Database_Design.md).
 
 ## Getting Started
 

@@ -37,12 +37,12 @@ export function TopNav() {
 
       <div className="relative mx-auto flex h-full max-w-[2048px] items-center gap-3 px-4 md:gap-6 md:px-7">
         {/* Logo */}
-        <Link href="/" className="z-10 flex w-[72px] shrink-0 items-center gap-3 md:w-[320px] 2xl:w-[360px]">
+        <Link href="/" className="z-10 flex w-[72px] shrink-0 items-center gap-3 md:w-[180px] lg:w-[250px] xl:w-[300px] 2xl:w-[360px]">
           <div className="text-[var(--gold-deep)] drop-shadow-[0_1px_0_rgba(255,255,255,0.55)]">
             <CompassStar size={52} />
           </div>
           <div className="hidden lg:block">
-            <div className="font-display text-[28px] font-bold tracking-[0.08em] text-[#554c40]">
+            <div className="font-display text-[24px] font-bold tracking-[0.08em] text-[#554c40] xl:text-[28px]">
               人生管理系统
             </div>
             <div className="font-display-en text-[11px] tracking-[0.24em] text-[var(--gold-deep)]">
@@ -142,10 +142,10 @@ export function TopNav() {
           >
             <Backpack size={16} />
           </Link>
-          <div className="hidden md:block">
+          <div className="hidden 2xl:block">
             <InboxButton />
           </div>
-          <div className="hidden md:block">
+          <div className="hidden 2xl:block">
             <NotificationsButton />
           </div>
           <Link

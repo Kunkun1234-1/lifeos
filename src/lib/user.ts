@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { auth } from "@/auth";
 import { provisionUserDefaults } from "./provision";
+import { headers } from "next/headers";
+import { jwtVerify } from "jose";
 
 const provisionCache = new Map<string, Promise<void>>();
 
@@ -25,8 +27,7 @@ async function provisionUserDefaultsOnce(userId: string) {
  *   reach here, but API routes that bypass the page chain still need a guard.
  */
 export async function getCurrentUser() {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = (await getApiTokenUserId()) ?? (await getSessionUserId());
 
   if (!userId) {
     throw new Response("Unauthenticated", { status: 401 });
@@ -46,12 +47,37 @@ export async function getCurrentUser() {
 }
 
 export async function getCurrentUserId(): Promise<string> {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const userId = (await getApiTokenUserId()) ?? (await getSessionUserId());
 
   if (!userId) {
     throw new Response("Unauthenticated", { status: 401 });
   }
 
   return userId;
+}
+
+async function getSessionUserId() {
+  const session = await auth();
+  return (session?.user as { id?: string } | undefined)?.id ?? null;
+}
+
+async function getApiTokenUserId(): Promise<string | null> {
+  const authorization = (await headers()).get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return null;
+
+  const secretValue = process.env.API_JWT_SECRET || process.env.AUTH_SECRET;
+  if (!secretValue || secretValue.length < 32) {
+    throw new Response("API authentication is not configured", { status: 503 });
+  }
+  try {
+    const { payload } = await jwtVerify(
+      authorization.slice(7),
+      new TextEncoder().encode(secretValue),
+      { issuer: "lifeos-web", audience: "lifeos-api" },
+    );
+    if (!payload.sub) throw new Error("Token subject is missing");
+    return payload.sub;
+  } catch {
+    throw new Response("Unauthenticated", { status: 401 });
+  }
 }

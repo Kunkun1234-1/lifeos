@@ -1,0 +1,16 @@
+{
+  "name": "@lifeos/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./achievements": "./src/achievements.ts",
+    "./rewards": "./src/rewards.ts",
+    "./tasks": "./src/tasks.ts"
+  },
+  "dependencies": {
+    "@lifeos/contracts": "0.1.0",
+    "@prisma/client": "^5.22.0"
+  }
+}

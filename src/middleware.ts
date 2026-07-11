@@ -16,6 +16,7 @@ export default auth((req) => {
     path.startsWith("/_next") ||
     path.startsWith("/lifeos") ||
     path.startsWith("/gacha/audio") ||
+    path.startsWith("/gacha/backgrounds") ||
     path.startsWith("/gacha/items") ||
     path.startsWith("/gacha/videos") ||
     path.startsWith("/uploads") ||

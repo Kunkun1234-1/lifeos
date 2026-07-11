@@ -1,33 +1,12 @@
 import { prisma } from "@/lib/prisma";
+export { calculateIncomeAllocation } from "@/lib/wallet-calculations";
 
-const DEFAULT_CATEGORIES = [
-  { kind: "income", name: "工资", color: "#4c8a74", order: 10 },
-  { kind: "income", name: "副业", color: "#3a6b8e", order: 20 },
-  { kind: "income", name: "退款", color: "#8a6820", order: 30 },
-  { kind: "expense", name: "餐饮", color: "#c5554a", order: 10, monthlyBudgetCents: 180000 },
-  { kind: "expense", name: "交通", color: "#3a6b8e", order: 20, monthlyBudgetCents: 50000 },
-  { kind: "expense", name: "学习", color: "#4c8a74", order: 30, monthlyBudgetCents: 100000 },
-  { kind: "expense", name: "娱乐", color: "#9b6bc1", order: 40, monthlyBudgetCents: 80000 },
-  { kind: "expense", name: "健康", color: "#c76d95", order: 50, monthlyBudgetCents: 80000 },
-  { kind: "expense", name: "购物", color: "#b68838", order: 60, monthlyBudgetCents: 150000 },
-  { kind: "expense", name: "居住", color: "#6b6458", order: 70, monthlyBudgetCents: 0 },
-  { kind: "expense", name: "其他", color: "#9a8f7f", order: 90, monthlyBudgetCents: 0 },
-  { kind: "transfer", name: "账户转账", color: "#b68838", order: 10 },
-  { kind: "transfer", name: "还款", color: "#3a6b8e", order: 20 },
-] as const;
+export const WALLET_POOL_TYPES = ["living", "savings", "flexible"] as const;
 
-export async function ensureFinanceDefaults(userId: string) {
-  await prisma.financeCategory.createMany({
-    data: DEFAULT_CATEGORIES.map((category) => ({
-      userId,
-      kind: category.kind,
-      name: category.name,
-      color: category.color,
-      order: category.order,
-      monthlyBudgetCents: "monthlyBudgetCents" in category ? category.monthlyBudgetCents : 0,
-    })),
-    skipDuplicates: true,
-  });
+export type WalletPoolKey = (typeof WALLET_POOL_TYPES)[number];
+
+export function monthKey(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export function monthWindow(now = new Date()) {
@@ -36,16 +15,43 @@ export function monthWindow(now = new Date()) {
   return { start, end };
 }
 
-export function parseTags(raw: string): string[] {
-  try {
-    const value = JSON.parse(raw);
-    return Array.isArray(value) ? value.filter((item) => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
+export async function ensureWalletDefaults(userId: string, now = new Date()) {
+  await prisma.walletPool.createMany({
+    data: WALLET_POOL_TYPES.map((type) => ({ userId, type })),
+    skipDuplicates: true,
+  });
 
-export function signedInitialBalance(type: string, cents: number) {
-  if ((type === "credit" || type === "debt") && cents > 0) return -cents;
-  return cents;
+  const month = monthKey(now);
+  let plan = await prisma.walletMonthlyPlan.findUnique({
+    where: { userId_month: { userId, month } },
+  });
+
+  if (!plan) {
+    const previous = await prisma.walletMonthlyPlan.findFirst({
+      where: { userId, month: { lt: month } },
+      orderBy: { month: "desc" },
+    });
+
+    plan = await prisma.walletMonthlyPlan.upsert({
+      where: { userId_month: { userId, month } },
+      update: {},
+      create: {
+        userId,
+        month,
+        livingTargetCents:
+          previous?.carryLivingTarget === false ? 0 : previous?.livingTargetCents ?? 0,
+        savingsRateBps: previous?.savingsRateBps ?? 5000,
+        carryLivingTarget: previous?.carryLivingTarget ?? true,
+        initialized: previous?.initialized ?? false,
+        rolloverCompleted: !previous,
+      },
+    });
+  }
+
+  const pools = await prisma.walletPool.findMany({
+    where: { userId },
+    orderBy: { type: "asc" },
+  });
+
+  return { plan, pools };
 }
