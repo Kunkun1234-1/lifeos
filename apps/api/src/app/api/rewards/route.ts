@@ -10,7 +10,7 @@ export async function GET() {
     where: { userId, archived: false },
     orderBy: [{ category: "asc" }, { costMoneyCents: "asc" }, { costGold: "asc" }],
   });
-  return NextResponse.json(items.map((item) => ({ ...item, imageUrl: normalizeGachaImageUrl(item.imageUrl) })));
+  return NextResponse.json(items.map((item) => ({ ...item, imageUrl: normalizeGachaImageUrl(item.imageUrl, item.name) })));
 }
 
 export async function POST(req: Request) {

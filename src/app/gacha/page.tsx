@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   Clock3,
@@ -110,12 +111,12 @@ export default function GachaPage() {
   return (
     <div className="relative min-h-[calc(100vh-82px)] overflow-hidden bg-[#07111d] text-white">
       <Image
-        src="/gacha/backgrounds/wish-observatory-v1.png"
-        alt="云端星象观测台"
+        src="/gacha/backgrounds/wish-banner-v2.png"
+        alt="雪境星海中的祈愿角色"
         fill
         priority
         sizes="100vw"
-        className="object-cover object-[62%_center]"
+        className="object-cover object-[64%_center]"
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,13,23,.97)_0%,rgba(5,13,23,.82)_24%,rgba(5,13,23,.24)_56%,rgba(5,13,23,.08)_78%,rgba(5,13,23,.42)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#06101c]/92 via-[#06101c]/30 to-transparent" />
@@ -374,21 +375,38 @@ function HistoryOverlay({ state, onClose }: { state: GachaState; onClose: () => 
 }
 
 function OverlayShell({ title, icon, onClose, children }: { title: string; icon: ReactNode; onClose: () => void; children: ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-[#030914]/72 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="h-full w-full max-w-[620px] overflow-y-auto border-l border-white/14 bg-[#0c1826]/98 p-5 shadow-[-30px_0_80px_-50px_black] sm:p-7">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+  useDialogDismiss(onClose);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex justify-end bg-[#030914]/72 text-white backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="h-full w-full max-w-[620px] overflow-y-auto border-l border-white/14 bg-[#0c1826]/98 px-5 pb-5 shadow-[-30px_0_80px_-50px_black] sm:px-7 sm:pb-7">
+        <div className="sticky top-0 z-20 -mx-5 flex items-center justify-between gap-3 border-b border-white/12 bg-[#0c1826]/98 px-5 py-4 shadow-[0_16px_28px_-24px_black] backdrop-blur-xl sm:-mx-7 sm:px-7">
           <div className="flex items-center gap-2 text-[#ffe5a0]">
             {icon}
             <h2 className="font-display text-xl text-white">{title}</h2>
           </div>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center border border-white/12 text-white/58 hover:text-white" title="关闭">
-            <X size={17} />
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 shrink-0 place-items-center border border-white/30 bg-black/35 text-white transition hover:border-[#e8c977]/70 hover:bg-[#e8c977]/20"
+            title={`关闭${title}`}
+            aria-label={`关闭${title}`}
+          >
+            <X size={20} strokeWidth={2.4} className="text-white" />
           </button>
         </div>
         <div className="py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -404,8 +422,8 @@ function RateBox({ label, rate, detail }: { label: string; rate: string; detail:
 
 function RollingOverlay({ count, highestTier, onSkip }: { count: number; highestTier: RewardItemDTO["tier"]; onSkip: () => void }) {
   const meta = TIER_META[highestTier];
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-[#040a13]/96" aria-label="祈愿进行中">
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-hidden bg-[#040a13]/96 text-white" aria-label="祈愿进行中">
       <div className={cn("absolute inset-0 bg-gradient-to-t via-transparent to-transparent", meta.glow)} />
       <div className="relative grid place-items-center text-center">
         <div className="absolute h-64 w-64 animate-ping rounded-full border border-white/12 motion-reduce:animate-none" />
@@ -419,14 +437,25 @@ function RollingOverlay({ count, highestTier, onSkip }: { count: number; highest
       <button type="button" onClick={onSkip} className="absolute right-5 top-5 flex h-9 items-center gap-2 border border-white/15 px-3 text-xs text-white/62 hover:text-white">
         <SkipForward size={14} /> 跳过
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
 function ResultOverlay({ result, onClose }: { result: GachaPullResult; onClose: () => void }) {
+  useDialogDismiss(onClose);
   const topTier = highestTier(result.results);
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#07111d]/98 p-4 sm:p-7" role="dialog" aria-modal="true" aria-label="祈愿结果">
+  return createPortal(
+    <div className="fixed inset-0 z-[90] overflow-y-auto bg-[#07111d]/98 p-4 pt-20 text-white sm:p-7 sm:pt-20" role="dialog" aria-modal="true" aria-label="祈愿结果">
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed right-4 top-4 z-[95] grid h-11 w-11 place-items-center border border-white/30 bg-[#07111d]/90 text-white shadow-lg backdrop-blur-md transition hover:border-[#e8c977]/75 sm:right-7 sm:top-7"
+        title="关闭祈愿结果"
+        aria-label="关闭祈愿结果"
+      >
+        <X size={22} strokeWidth={2.4} className="text-white" />
+      </button>
       <div className="mx-auto flex min-h-full max-w-6xl flex-col justify-center">
         <div className="flex flex-col gap-3 border-b border-white/12 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -450,8 +479,24 @@ function ResultOverlay({ result, onClose }: { result: GachaPullResult; onClose: 
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
+}
+
+function useDialogDismiss(onClose: () => void) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
 }
 
 function ResultCard({ item }: { item: GachaPullResult["results"][number] }) {
@@ -461,10 +506,10 @@ function ResultCard({ item }: { item: GachaPullResult["results"][number] }) {
   return (
     <article className={cn("relative overflow-hidden border bg-[#111f2f]", meta.border)}>
       <div className={cn("absolute inset-x-0 top-0 h-32 bg-gradient-to-b to-transparent", meta.glow)} />
-      <div className="relative aspect-square p-4">
+      <div className="relative grid aspect-square place-items-center p-4">
         {reward?.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={reward.imageUrl} alt={reward.name} className="h-full w-full object-contain drop-shadow-[0_14px_20px_rgba(0,0,0,.45)]" />
+          <img src={reward.imageUrl} alt={reward.name} className="h-[44%] w-[44%] object-contain drop-shadow-[0_14px_20px_rgba(0,0,0,.45)]" />
         ) : (
           <div className="grid h-full place-items-center text-6xl">{reward?.emoji ?? "✦"}</div>
         )}

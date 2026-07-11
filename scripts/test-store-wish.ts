@@ -6,6 +6,7 @@ import {
   currentFiveStarRate,
   rollGachaTier,
 } from "../src/lib/gacha-rules";
+import { normalizeGachaImageUrl } from "../src/lib/gacha-assets";
 import { RewardItemSchema } from "../src/lib/validators";
 
 const baseReward = {
@@ -62,6 +63,16 @@ assert.equal(
   rollGachaTier(0, 0, sequence([0.0061, 0.9])),
   "rare",
   "the four-star base band starts immediately after the five-star band",
+);
+assert.equal(
+  normalizeGachaImageUrl("/legacy/custom.png", "月露茶券"),
+  "/gacha/items/material-moon-tea.png",
+  "default rewards must prefer the curated material library",
+);
+assert.equal(
+  normalizeGachaImageUrl("/uploads/custom.png", "自定义奖励"),
+  "/uploads/custom.png",
+  "custom rewards keep their uploaded image when the material library has no match",
 );
 
 console.log("store/wish rule tests passed");

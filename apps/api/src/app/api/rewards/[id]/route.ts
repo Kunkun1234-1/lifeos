@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: Params) {
     ...patch,
   });
   const updated = await prisma.rewardItem.update({ where: { id }, data });
-  return NextResponse.json({ ...updated, imageUrl: normalizeGachaImageUrl(updated.imageUrl) });
+  return NextResponse.json({ ...updated, imageUrl: normalizeGachaImageUrl(updated.imageUrl, updated.name) });
 }
 
 export async function DELETE(_req: Request, { params }: Params) {

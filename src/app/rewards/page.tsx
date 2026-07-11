@@ -312,13 +312,13 @@ function ProductCard({
         </button>
       </div>
 
-      <div className="relative aspect-[1.14] overflow-hidden bg-[radial-gradient(circle_at_50%_35%,rgba(126,184,205,.16),transparent_55%),#0d1825]">
+      <div className="relative grid aspect-[1.14] place-items-center overflow-hidden bg-[radial-gradient(circle_at_50%_35%,rgba(126,184,205,.16),transparent_55%),#0d1825]">
         {reward.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={reward.imageUrl}
             alt={reward.name}
-            className="h-full w-full object-contain p-4 transition duration-300 group-hover:scale-[1.035]"
+            className="h-auto max-h-[70%] w-auto max-w-[70%] object-contain transition duration-300 group-hover:scale-[1.035]"
           />
         ) : (
           <div className="grid h-full place-items-center text-6xl">{reward.emoji}</div>

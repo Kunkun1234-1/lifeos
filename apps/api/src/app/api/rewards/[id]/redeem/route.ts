@@ -119,7 +119,7 @@ async function purchaseResponse(
     },
     reward: {
       ...redemption.reward,
-      imageUrl: normalizeGachaImageUrl(redemption.reward.imageUrl),
+      imageUrl: normalizeGachaImageUrl(redemption.reward.imageUrl, redemption.reward.name),
     },
     balances: {
       gold: currency?.gold ?? 0,

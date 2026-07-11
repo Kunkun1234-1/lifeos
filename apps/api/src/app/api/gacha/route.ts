@@ -34,7 +34,7 @@ export async function GET() {
   );
   const serializeReward = (item: (typeof rewardItems)[number]) => ({
     ...item,
-    imageUrl: normalizeGachaImageUrl(item.imageUrl),
+    imageUrl: normalizeGachaImageUrl(item.imageUrl, item.name),
   });
 
   return NextResponse.json({

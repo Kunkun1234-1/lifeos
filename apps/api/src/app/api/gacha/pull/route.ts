@@ -215,7 +215,7 @@ async function batchResponse(userId: string, batchId: string) {
       tier: pull.tier,
       pity: pull.pity,
       reward: pull.reward
-        ? { ...pull.reward, imageUrl: normalizeGachaImageUrl(pull.reward.imageUrl) }
+        ? { ...pull.reward, imageUrl: normalizeGachaImageUrl(pull.reward.imageUrl, pull.reward.name) }
         : null,
     })),
     goldRemaining: currency?.gold ?? 0,

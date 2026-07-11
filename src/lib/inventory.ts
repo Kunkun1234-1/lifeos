@@ -79,7 +79,7 @@ export function serializeInventoryReward(
       name: redemption.reward.name,
       description: redemption.reward.description,
       emoji: redemption.reward.emoji,
-      imageUrl: normalizeGachaImageUrl(redemption.reward.imageUrl),
+      imageUrl: normalizeGachaImageUrl(redemption.reward.imageUrl, redemption.reward.name),
       tier: rewardTier(redemption.reward.tier),
       category: rewardCategory(redemption.reward.category),
       costMoneyCents: redemption.reward.costMoneyCents,
