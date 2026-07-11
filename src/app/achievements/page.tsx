@@ -1,385 +1,305 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2 } from "lucide-react";
 import {
-  useAchievements,
-  useCreateCustomAchievement,
-  useDeleteCustomAchievement,
-  useUnlockAchievement,
-} from "@/hooks/queries";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea, Label, Select } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { ImagePicker } from "@/components/image-picker";
+  Award,
+  Check,
+  ChevronDown,
+  Grid2X2,
+  List,
+  LockKeyhole,
+  Search,
+  Star,
+} from "lucide-react";
+import { useAchievements } from "@/hooks/queries";
 import type { AchievementDTO } from "@/lib/types";
+import styles from "./page.module.css";
 
-const TIER_COLOR: Record<string, string> = {
-  bronze: "#a87034",
-  silver: "#9aa1ad",
-  gold: "var(--gold-deep)",
-  legendary: "#9b6bc1",
-};
+type Filter = "all" | "unlocked" | "progress" | "hidden";
+type SortMode = "default" | "progress" | "reward";
 
-const TIER_LABEL: Record<string, string> = {
-  bronze: "铜",
-  silver: "银",
-  gold: "金",
-  legendary: "传说",
-};
+const TIERS = ["bronze", "silver", "gold", "legendary"] as const;
+const EMPTY_ACHIEVEMENTS: AchievementDTO[] = [];
+
+const TIER_META = {
+  bronze: { cn: "铜牌", en: "BRONZE", visible: 5 },
+  silver: { cn: "银牌", en: "SILVER", visible: 4 },
+  gold: { cn: "金牌", en: "GOLD", visible: 4 },
+  legendary: { cn: "传说", en: "LEGENDARY", visible: 4 },
+} as const;
 
 const CATEGORY_LABEL: Record<string, string> = {
-  streak: "连击",
-  cumulative: "累积",
-  milestone: "里程碑",
-  hidden: "隐藏",
-  custom: "自定义",
+  streak: "普通",
+  cumulative: "稀有",
+  milestone: "普通",
+  hidden: "传说",
+  custom: "稀有",
 };
+
+function isHidden(a: AchievementDTO) {
+  return a.hidden && !a.unlocked;
+}
+
+function rewardScore(a: AchievementDTO) {
+  return a.reward.gold + a.reward.gems * 40 + a.reward.fate * 60;
+}
 
 export default function AchievementsPage() {
   const { data: items } = useAchievements();
-  const [showForm, setShowForm] = useState(false);
-  const list = items ?? [];
-  const totalUnlocked = list.filter((a) => a.unlocked).length;
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
+  const [gridView, setGridView] = useState(true);
+  const list = items ?? EMPTY_ACHIEVEMENTS;
 
-  // Group by tier
-  const grouped: Record<string, AchievementDTO[]> = {};
-  for (const a of list) {
-    grouped[a.tier] = grouped[a.tier] ?? [];
-    grouped[a.tier].push(a);
-  }
-  const TIERS = ["bronze", "silver", "gold", "legendary"];
+  const counts = useMemo(
+    () => ({
+      all: list.length,
+      unlocked: list.filter((a) => a.unlocked).length,
+      progress: list.filter((a) => !a.unlocked && !a.hidden).length,
+      hidden: list.filter(isHidden).length,
+    }),
+    [list],
+  );
+
+  const visibleItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
+    const next = list.filter((a) => {
+      const filterMatches =
+        filter === "all" ||
+        (filter === "unlocked" && a.unlocked) ||
+        (filter === "progress" && !a.unlocked && !a.hidden) ||
+        (filter === "hidden" && isHidden(a));
+      const queryMatches =
+        !normalizedQuery ||
+        a.name.toLocaleLowerCase("zh-CN").includes(normalizedQuery) ||
+        a.description.toLocaleLowerCase("zh-CN").includes(normalizedQuery);
+      return filterMatches && queryMatches;
+    });
+
+    if (sortMode === "progress") return next.toSorted((a, b) => b.progress - a.progress);
+    if (sortMode === "reward") return next.toSorted((a, b) => rewardScore(b) - rewardScore(a));
+    return next;
+  }, [filter, list, query, sortMode]);
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 md:px-8 md:py-8">
-      <div className="panel-cream framed flex flex-col gap-4 rounded-sm p-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="section-label">
-            <span className="cn text-2xl">成就</span>
-            <span className="en text-[11px]">Achievements</span>
-          </div>
-          <div className="mt-2 h-px bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/40 to-transparent" />
-          <p className="mt-3 max-w-2xl text-sm text-[var(--fg-muted)]">
-            完成任务、习惯、日程、复盘的过程会自动解锁成就。隐藏成就只在解锁后展示。自定义成就由你手动标记完成。
-          </p>
-        </div>
-        <div className="flex items-end gap-3">
-          <div className="rounded-sm border border-[var(--gold)] bg-[var(--gold-tint)] px-4 py-2 text-center">
-            <div className="font-mono text-2xl font-bold text-[var(--gold-deep)]">
-              {totalUnlocked}<span className="text-base">/{list.length}</span>
-            </div>
-            <div className="font-display-en text-[9px] tracking-[0.25em] text-[var(--gold-deep)]">
-              UNLOCKED
-            </div>
-          </div>
-          <Button onClick={() => setShowForm((v) => !v)}>
-            <Plus size={16} />
-            {showForm ? "Close" : "新增成就"}
-          </Button>
-        </div>
-      </div>
+    <div className={`achievements-page ${styles.page}`}>
+      <AchievementToolbar
+        counts={counts}
+        filter={filter}
+        onFilter={setFilter}
+        query={query}
+        onQuery={setQuery}
+        sortMode={sortMode}
+        onSort={setSortMode}
+        gridView={gridView}
+        onGridView={setGridView}
+      />
 
-      <AnimatePresence initial={false}>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <CustomAchievementForm onDone={() => setShowForm(false)} />
-          </motion.div>
+      <div className={styles.content}>
+        {TIERS.map((tier) => {
+          const allTierItems = list.filter((a) => a.tier === tier);
+          const tierItems = visibleItems.filter((a) => a.tier === tier);
+          if (tierItems.length === 0) return null;
+          const unlockedCount = allTierItems.filter((a) => a.unlocked).length;
+          return (
+            <section className={`${styles.tier} ${styles[tier]}`} key={tier}>
+              <div className={styles.tierHeading}>
+                <div className={styles.tierTitleGroup}>
+                  <span className={styles.tierSeal} aria-hidden="true">
+                    <Award size={23} strokeWidth={1.7} />
+                  </span>
+                  <h2>{TIER_META[tier].cn}</h2>
+                  <span className={styles.tierEnglish}>{TIER_META[tier].en}</span>
+                </div>
+                <div className={styles.tierCount}>
+                  <strong>{unlockedCount}/{allTierItems.length}</strong> 已解锁
+                  <ChevronDown size={14} aria-hidden="true" />
+                </div>
+              </div>
+
+              <div className={gridView ? styles.cardGrid : styles.cardList} data-tier={tier}>
+                {tierItems.slice(0, gridView ? TIER_META[tier].visible : undefined).map((achievement) => (
+                  <AchievementCard key={achievement.id} achievement={achievement} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+
+        {visibleItems.length === 0 && (
+          <div className={styles.empty}>没有找到符合条件的成就</div>
         )}
-      </AnimatePresence>
-
-      {TIERS.map((tier) => {
-        const tierItems = grouped[tier] ?? [];
-        if (tierItems.length === 0) return null;
-        return (
-          <section key={tier}>
-            <div className="mb-3 flex items-baseline gap-2">
-              <span className="diamond-gold" />
-              <h3
-                className="font-display text-lg font-bold"
-                style={{ color: TIER_COLOR[tier] }}
-              >
-                {TIER_LABEL[tier]}牌
-              </h3>
-              <span
-                className="font-display-en text-[10px] uppercase tracking-[0.25em]"
-                style={{ color: TIER_COLOR[tier] }}
-              >
-                {tier} · {tierItems.filter((a) => a.unlocked).length}/{tierItems.length}
-              </span>
-              <div className="h-px flex-1 bg-gradient-to-r from-[var(--gold)]/40 to-transparent" />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {tierItems.map((a, i) => (
-                <AchievementCard key={a.id} a={a} index={i} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      </div>
     </div>
   );
 }
 
-function CustomAchievementForm({ onDone }: { onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [emoji, setEmoji] = useState("🏆");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [tier, setTier] = useState<"bronze" | "silver" | "gold" | "legendary">("bronze");
-  const [rewardGold, setRewardGold] = useState(0);
-  const [rewardGems, setRewardGems] = useState(0);
-  const [rewardFate, setRewardFate] = useState(0);
-  const create = useCreateCustomAchievement();
-
-  const submit = async () => {
-    if (!name.trim()) return;
-    await create.mutateAsync({
-      name: name.trim(),
-      description: description.trim(),
-      emoji: emoji || "🏆",
-      imageUrl,
-      tier,
-      rewardGold,
-      rewardGems,
-      rewardFate,
-    });
-    onDone();
-  };
+function AchievementToolbar({
+  counts,
+  filter,
+  onFilter,
+  query,
+  onQuery,
+  sortMode,
+  onSort,
+  gridView,
+  onGridView,
+}: {
+  counts: Record<Filter, number>;
+  filter: Filter;
+  onFilter: (filter: Filter) => void;
+  query: string;
+  onQuery: (query: string) => void;
+  sortMode: SortMode;
+  onSort: (sortMode: SortMode) => void;
+  gridView: boolean;
+  onGridView: (gridView: boolean) => void;
+}) {
+  const tabs: Array<{ key: Filter; label: string }> = [
+    { key: "all", label: "全部" },
+    { key: "unlocked", label: "已解锁" },
+    { key: "progress", label: "进行中" },
+    { key: "hidden", label: "隐藏" },
+  ];
 
   return (
-    <Card>
-      <CardContent className="grid gap-4 pt-5">
-        <div className="grid gap-1.5">
-          <Label>图标</Label>
-          <ImagePicker
-            value={imageUrl}
-            onChange={setImageUrl}
-            fallbackEmoji={emoji || "🏆"}
-            label="上传徽章图片"
-            hint="留空则使用 emoji"
+    <header className={styles.toolbar}>
+      <div className={styles.tabs} role="tablist" aria-label="成就筛选">
+        {tabs.map((tab) => (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={filter === tab.key}
+            className={filter === tab.key ? styles.activeTab : styles.tab}
+            onClick={() => onFilter(tab.key)}
+            key={tab.key}
+          >
+            <span>{tab.label}</span>
+            <b>{counts[tab.key]}</b>
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.toolbarActions}>
+        <label className={styles.searchBox}>
+          <span className="sr-only">搜索成就</span>
+          <input
+            value={query}
+            onChange={(event) => onQuery(event.target.value)}
+            placeholder="搜索成就名称或描述..."
           />
+          <Search size={22} strokeWidth={2} aria-hidden="true" />
+        </label>
+        <label className={styles.sortBox}>
+          <span className="sr-only">成就排序</span>
+          <select value={sortMode} onChange={(event) => onSort(event.target.value as SortMode)}>
+            <option value="default">默认排序</option>
+            <option value="progress">完成进度</option>
+            <option value="reward">奖励数量</option>
+          </select>
+          <ChevronDown size={19} aria-hidden="true" />
+        </label>
+        <div className={styles.viewToggle} aria-label="视图切换">
+          <button
+            type="button"
+            title="网格视图"
+            aria-pressed={gridView}
+            className={gridView ? styles.selectedView : undefined}
+            onClick={() => onGridView(true)}
+          >
+            <Grid2X2 size={22} />
+          </button>
+          <button
+            type="button"
+            title="列表视图"
+            aria-pressed={!gridView}
+            className={!gridView ? styles.selectedView : undefined}
+            onClick={() => onGridView(false)}
+          >
+            <List size={25} />
+          </button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-1.5">
-            <Label>名称</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="如：跑完第一个半马" maxLength={60} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Emoji（可作为图标 fallback）</Label>
-            <Input value={emoji} onChange={(e) => setEmoji(e.target.value)} maxLength={8} />
-          </div>
-          <div className="grid gap-1.5 sm:col-span-2">
-            <Label>描述</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="解锁条件 / 你想纪念的瞬间"
-              rows={2}
-              maxLength={280}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>等级 Tier</Label>
-            <Select value={tier} onChange={(e) => setTier(e.target.value as typeof tier)}>
-              <option value="bronze">铜牌 · Bronze</option>
-              <option value="silver">银牌 · Silver</option>
-              <option value="gold">金牌 · Gold</option>
-              <option value="legendary">传说 · Legendary</option>
-            </Select>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:col-span-1">
-            <div className="grid gap-1.5">
-              <Label>⭐ Mora</Label>
-              <Input
-                type="number"
-                min={0}
-                value={rewardGold}
-                onChange={(e) => setRewardGold(Number(e.target.value))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>💎 Gems</Label>
-              <Input
-                type="number"
-                min={0}
-                value={rewardGems}
-                onChange={(e) => setRewardGems(Number(e.target.value))}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>🎫 Fate</Label>
-              <Input
-                type="number"
-                min={0}
-                value={rewardFate}
-                onChange={(e) => setRewardFate(Number(e.target.value))}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onDone}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={create.isPending || !name.trim()}>
-            {create.isPending ? "保存中…" : "创建"}
-          </Button>
-        </div>
-        <p className="text-[10px] text-[var(--fg-subtle)]">
-          自定义成就由你手动标记完成，完成时会一次性发放奖励。
-        </p>
-      </CardContent>
-    </Card>
+      </div>
+    </header>
   );
 }
 
-function AchievementCard({ a, index }: { a: AchievementDTO; index: number }) {
-  const showHidden = a.hidden && !a.unlocked;
-  const unlock = useUnlockAchievement();
-  const remove = useDeleteCustomAchievement();
+function AchievementCard({ achievement }: { achievement: AchievementDTO }) {
+  const locked = !achievement.unlocked;
+  const hidden = isHidden(achievement);
+  const progress = Math.max(0, Math.min(100, achievement.progress * 100));
+  const rarity = hidden ? "传说" : CATEGORY_LABEL[achievement.category] ?? "普通";
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04 }}
-      className={`relative panel-cream framed rounded-sm p-4 ${
-        a.unlocked ? "" : "grayscale-[0.35]"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border-2 text-2xl"
-          style={{
-            borderColor: a.unlocked ? TIER_COLOR[a.tier] : "var(--border)",
-            background: a.unlocked
-              ? `radial-gradient(${TIER_COLOR[a.tier]}33, transparent 70%)`
-              : "var(--bg-elevated)",
-            color: a.unlocked ? "inherit" : "var(--fg-subtle)",
-          }}
-        >
-          {showHidden ? (
-            <span>?</span>
-          ) : a.imageUrl ? (
-            <Image src={a.imageUrl} alt={a.name} fill sizes="48px" className="object-cover" unoptimized />
-          ) : (
-            <span>{a.emoji}</span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
-            <div className="font-display text-[14px] font-bold text-[var(--fg-strong)]">
-              {showHidden ? "??? · 隐藏成就" : a.name}
-            </div>
-            {a.isCustom && (
-              <span className="rounded-sm border border-[var(--gold)]/50 px-1 text-[8px] uppercase tracking-[0.18em] text-[var(--gold-deep)]">
-                Custom
+    <article className={`${styles.card} ${locked ? styles.locked : styles.unlocked}`}>
+      <span className={styles.corner} aria-hidden="true" />
+      {achievement.unlocked ? (
+        <span className={styles.unlockMark} title="已解锁">
+          <Check size={19} strokeWidth={3} />
+        </span>
+      ) : hidden ? (
+        <LockKeyhole className={styles.lockIcon} size={18} aria-label="未解锁" />
+      ) : null}
+
+      <div className={styles.cardTop}>
+        <div className={styles.medallion}>
+          <div className={styles.medallionInner}>
+            {hidden ? (
+              <span className={styles.hiddenGlyph}>✧</span>
+            ) : achievement.imageUrl ? (
+              <Image
+                src={achievement.imageUrl}
+                alt=""
+                fill
+                sizes="74px"
+                className={styles.badgeImage}
+                unoptimized
+              />
+            ) : (
+              <span className={styles.emoji} role="img" aria-label={achievement.name}>
+                {achievement.emoji}
               </span>
             )}
           </div>
-          <div className="mt-0.5 text-[11px] leading-snug text-[var(--fg-muted)]">
-            {showHidden ? "完成特殊条件后解锁" : a.description || "—"}
-          </div>
         </div>
-        {a.unlocked && (
-          <span
-            className="font-display-en text-[9px] uppercase tracking-[0.18em]"
-            style={{ color: TIER_COLOR[a.tier] }}
-          >
-            ✓ Unlocked
-          </span>
-        )}
+        <div className={styles.cardCopy}>
+          <h3>{hidden ? achievement.name : achievement.name}</h3>
+          <p>{hidden ? achievement.description : achievement.description}</p>
+        </div>
       </div>
 
-      {/* Manual unlock + delete (custom only, not unlocked) */}
-      {a.isCustom && a.isManual && !a.unlocked && (
-        <div className="mt-3 flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => unlock.mutate(a.id)}
-            disabled={unlock.isPending}
-            className="flex-1"
-          >
-            <Check size={14} /> 标记完成
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            title="Delete"
-            onClick={() => {
-              if (confirm(`Delete custom achievement "${a.name}"?`)) remove.mutate(a.id);
-            }}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      )}
-      {a.isCustom && a.unlocked && (
-        <div className="mt-2 flex justify-end">
-          <Button
-            size="icon"
-            variant="ghost"
-            title="Delete"
-            onClick={() => {
-              if (confirm(`Delete custom achievement "${a.name}"?`)) remove.mutate(a.id);
-            }}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      )}
-
-      {/* Progress bar (when not unlocked) */}
-      {!a.unlocked && !showHidden && (
-        <div className="mt-3">
-          <div className="flex items-baseline justify-between text-[10px]">
-            <span className="font-display-en uppercase tracking-[0.18em] text-[var(--fg-subtle)]">
-              {CATEGORY_LABEL[a.category] ?? a.category}
-            </span>
-            <span className="font-mono text-[var(--fg)]">
-              {a.current}/{a.threshold}
-            </span>
+      {locked && (
+        <div className={styles.progressBlock}>
+          <div className={styles.progressNumbers}>
+            <span />
+            <b>{achievement.current} / {achievement.threshold}</b>
           </div>
-          <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-[var(--bg-panel-ink)]/15 border border-[var(--border)]">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${a.progress * 100}%`,
-                background: TIER_COLOR[a.tier],
-              }}
-            />
+          <div className={styles.progressTrack}>
+            <span style={{ width: `${progress}%` }} />
           </div>
         </div>
       )}
 
-      {/* Reward chips */}
-      <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-mono">
-        {a.reward.gold > 0 && (
-          <span className="rounded-sm bg-[var(--gold-tint)] px-1.5 text-[var(--attr-gold)]">
-            ⭐{a.reward.gold}
-          </span>
+      <footer className={styles.cardFooter}>
+        <div className={styles.reward}>
+          <Star size={22} fill="currentColor" strokeWidth={1.5} />
+          <b>+{achievement.reward.gold}</b>
+        </div>
+        <span className={`${styles.rarity} ${styles[`rarity${rarity}`] ?? ""}`}>{rarity}</span>
+        {achievement.unlockedAt && (
+          <time dateTime={achievement.unlockedAt}>{formatDate(achievement.unlockedAt)}</time>
         )}
-        {a.reward.gems > 0 && (
-          <span className="rounded-sm bg-[var(--gold-tint)] px-1.5 text-[var(--attr-cha)]">
-            💎{a.reward.gems}
-          </span>
-        )}
-        {a.reward.fate > 0 && (
-          <span className="rounded-sm bg-[var(--gold-tint)] px-1.5 text-[var(--attr-cre)]">
-            🎫{a.reward.fate}
-          </span>
-        )}
-        {a.unlockedAt && (
-          <span className="ml-auto text-[var(--fg-subtle)]">
-            {new Date(a.unlockedAt).toLocaleDateString()}
-          </span>
-        )}
-      </div>
-    </motion.div>
+      </footer>
+    </article>
   );
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
 }

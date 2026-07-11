@@ -148,6 +148,7 @@ export async function refundResin(
 
 /** Standard costs for AI Coach calls. Tunable from one place. */
 export const RESIN_COSTS = {
+  scheduleCoach: 10,
   decisionCoach: 20,
   weeklyCoach: 30,
   monthlyReview: 50,

@@ -23,6 +23,7 @@
     "smoke:wallet": "node scripts/smoke-wallet.mjs",
     "smoke:notes": "node scripts/smoke-notes.mjs",
     "test:store-wish": "tsx scripts/test-store-wish.ts",
+    "test:schedule": "tsx scripts/test-schedule-model.ts",
     "verify:predeploy": "npm run verify:split && npm run smoke:notes",
     "db:generate": "prisma generate",
     "db:check": "node scripts/db-check.mjs",

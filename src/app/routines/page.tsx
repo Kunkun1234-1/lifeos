@@ -1,784 +1,691 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
+  AlertTriangle,
+  BarChart3,
+  BrainCircuit,
   CalendarDays,
   Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Flame,
+  Focus,
+  LoaderCircle,
+  MoreHorizontal,
   Pencil,
   Plus,
-  Repeat,
+  RefreshCw,
+  Sparkles,
+  Target,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { AreaSelect } from "@/components/area-select";
 import {
   useCompleteRoutine,
-  useCreateRoutine,
+  useCompleteTask,
   useDeleteRoutine,
   useRoutines,
-  useUpdateRoutine,
+  useTasks,
 } from "@/hooks/queries";
 import { addDaysYMD, dayOfWeek, todayYMD } from "@/lib/date";
+import { api } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
-import type { RoutineDTO } from "@/lib/types";
+import type { RoutineDTO, TaskDTO } from "@/lib/types";
+import { ScheduleFormPanel } from "./components/schedule-form-panel";
+import {
+  DAY_LABELS,
+  DAY_SHORT,
+  GRID_HEIGHT,
+  HOUR_HEIGHT,
+  IDEAL_BLOCKS,
+  areaBreakdown,
+  blockStyle,
+  buildEntries,
+  calendarDates,
+  completionSummary,
+  conflictIds,
+  dateStrip,
+  formatFullDate,
+  formatMonthDay,
+  formatTime,
+  hasScheduleOnDate,
+  hourMarks,
+  isTimed,
+  minutesToTop,
+  shiftMonth,
+  tasksForDate,
+  timeToMinutes,
+  type AiScheduleSuggestion,
+  type ScheduleEntry,
+  type ScheduleView,
+} from "./schedule-model";
 
-const DAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-const DAY_SHORT = ["日", "一", "二", "三", "四", "五", "六"];
-const SCHEDULE_META_KEY = "__lifeosSchedule";
-const TIME_START = 6 * 60;
-const TIME_END = 24 * 60;
-const HOUR_HEIGHT = 74;
-const GRID_HEIGHT = ((TIME_END - TIME_START) / 60) * HOUR_HEIGHT;
-
-type ScheduleKind = "recurring" | "single";
-
-type ScheduleMeta = {
-  [SCHEDULE_META_KEY]: true;
-  kind: ScheduleKind;
-  startTime: string;
-  endTime: string;
-  date?: string;
-  note?: string;
+type ScheduleCoachResponse = {
+  summary: string;
+  suggestions: AiScheduleSuggestion[];
+  cost: number;
 };
 
-type DecodedNotes = {
-  meta: ScheduleMeta | null;
-  note: string;
-};
-
-type ScheduleEntry = {
-  routine: RoutineDTO;
-  meta: ScheduleMeta | null;
-  note: string;
-  start: number | null;
-  end: number | null;
-};
-
-const IDEAL_BLOCKS = [
-  {
-    startTime: "08:00",
-    endTime: "08:30",
-    title: "美美起床",
-    detail: "固定起床时间，先稳定身体状态和一天的能量。",
-  },
-  {
-    startTime: "08:30",
-    endTime: "09:30",
-    title: "早餐与咖啡",
-    detail: "早餐冥想，坚果、香蕉、面包、鸡蛋可随机搭配。",
-  },
-  {
-    startTime: "09:30",
-    endTime: "10:00",
-    title: "每日计划",
-    detail: "梳理今天有趣、必须、开心、学习或工作相关的事情。",
-  },
-  {
-    startTime: "10:00",
-    endTime: "12:00",
-    title: "早晨黄金时间",
-    detail: "处理重要且对未来有复利效应的困难任务。",
-  },
-  {
-    startTime: "12:00",
-    endTime: "14:00",
-    title: "午餐与午休",
-    detail: "简单饮食，冥想训练，从身体到内心放松。",
-  },
-  {
-    startTime: "14:00",
-    endTime: "18:00",
-    title: "下午黄金时间",
-    detail: "处理复杂、有难度，但不必全程高度紧绷的事项。",
-  },
-  {
-    startTime: "18:00",
-    endTime: "19:30",
-    title: "晚餐与散步",
-    detail: "吃好一点，散步、回邮件、查邮件或阅读。",
-  },
-  {
-    startTime: "19:30",
-    endTime: "22:00",
-    title: "杂活与自由时间",
-    detail: "健身、跑步、游泳、读书、遛狗、加班或杂活。",
-  },
-  {
-    startTime: "22:00",
-    endTime: "23:00",
-    title: "自由时间",
-    detail: "不纠结具体内容，给一天留出弹性。",
-  },
-  {
-    startTime: "23:00",
-    endTime: "24:00",
-    title: "睡前准备",
-    detail: "洗漱、洗澡、聊天、听有声书，进入适合入睡的环境。",
-  },
+const VIEW_TABS: Array<{ id: ScheduleView; label: string }> = [
+  { id: "timeline", label: "时间轴" },
+  { id: "ideal", label: "理想安排" },
+  { id: "actual", label: "具体安排" },
 ];
-
-const TIME_OPTIONS = Array.from({ length: ((24 - 6) * 2) + 1 }, (_, index) =>
-  formatTime(6 * 60 + index * 30),
-);
 
 export default function RoutinesPage() {
   const [selectedDate, setSelectedDate] = useState(() => todayYMD());
-  const [showForm, setShowForm] = useState(false);
+  const [view, setView] = useState<ScheduleView>("timeline");
+  const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RoutineDTO | null>(null);
-  const { data: routines, isLoading } = useRoutines();
-
-  const selectedDow = dayOfWeek(selectedDate);
+  const [coach, setCoach] = useState<ScheduleCoachResponse | null>(null);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState<string | null>(null);
+  const { data: routines = [], isLoading: routinesLoading } = useRoutines();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
   const today = todayYMD();
-  const dateStrip = useMemo(
-    () => Array.from({ length: 15 }, (_, index) => addDaysYMD(selectedDate, index - 7)),
-    [selectedDate],
-  );
 
-  const entries = useMemo(() => {
-    return (routines ?? [])
-      .filter((routine) => routineMatchesDate(routine, selectedDate))
-      .map((routine): ScheduleEntry => {
-        const decoded = decodeNotes(routine.notes);
-        const start = decoded.meta ? timeToMinutes(decoded.meta.startTime) : null;
-        const end = decoded.meta ? timeToMinutes(decoded.meta.endTime) : null;
-        return {
-          routine,
-          meta: decoded.meta,
-          note: decoded.note,
-          start,
-          end,
-        };
-      })
-      .sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999));
-  }, [routines, selectedDate]);
+  const entries = useMemo(() => buildEntries(routines, selectedDate), [routines, selectedDate]);
+  const datedTasks = useMemo(() => tasksForDate(tasks, selectedDate), [tasks, selectedDate]);
+  const timedEntries = entries.filter(isTimed);
+  const unscheduledEntries = entries.filter((entry) => !isTimed(entry));
+  const conflicts = useMemo(() => conflictIds(entries), [entries]);
+  const summary = completionSummary(entries, selectedDate, today);
+  const areas = areaBreakdown(entries);
 
-  const timedEntries = entries.filter((entry) => isTimed(entry.start, entry.end));
-  const unscheduledEntries = entries.filter((entry) => !isTimed(entry.start, entry.end));
+  const selectDate = (date: string) => {
+    setSelectedDate(date);
+    setCoach(null);
+    setCoachError(null);
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (routine: RoutineDTO) => {
+    setEditing(routine);
+    setFormOpen(true);
+  };
+
+  const askCoach = async () => {
+    setCoachLoading(true);
+    setCoachError(null);
+    try {
+      const result = await api<ScheduleCoachResponse>("/api/ai/schedule-coach", {
+        method: "POST",
+        json: {
+          date: selectedDate,
+          schedules: entries.map((entry) => ({
+            title: entry.routine.title,
+            startTime: entry.meta?.startTime ?? null,
+            endTime: entry.meta?.endTime ?? null,
+            area: entry.routine.area?.name ?? null,
+            completed: selectedDate === today && entry.routine.completedToday,
+          })),
+          tasks: datedTasks.map((task) => ({
+            title: task.title,
+            status: task.status,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            area: task.area?.name ?? null,
+          })),
+        },
+      });
+      setCoach(result);
+    } catch (error) {
+      setCoachError(error instanceof Error ? error.message : "AI 建议生成失败");
+    } finally {
+      setCoachLoading(false);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-[1680px] px-4 py-5 md:px-8">
-      <section className="relative overflow-hidden rounded-sm border border-[var(--gold)]/55 bg-[rgba(255,252,242,0.36)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.3),0_24px_70px_-42px_rgba(4,12,24,0.9)] backdrop-blur-xl">
-        <header className="border-b border-[var(--gold)]/36 bg-[rgba(255,252,242,0.48)] px-4 py-4 backdrop-blur-xl">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-sm border border-[var(--gold)]/60 bg-[rgba(24,38,58,0.88)] text-[var(--gold-pale)]">
-                <CalendarDays size={23} />
-              </div>
-              <div>
-                <div className="section-label">
-                  <span className="cn text-2xl">日程</span>
-                  <span className="en text-[11px]">Schedule</span>
-                </div>
-                <div className="mt-1 text-sm text-[var(--fg-muted)]">
-                  {formatFullDate(selectedDate)} · {DAY_LABELS[selectedDow]}
-                </div>
-              </div>
+    <div className="mx-auto max-w-[1920px] px-3 py-4 sm:px-4 lg:px-6">
+      <section className="overflow-hidden rounded-sm border border-[var(--gold)]/48 bg-[rgba(255,252,242,0.78)] shadow-[0_24px_70px_-42px_rgba(4,12,24,0.92)] backdrop-blur-xl">
+        <div className="min-[1200px]:grid min-[1200px]:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className="hidden border-r border-[var(--border)] bg-[rgba(250,243,226,0.72)] p-3 min-[1200px]:block">
+            <div className="sticky top-[98px] grid gap-3">
+              <MonthCalendar selectedDate={selectedDate} today={today} routines={routines} onSelect={selectDate} />
+              <OverviewPanel summary={summary} isToday={selectedDate === today} />
+              <AreaPanel areas={areas} />
+              <FocusPanel entries={entries} onCreate={openCreate} />
+            </div>
+          </aside>
+
+          <div className="min-w-0">
+            <ScheduleHeader selectedDate={selectedDate} today={today} onSelect={selectDate} onCreate={openCreate} />
+
+            <div className="border-b border-[var(--border)] px-3 py-3 min-[1200px]:hidden">
+              <OverviewInline summary={summary} />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSelectedDate(addDaysYMD(selectedDate, -1))}>
-                <ChevronLeft size={15} />
-                前一天
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setSelectedDate(today)}>
-                今天
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setSelectedDate(addDaysYMD(selectedDate, 1))}>
-                后一天
-                <ChevronRight size={15} />
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setShowForm((value) => !value);
-                }}
-              >
-                <Plus size={15} />
-                {showForm ? "收起" : "写安排"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {dateStrip.map((date) => {
-              const active = date === selectedDate;
-              const current = date === today;
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  onClick={() => setSelectedDate(date)}
-                  className={cn(
-                    "min-w-[74px] rounded-sm border px-3 py-2 text-left transition-all",
-                    active
-                      ? "border-[var(--gold)] bg-[rgba(24,38,58,0.86)] text-[var(--fg-on-ink)] shadow-[0_0_0_2px_rgba(232,201,119,0.2)]"
-                      : "border-[var(--gold)]/24 bg-[rgba(255,252,242,0.56)] text-[var(--fg)] hover:border-[var(--gold)]/55",
-                  )}
-                >
-                  <div className={cn("font-display text-[13px]", active ? "text-[var(--gold-pale)]" : "text-[var(--fg-strong)]")}>
-                    {formatMonthDay(date)}
+            <div className="grid min-w-0 min-[1540px]:grid-cols-[minmax(0,1fr)_310px]">
+              <div className="min-w-0 p-3 sm:p-4">
+                <div className="border-b border-[var(--border)]">
+                  <div className="flex min-w-max gap-7" role="tablist" aria-label="日程视图">
+                    {VIEW_TABS.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={view === tab.id}
+                        onClick={() => setView(tab.id)}
+                        className={cn(
+                          "relative h-11 px-1 font-display text-sm font-bold transition-colors",
+                          view === tab.id ? "text-[var(--accent-strong)]" : "text-[var(--fg-muted)] hover:text-[var(--fg-strong)]",
+                        )}
+                      >
+                        {tab.label}
+                        {view === tab.id && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--accent)]" />}
+                      </button>
+                    ))}
                   </div>
-                  <div className="mt-0.5 flex items-center justify-between font-display-en text-[8px]">
-                    <span>{DAY_SHORT[dayOfWeek(date)]}</span>
-                    {current && <span className="text-[var(--gold-bright)]">TODAY</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </header>
+                </div>
 
-        {showForm && (
-          <div className="border-b border-[var(--gold)]/28 bg-[rgba(10,24,42,0.16)] p-4">
-            <ScheduleForm
-              key={editing?.id ?? `new-${selectedDate}`}
-              initial={editing}
-              selectedDate={selectedDate}
-              onDone={() => {
-                setEditing(null);
-                setShowForm(false);
-              }}
-            />
-          </div>
-        )}
-
-        <div className="p-4">
-          <div className="mb-3 grid grid-cols-[72px_minmax(300px,1fr)_minmax(340px,1.1fr)] gap-3 overflow-x-auto text-sm">
-            <ColumnHeader label="时间轴" subLabel="Time" />
-            <ColumnHeader label="理想日程安排" subLabel="Ideal day" />
-            <ColumnHeader label="具体时间安排" subLabel={isLoading ? "Loading" : `${entries.length} items`} />
-          </div>
-
-          <div className="max-h-[calc(100vh-310px)] min-h-[520px] overflow-auto rounded-sm border border-[var(--gold)]/36 bg-[rgba(10,24,42,0.24)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] backdrop-blur-md">
-            <div
-              className="grid min-w-[820px] grid-cols-[72px_minmax(300px,1fr)_minmax(340px,1.1fr)] gap-3 p-3"
-              style={{ height: GRID_HEIGHT + 24 }}
-            >
-              <TimeRail />
-              <TimelineColumn>
-                {IDEAL_BLOCKS.map((block) => (
-                  <IdealBlock key={`${block.startTime}-${block.title}`} block={block} />
-                ))}
-              </TimelineColumn>
-              <TimelineColumn>
-                {isLoading ? (
-                  <div className="absolute inset-x-3 top-6 rounded-sm border border-dashed border-white/35 bg-white/10 py-10 text-center text-sm text-[var(--fg-on-ink)]/75">
-                    Loading...
-                  </div>
-                ) : timedEntries.length === 0 && unscheduledEntries.length === 0 ? (
-                  <div className="absolute inset-x-3 top-6 rounded-sm border border-dashed border-white/35 bg-white/10 py-10 text-center text-sm text-[var(--fg-on-ink)]/75">
-                    这一天还没有具体安排。
-                  </div>
-                ) : (
-                  timedEntries.map((entry) => (
-                    <ActualBlock
-                      key={entry.routine.id}
-                      entry={entry}
-                      selectedDate={selectedDate}
-                      onEdit={() => {
-                        setEditing(entry.routine);
-                        setShowForm(true);
-                      }}
-                    />
-                  ))
+                {unscheduledEntries.length > 0 && view !== "ideal" && (
+                  <UnscheduledRow entries={unscheduledEntries} onEdit={openEdit} />
                 )}
-              </TimelineColumn>
+
+                <Timeline
+                  view={view}
+                  entries={timedEntries}
+                  selectedDate={selectedDate}
+                  loading={routinesLoading}
+                  conflicts={conflicts}
+                  onEdit={openEdit}
+                  onCreate={openCreate}
+                />
+
+                <div className="mt-4 grid gap-3 min-[760px]:grid-cols-2 min-[1540px]:hidden">
+                  <AiCoachPanel
+                    coach={coach}
+                    loading={coachLoading}
+                    error={coachError}
+                    onGenerate={askCoach}
+                  />
+                  <TodayGoalsPanel tasks={datedTasks} selectedDate={selectedDate} today={today} loading={tasksLoading} />
+                  <MonthStatsPanel routines={routines} summary={summary} />
+                </div>
+              </div>
+
+              <aside className="hidden border-l border-[var(--border)] bg-[rgba(237,245,255,0.34)] p-3 min-[1540px]:block">
+                <div className="sticky top-[98px] grid gap-3">
+                  <AiCoachPanel coach={coach} loading={coachLoading} error={coachError} onGenerate={askCoach} />
+                  <TodayGoalsPanel tasks={datedTasks} selectedDate={selectedDate} today={today} loading={tasksLoading} />
+                  <MonthStatsPanel routines={routines} summary={summary} />
+                </div>
+              </aside>
             </div>
           </div>
-
-          {unscheduledEntries.length > 0 && (
-            <section className="mt-4 rounded-sm border border-[var(--gold)]/32 bg-[rgba(255,252,242,0.52)] p-3 backdrop-blur-xl">
-              <div className="mb-2 font-display text-sm font-bold text-[var(--fg-strong)]">未定时间</div>
-              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {unscheduledEntries.map((entry) => (
-                  <button
-                    key={entry.routine.id}
-                    type="button"
-                    onClick={() => {
-                      setEditing(entry.routine);
-                      setShowForm(true);
-                    }}
-                    className="rounded-sm border border-[var(--gold)]/28 bg-[rgba(255,252,242,0.72)] p-3 text-left text-sm hover:border-[var(--gold)]"
-                  >
-                    <div className="font-display font-bold text-[var(--fg-strong)]">{entry.routine.title}</div>
-                    <div className="mt-1 text-xs text-[var(--fg-muted)]">
-                      {entry.note || "没有写具体时间，可编辑补全。"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       </section>
+
+      <ScheduleFormPanel
+        open={formOpen}
+        initial={editing}
+        selectedDate={selectedDate}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditing(null);
+        }}
+      />
     </div>
   );
 }
 
-function ColumnHeader({ label, subLabel }: { label: string; subLabel: string }) {
+function ScheduleHeader({ selectedDate, today, onSelect, onCreate }: {
+  selectedDate: string;
+  today: string;
+  onSelect: (date: string) => void;
+  onCreate: () => void;
+}) {
   return (
-    <div className="rounded-sm border border-[var(--gold)]/28 bg-[rgba(255,252,242,0.5)] px-3 py-2 backdrop-blur-xl">
-      <div className="font-display text-[14px] font-bold text-[var(--fg-strong)]">{label}</div>
-      <div className="font-display-en text-[8px] text-[var(--gold-deep)]">{subLabel}</div>
-    </div>
-  );
-}
-
-function TimeRail() {
-  return (
-    <div className="relative border-r border-white/26 text-right">
-      {hourMarks().map((minutes) => (
-        <div
-          key={minutes}
-          className="absolute right-3 -translate-y-2 font-mono text-[11px] text-[var(--fg-on-ink)]/78"
-          style={{ top: minutesToTop(minutes) }}
-        >
-          {formatTime(minutes)}
+    <header className="border-b border-[var(--border)] bg-[rgba(255,252,242,0.76)] px-3 py-4 sm:px-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-[var(--gold-deep)]">
+            <CalendarDays size={18} />
+            <span className="font-display-en text-[9px]">Schedule</span>
+          </div>
+          <h1 className="mt-1 font-display text-xl font-bold text-[var(--fg-strong)] sm:text-2xl">
+            {formatFullDate(selectedDate)} · {DAY_LABELS[dayOfWeek(selectedDate)]}
+          </h1>
         </div>
-      ))}
-    </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => onSelect(addDaysYMD(selectedDate, -1))}>
+            <ChevronLeft size={15} /><span className="hidden sm:inline">前一天</span>
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => onSelect(today)}>今天</Button>
+          <Button size="sm" variant="outline" onClick={() => onSelect(addDaysYMD(selectedDate, 1))}>
+            <span className="hidden sm:inline">后一天</span><ChevronRight size={15} />
+          </Button>
+          <Button data-testid="schedule-add-button" size="sm" onClick={onCreate}><Plus size={15} />添加日程</Button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-7 gap-1.5 overflow-x-auto pb-1 sm:gap-2">
+        {dateStrip(selectedDate).map((date) => {
+          const active = date === selectedDate;
+          return (
+            <button
+              key={date}
+              type="button"
+              onClick={() => onSelect(date)}
+              aria-pressed={active}
+              className={cn(
+                "min-w-[64px] rounded-sm border px-2 py-2 text-center transition-colors sm:min-w-[78px]",
+                active
+                  ? "border-[var(--accent)] bg-[var(--accent-strong)] text-white shadow-[0_8px_20px_-14px_var(--accent)]"
+                  : "border-[var(--border-soft)] bg-white/54 text-[var(--fg)] hover:border-[var(--gold)]",
+              )}
+            >
+              <div className="font-display text-sm font-bold">{formatMonthDay(date)}</div>
+              <div className={cn("mt-0.5 text-[10px]", active ? "text-white/76" : "text-[var(--fg-muted)]")}>{DAY_LABELS[dayOfWeek(date)]}</div>
+            </button>
+          );
+        })}
+      </div>
+    </header>
   );
 }
 
-function TimelineColumn({ children }: { children: React.ReactNode }) {
+function MonthCalendar({ selectedDate, today, routines, onSelect }: {
+  selectedDate: string;
+  today: string;
+  routines: RoutineDTO[];
+  onSelect: (date: string) => void;
+}) {
+  const [year, month] = selectedDate.split("-").map(Number);
   return (
-    <div className="relative h-full overflow-hidden rounded-sm border border-white/24 bg-[rgba(255,255,255,0.08)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.28)_1px,transparent_1px)] bg-[length:100%_74px] opacity-36" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(232,201,119,0.08)_1px,transparent_1px)] bg-[length:48px_100%] opacity-40" />
-      {children}
+    <Panel>
+      <div className="flex items-center justify-between">
+        <PanelTitle>{year}年{month}月</PanelTitle>
+        <div className="flex gap-1">
+          <IconButton label="上个月" onClick={() => onSelect(shiftMonth(selectedDate, -1))}><ChevronLeft size={15} /></IconButton>
+          <IconButton label="下个月" onClick={() => onSelect(shiftMonth(selectedDate, 1))}><ChevronRight size={15} /></IconButton>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-7 text-center text-[10px] text-[var(--fg-subtle)]">
+        {DAY_SHORT.map((day) => <span key={day} className="py-1">{day}</span>)}
+      </div>
+      <div className="grid grid-cols-7 gap-y-1 text-center">
+        {calendarDates(selectedDate).map((date) => {
+          const inMonth = Number(date.slice(5, 7)) === month;
+          const active = date === selectedDate;
+          const current = date === today;
+          const scheduled = hasScheduleOnDate(routines, date);
+          return (
+            <button
+              key={date}
+              type="button"
+              onClick={() => onSelect(date)}
+              aria-label={date}
+              className={cn(
+                "relative mx-auto grid h-7 w-7 place-items-center rounded-sm text-[11px] transition-colors",
+                !inMonth && "text-[var(--fg-subtle)]/45",
+                inMonth && !active && "text-[var(--fg)] hover:bg-[var(--gold-tint)]",
+                active && "bg-[var(--accent-strong)] text-white",
+                current && !active && "font-bold text-[var(--accent-strong)] ring-1 ring-[var(--accent)]/45",
+              )}
+            >
+              {Number(date.slice(8, 10))}
+              {scheduled && <span className={cn("absolute bottom-0.5 h-0.5 w-0.5 rounded-full", active ? "bg-white" : "bg-[var(--gold)]")} />}
+            </button>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+function OverviewPanel({ summary, isToday }: { summary: ReturnType<typeof completionSummary>; isToday: boolean }) {
+  return (
+    <Panel>
+      <PanelTitle>今日概览</PanelTitle>
+      <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-[var(--border-soft)] bg-[var(--border-soft)]">
+        <Metric value={summary.done} label="已完成" tone="success" />
+        <Metric value={summary.active} label={isToday ? "进行中" : "已安排"} tone="warning" />
+        <Metric value={summary.pending} label="待完成" tone="danger" />
+        <Metric value={`${summary.rate}%`} label="完成度" tone="accent" />
+      </div>
+    </Panel>
+  );
+}
+
+function OverviewInline({ summary }: { summary: ReturnType<typeof completionSummary> }) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      <CompactMetric value={summary.done} label="完成" />
+      <CompactMetric value={summary.active} label="进行" />
+      <CompactMetric value={summary.pending} label="待办" />
+      <CompactMetric value={`${summary.rate}%`} label="进度" />
     </div>
   );
 }
 
-function IdealBlock({ block }: { block: (typeof IDEAL_BLOCKS)[number] }) {
+function AreaPanel({ areas }: { areas: ReturnType<typeof areaBreakdown> }) {
+  return (
+    <Panel>
+      <PanelTitle>日程类型</PanelTitle>
+      <div className="mt-3 grid gap-2.5">
+        {areas.length ? areas.map((area) => (
+          <div key={area.name} className="flex items-center gap-2 text-xs">
+            <span className="grid h-6 w-6 place-items-center rounded-sm text-[11px] text-white" style={{ backgroundColor: area.color }}>{area.icon}</span>
+            <span className="min-w-0 flex-1 truncate text-[var(--fg)]">{area.name}</span>
+            <span className="font-mono text-[var(--fg-muted)]">{area.count}</span>
+          </div>
+        )) : <EmptyLine>当天还没有领域分布</EmptyLine>}
+      </div>
+    </Panel>
+  );
+}
+
+function FocusPanel({ entries, onCreate }: { entries: ScheduleEntry[]; onCreate: () => void }) {
+  const longest = entries.filter(isTimed).sort((a, b) => ((b.end ?? 0) - (b.start ?? 0)) - ((a.end ?? 0) - (a.start ?? 0)))[0];
+  return (
+    <Panel>
+      <div className="flex items-center gap-2 text-[var(--accent-strong)]"><Focus size={16} /><PanelTitle>专注建议</PanelTitle></div>
+      <p className="mt-3 text-sm font-semibold text-[var(--fg-strong)]">{longest ? longest.routine.title : "给今天留出一个专注时段"}</p>
+      <p className="mt-1 text-xs leading-5 text-[var(--fg-muted)]">
+        {longest?.meta ? `${longest.meta.startTime}-${longest.meta.endTime} 是当天最长的连续安排。` : "先添加最重要的一件事，再围绕它组织其余时间。"}
+      </p>
+      <Button className="mt-3 w-full" size="sm" variant="outline" onClick={onCreate}><Plus size={14} />添加安排</Button>
+    </Panel>
+  );
+}
+
+function Timeline({ view, entries, selectedDate, loading, conflicts, onEdit, onCreate }: {
+  view: ScheduleView;
+  entries: ScheduleEntry[];
+  selectedDate: string;
+  loading: boolean;
+  conflicts: Set<string>;
+  onEdit: (routine: RoutineDTO) => void;
+  onCreate: () => void;
+}) {
+  const showIdeal = view === "timeline" || view === "ideal";
+  const showActual = view === "timeline" || view === "actual";
+  return (
+    <div className="mt-3 h-[720px] min-h-[520px] overflow-auto border border-[var(--border-soft)] bg-[rgba(255,255,255,0.46)] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+      <div className="grid min-w-0 grid-cols-[64px_minmax(0,1fr)] sm:min-w-[560px] sm:grid-cols-[72px_minmax(0,1fr)]" style={{ height: GRID_HEIGHT }}>
+        <div className="relative border-r border-[var(--border-soft)] bg-[rgba(250,243,226,0.54)]">
+          {hourMarks().map((minutes) => (
+            <div key={minutes} className="absolute right-3 -translate-y-2 font-mono text-[11px] text-[var(--fg-subtle)]" style={{ top: minutesToTop(minutes) }}>
+              {formatTime(minutes)}
+            </div>
+          ))}
+        </div>
+        <div
+          className="relative bg-[linear-gradient(180deg,rgba(58,107,142,0.1)_1px,transparent_1px)]"
+          style={{ backgroundSize: `100% ${HOUR_HEIGHT}px` }}
+        >
+          <div
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(107,100,88,0.05)_1px,transparent_1px)]"
+            style={{ backgroundSize: `100% ${HOUR_HEIGHT / 2}px` }}
+          />
+          {showIdeal && IDEAL_BLOCKS.map((block) => <IdealBlock key={`${block.startTime}-${block.title}`} block={block} background={view === "timeline"} />)}
+          {showActual && entries.map((entry) => (
+            <ActualBlock key={entry.routine.id} entry={entry} selectedDate={selectedDate} conflict={conflicts.has(entry.routine.id)} onEdit={() => onEdit(entry.routine)} />
+          ))}
+          {!loading && showActual && entries.length === 0 && (
+            <div className="absolute inset-x-6 top-8 border border-dashed border-[var(--border)] bg-white/52 px-4 py-10 text-center">
+              <CalendarDays className="mx-auto text-[var(--gold)]" size={24} />
+              <p className="mt-3 text-sm font-semibold text-[var(--fg-strong)]">这一天还没有具体安排</p>
+              <Button className="mt-3" size="sm" variant="outline" onClick={onCreate}><Plus size={14} />添加日程</Button>
+            </div>
+          )}
+          {loading && (
+            <div className="absolute inset-x-6 top-8 flex items-center justify-center gap-2 border border-[var(--border-soft)] bg-white/56 py-8 text-sm text-[var(--fg-muted)]">
+              <LoaderCircle className="animate-spin" size={16} />加载日程...
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IdealBlock({ block, background }: { block: (typeof IDEAL_BLOCKS)[number]; background: boolean }) {
+  const toneClass = {
+    success: "border-l-[var(--success)] bg-[rgba(76,138,116,0.12)] text-[var(--success)]",
+    accent: "border-l-[var(--accent)] bg-[rgba(58,107,142,0.12)] text-[var(--accent-strong)]",
+    creative: "border-l-[var(--attr-cre)] bg-[rgba(155,107,193,0.11)] text-[var(--attr-cre)]",
+    strength: "border-l-[var(--attr-str)] bg-[rgba(197,85,74,0.1)] text-[var(--attr-str)]",
+    neutral: "border-l-[var(--fg-subtle)] bg-[rgba(107,100,88,0.08)] text-[var(--fg-muted)]",
+  }[block.tone];
   return (
     <div
-      className="absolute left-3 right-3 rounded-sm border border-[var(--gold)]/38 bg-[rgba(255,252,242,0.74)] p-3 text-[var(--fg)] shadow-[0_14px_30px_-24px_rgba(4,12,24,0.8)] backdrop-blur-xl"
+      className={cn(
+        "absolute left-3 right-3 overflow-hidden border border-[var(--border-soft)] border-l-[3px] px-3 py-2",
+        toneClass,
+        background && "opacity-45",
+      )}
       style={blockStyle(timeToMinutes(block.startTime), timeToMinutes(block.endTime))}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0 font-display text-[14px] font-bold text-[var(--fg-strong)]">
-          {block.title}
-        </div>
-        <div className="shrink-0 font-mono text-[10px] text-[var(--gold-deep)]">
-          {block.startTime}-{block.endTime}
-        </div>
+      <div className="flex items-start justify-between gap-3">
+        <span className="truncate font-display text-sm font-bold">{block.title}</span>
+        <span className="shrink-0 font-mono text-[10px] opacity-80">{block.startTime}-{block.endTime}</span>
       </div>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--fg-muted)]">{block.detail}</p>
     </div>
   );
 }
 
-function ActualBlock({
-  entry,
-  selectedDate,
-  onEdit,
-}: {
+function ActualBlock({ entry, selectedDate, conflict, onEdit }: {
   entry: ScheduleEntry;
   selectedDate: string;
+  conflict: boolean;
   onEdit: () => void;
 }) {
   const complete = useCompleteRoutine();
   const remove = useDeleteRoutine();
-  const today = todayYMD();
-  const isToday = selectedDate === today;
+  const isToday = selectedDate === todayYMD();
   const done = isToday && entry.routine.completedToday;
-  const kind = entry.meta?.kind ?? "recurring";
-
+  const color = entry.routine.area?.color ?? "var(--accent)";
   return (
     <article
+      id={`schedule-${entry.routine.id}`}
+      tabIndex={0}
+      onKeyDown={(event) => event.key === "Enter" && onEdit()}
       className={cn(
-        "absolute left-3 right-3 rounded-sm border p-3 shadow-[0_16px_34px_-24px_rgba(4,12,24,0.9)] backdrop-blur-xl",
-        done
-          ? "border-[var(--success)]/55 bg-[rgba(76,138,116,0.28)]"
-          : kind === "single"
-            ? "border-[var(--gold)]/50 bg-[rgba(255,252,242,0.72)]"
-            : "border-[#88a9d4]/46 bg-[rgba(221,235,255,0.68)]",
+        "group absolute left-5 right-5 overflow-hidden border border-l-[4px] px-3 py-2.5 shadow-[0_12px_28px_-24px_rgba(4,12,24,0.9)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)]/55",
+        done ? "bg-[rgba(76,138,116,0.2)]" : "bg-[rgba(255,252,242,0.92)]",
+        conflict ? "border-[var(--warning)]" : "border-[var(--border)]",
       )}
-      style={blockStyle(entry.start, entry.end)}
+      style={{ ...blockStyle(entry.start, entry.end), borderLeftColor: color }}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-display text-[14px] font-bold text-[var(--fg-strong)]">
-              {entry.routine.title}
-            </span>
-            <span className="shrink-0 rounded-sm border border-[var(--gold)]/24 bg-white/55 px-1.5 py-0.5 text-[10px] text-[var(--gold-deep)]">
-              {kind === "single" ? "单次" : "周期"}
-            </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-display text-sm font-bold text-[var(--fg-strong)]">{entry.routine.title}</span>
+            {conflict && <AlertTriangle className="shrink-0 text-[var(--warning)]" size={13} aria-label="时间冲突" />}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--fg-muted)]">
-            <span className="inline-flex items-center gap-1">
-              <Clock3 size={12} />
-              {entry.meta?.startTime ?? "未设"}-{entry.meta?.endTime ?? "未设"}
-            </span>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--fg-muted)]">
+            <span className="inline-flex items-center gap-1"><Clock3 size={11} />{entry.meta?.startTime}-{entry.meta?.endTime}</span>
             {entry.routine.area && <span>{entry.routine.area.icon} {entry.routine.area.name}</span>}
+            <span className="inline-flex items-center gap-1"><Flame size={11} />{entry.routine.streakCurrent}</span>
           </div>
         </div>
-        <div className="flex shrink-0 gap-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="grid h-7 w-7 place-items-center rounded-sm text-[var(--fg-muted)] hover:bg-white/45 hover:text-[var(--fg-strong)]"
-            title="编辑"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            type="button"
+        <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+          <IconButton label="编辑日程" onClick={onEdit}><Pencil size={13} /></IconButton>
+          <IconButton
+            label="归档日程"
+            danger
             onClick={() => {
-              if (confirm(`归档安排「${entry.routine.title}」？`)) remove.mutate(entry.routine.id);
+              if (window.confirm(`归档安排「${entry.routine.title}」？`)) remove.mutate(entry.routine.id);
             }}
-            className="grid h-7 w-7 place-items-center rounded-sm text-[var(--fg-muted)] hover:bg-white/45 hover:text-[var(--danger)]"
-            title="归档"
-          >
-            <Trash2 size={13} />
-          </button>
+          ><Trash2 size={13} /></IconButton>
         </div>
       </div>
-      {entry.note && (
-        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--fg-muted)]">{entry.note}</p>
-      )}
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-[11px] text-[var(--fg-subtle)]">
-          <span className="inline-flex items-center gap-1">
-            <Flame size={12} />
-            {entry.routine.streakCurrent}
-          </span>
-          <span>+{entry.routine.xpReward} XP</span>
-          <span>+{entry.routine.goldReward} Gold</span>
-        </div>
+      {entry.note && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--fg-muted)]">{entry.note}</p>}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <span className="text-[10px] text-[var(--fg-subtle)]">+{entry.routine.xpReward} XP · +{entry.routine.goldReward} Gold</span>
         <button
           type="button"
           disabled={!isToday || done || complete.isPending}
           onClick={() => complete.mutate(entry.routine.id)}
           className={cn(
-            "inline-flex h-7 items-center gap-1 rounded-sm border px-2 text-[11px] transition-all",
-            done
-              ? "border-[var(--success)] bg-[var(--success)]/18 text-[var(--success)]"
-              : "border-[var(--gold)]/44 bg-white/48 text-[var(--fg-strong)] hover:border-[var(--gold)]",
-            (!isToday || complete.isPending) && "opacity-55",
+            "inline-flex h-6 items-center gap-1 border px-2 text-[10px] transition-colors",
+            done ? "border-[var(--success)] text-[var(--success)]" : "border-[var(--border)] bg-white/60 text-[var(--fg)] hover:border-[var(--success)]",
+            (!isToday || complete.isPending) && "opacity-50",
           )}
           title={isToday ? "完成今日安排" : "只能完成今天的安排"}
-        >
-          <Check size={12} />
-          {done ? "已完成" : "完成"}
-        </button>
+        ><Check size={11} />{done ? "已完成" : "完成"}</button>
       </div>
     </article>
   );
 }
 
-function ScheduleForm({
-  initial,
-  selectedDate,
-  onDone,
-}: {
-  initial: RoutineDTO | null;
-  selectedDate: string;
-  onDone: () => void;
-}) {
-  const decoded = decodeNotes(initial?.notes ?? null);
-  const initialMeta = decoded.meta;
-  const initialKind = initialMeta?.kind ?? "recurring";
-  const initialDate = initialMeta?.date ?? selectedDate;
-  const [kind, setKind] = useState<ScheduleKind>(initialKind);
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [note, setNote] = useState(decoded.note);
-  const [date, setDate] = useState(initialDate);
-  const [days, setDays] = useState<number[]>(parseRoutineDays(initial?.daysOfWeek));
-  const [startTime, setStartTime] = useState(initialMeta?.startTime ?? "09:00");
-  const [endTime, setEndTime] = useState(initialMeta?.endTime ?? "10:00");
-  const [areaId, setAreaId] = useState<string | null>(initial?.areaId ?? null);
-  const [xpReward, setXpReward] = useState(initial?.xpReward ?? 10);
-  const [goldReward, setGoldReward] = useState(initial?.goldReward ?? 5);
-
-  const create = useCreateRoutine();
-  const update = useUpdateRoutine();
-  const editing = Boolean(initial);
-  const startMinutes = timeToMinutes(startTime);
-  const endMinutes = timeToMinutes(endTime);
-  const validTime = startMinutes !== null && endMinutes !== null && endMinutes > startMinutes;
-  const validDays = kind === "single" || days.length > 0;
-
-  const toggleDay = (day: number) => {
-    setDays((current) =>
-      current.includes(day)
-        ? current.filter((value) => value !== day)
-        : [...current, day].sort((a, b) => a - b),
-    );
-  };
-
-  const submit = async () => {
-    if (!title.trim() || !validTime || !validDays) return;
-
-    const meta: ScheduleMeta = {
-      [SCHEDULE_META_KEY]: true,
-      kind,
-      startTime,
-      endTime,
-      ...(kind === "single" ? { date } : {}),
-      ...(note.trim() ? { note: note.trim() } : {}),
-    };
-    const payload = {
-      title: title.trim(),
-      notes: encodeNotes(meta),
-      areaId,
-      daysOfWeek: kind === "single" ? [dayOfWeek(date)] : days,
-      xpReward,
-      goldReward,
-    };
-
-    if (initial) {
-      await update.mutateAsync({ id: initial.id, body: payload });
-    } else {
-      await create.mutateAsync(payload);
-    }
-    onDone();
-  };
-
+function UnscheduledRow({ entries, onEdit }: { entries: ScheduleEntry[]; onEdit: (routine: RoutineDTO) => void }) {
   return (
-    <div className="rounded-sm border border-[var(--gold)]/34 bg-[rgba(255,252,242,0.7)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)] backdrop-blur-xl">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <div className="font-display text-lg font-bold text-[var(--fg-strong)]">
-            {editing ? "编辑安排" : "写一个安排"}
-          </div>
-          <div className="mt-1 text-xs text-[var(--fg-muted)]">
-            支持固定周期，也支持某一天的上课、考试、约定或其他具体事项。
-          </div>
-        </div>
-        <Button variant="ghost" size="sm" onClick={onDone}>
-          取消
-        </Button>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr_0.9fr]">
-        <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label>标题</Label>
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：高数课 / 期末考试 / 晚间跑步" />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>备注</Label>
-            <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="地点、准备材料、提醒事项..." />
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label>安排类型</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setKind("recurring")}
-                className={kindButtonClass(kind === "recurring")}
-              >
-                <Repeat size={14} />
-                固定周期
-              </button>
-              <button
-                type="button"
-                onClick={() => setKind("single")}
-                className={kindButtonClass(kind === "single")}
-              >
-                <CalendarDays size={14} />
-                单次事项
-              </button>
-            </div>
-          </div>
-
-          {kind === "single" ? (
-            <div className="grid gap-1.5">
-              <Label>日期</Label>
-              <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-            </div>
-          ) : (
-            <div className="grid gap-1.5">
-              <Label>重复星期</Label>
-              <div className="grid grid-cols-7 gap-1">
-                {DAY_SHORT.map((label, index) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => toggleDay(index)}
-                    className={cn(
-                      "h-8 rounded-sm border text-xs transition-all",
-                      days.includes(index)
-                        ? "border-[var(--gold)] bg-[rgba(24,38,58,0.86)] text-[var(--gold-pale)]"
-                        : "border-[var(--gold)]/25 bg-white/44 text-[var(--fg-muted)] hover:border-[var(--gold)]/55",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="grid gap-1.5">
-              <Label>开始</Label>
-              <Select value={startTime} onChange={(event) => setStartTime(event.target.value)}>
-                {TIME_OPTIONS.slice(0, -1).map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label>结束</Label>
-              <Select value={endTime} onChange={(event) => setEndTime(event.target.value)}>
-                {TIME_OPTIONS.slice(1).map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-          {!validTime && <div className="text-xs text-[var(--danger)]">结束时间必须晚于开始时间。</div>}
-        </div>
-
-        <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label>领域</Label>
-            <AreaSelect value={areaId} onChange={setAreaId} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="grid gap-1.5">
-              <Label>XP</Label>
-              <Input type="number" min={0} value={xpReward} onChange={(event) => setXpReward(Number(event.target.value))} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Gold</Label>
-              <Input type="number" min={0} value={goldReward} onChange={(event) => setGoldReward(Number(event.target.value))} />
-            </div>
-          </div>
-          <Button
-            className="mt-auto"
-            onClick={submit}
-            disabled={create.isPending || update.isPending || !title.trim() || !validTime || !validDays}
-          >
-            {create.isPending || update.isPending ? "保存中..." : editing ? "保存修改" : "创建安排"}
-          </Button>
-        </div>
+    <div className="mt-3 border border-dashed border-[var(--border)] bg-[rgba(250,243,226,0.5)] p-2.5">
+      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)]"><MoreHorizontal size={14} />未定时间</div>
+      <div className="flex gap-2 overflow-x-auto">
+        {entries.map((entry) => (
+          <button key={entry.routine.id} type="button" onClick={() => onEdit(entry.routine)} className="min-w-[180px] border border-[var(--border-soft)] bg-white/60 px-3 py-2 text-left hover:border-[var(--gold)]">
+            <div className="truncate text-xs font-semibold text-[var(--fg-strong)]">{entry.routine.title}</div>
+            <div className="mt-0.5 truncate text-[10px] text-[var(--fg-muted)]">{entry.note || "点击补充时间"}</div>
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-function kindButtonClass(active: boolean) {
-  return cn(
-    "inline-flex h-9 items-center justify-center gap-2 rounded-sm border text-sm transition-all",
-    active
-      ? "border-[var(--gold)] bg-[rgba(24,38,58,0.86)] text-[var(--gold-pale)]"
-      : "border-[var(--gold)]/28 bg-white/48 text-[var(--fg-muted)] hover:border-[var(--gold)]/55 hover:text-[var(--fg-strong)]",
+function AiCoachPanel({ coach, loading, error, onGenerate }: {
+  coach: ScheduleCoachResponse | null;
+  loading: boolean;
+  error: string | null;
+  onGenerate: () => void;
+}) {
+  const iconByKind = { focus: Focus, rest: Clock3, balance: BrainCircuit };
+  return (
+    <Panel>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[var(--accent-strong)]"><Sparkles size={16} /><PanelTitle>AI 智能建议</PanelTitle></div>
+        <IconButton label={coach ? "重新生成 AI 建议" : "生成 AI 建议"} onClick={onGenerate} disabled={loading}>
+          {loading ? <LoaderCircle className="animate-spin" size={14} /> : <RefreshCw size={14} />}
+        </IconButton>
+      </div>
+      {coach?.summary && <p className="mt-3 text-xs leading-5 text-[var(--fg-muted)]">{coach.summary}</p>}
+      <div className="mt-3 divide-y divide-[var(--border-soft)] border-y border-[var(--border-soft)]">
+        {coach?.suggestions.length ? coach.suggestions.map((suggestion, index) => {
+          const Icon = iconByKind[suggestion.kind];
+          return (
+            <div key={`${suggestion.title}-${index}`} className="py-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-[var(--fg-strong)]"><Icon size={14} className="text-[var(--accent)]" />{suggestion.title}</div>
+              <p className="mt-1 pl-[22px] text-[11px] leading-5 text-[var(--fg-muted)]">{suggestion.detail}</p>
+            </div>
+          );
+        }) : (
+          <div className="py-4 text-center">
+            <BrainCircuit className="mx-auto text-[var(--gold)]" size={22} />
+            <p className="mt-2 text-xs text-[var(--fg-muted)]">结合当日日程和任务生成建议</p>
+          </div>
+        )}
+      </div>
+      {error && <p className="mt-2 text-xs leading-5 text-[var(--danger)]">{error}</p>}
+      <Button className="mt-3 w-full" size="sm" variant={coach ? "outline" : "primary"} onClick={onGenerate} disabled={loading}>
+        <Sparkles size={14} />{loading ? "分析中..." : coach ? "重新分析 · 10 精力" : "生成建议 · 10 精力"}
+      </Button>
+    </Panel>
   );
 }
 
-function parseRoutineDays(raw?: string) {
-  try {
-    const parsed = JSON.parse(raw ?? "");
-    if (
-      Array.isArray(parsed) &&
-      parsed.every((day) => Number.isInteger(day) && day >= 0 && day <= 6)
-    ) {
-      return parsed as number[];
-    }
-  } catch {}
-  return [0, 1, 2, 3, 4, 5, 6];
+function TodayGoalsPanel({ tasks, selectedDate, today, loading }: {
+  tasks: TaskDTO[];
+  selectedDate: string;
+  today: string;
+  loading: boolean;
+}) {
+  const complete = useCompleteTask();
+  const visible = tasks.slice(0, 5);
+  const done = tasks.filter((task) => task.status === "DONE").length;
+  return (
+    <Panel>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[var(--accent-strong)]"><Target size={16} /><PanelTitle>今日目标</PanelTitle></div>
+        <Link href="/tasks" className="text-[10px] text-[var(--gold-deep)] hover:underline">全部任务</Link>
+      </div>
+      <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--fg-muted)]"><span>{done}/{tasks.length} 已完成</span><span>任务模块</span></div>
+      <div className="mt-2 divide-y divide-[var(--border-soft)] border-y border-[var(--border-soft)]">
+        {loading ? <div className="py-4 text-center text-xs text-[var(--fg-muted)]">加载任务...</div> : visible.length ? visible.map((task) => {
+          const taskDone = task.status === "DONE";
+          return (
+            <div key={task.id} className="flex items-center gap-2 py-2.5">
+              <button
+                type="button"
+                aria-label={`完成任务：${task.title}`}
+                disabled={taskDone || selectedDate !== today || complete.isPending}
+                onClick={() => complete.mutate(task.id)}
+                className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-full border", taskDone ? "border-[var(--success)] bg-[var(--success)] text-white" : "border-[var(--border)] text-transparent hover:border-[var(--success)]", selectedDate !== today && "opacity-55")}
+              ><Check size={11} /></button>
+              <div className="min-w-0 flex-1">
+                <div className={cn("truncate text-xs text-[var(--fg-strong)]", taskDone && "text-[var(--fg-subtle)] line-through")}>{task.title}</div>
+                <div className="mt-0.5 truncate text-[9px] text-[var(--fg-subtle)]">{task.area ? `${task.area.icon} ${task.area.name}` : `优先级 ${task.priority}`}</div>
+              </div>
+            </div>
+          );
+        }) : <div className="py-4 text-center text-xs text-[var(--fg-muted)]">当天没有到期或完成的任务</div>}
+      </div>
+    </Panel>
+  );
 }
 
-function decodeNotes(raw: string | null | undefined): DecodedNotes {
-  if (!raw) return { meta: null, note: "" };
-  try {
-    const parsed = JSON.parse(raw) as Partial<ScheduleMeta>;
-    if (
-      parsed &&
-      parsed[SCHEDULE_META_KEY] === true &&
-      (parsed.kind === "recurring" || parsed.kind === "single") &&
-      typeof parsed.startTime === "string" &&
-      typeof parsed.endTime === "string"
-    ) {
-      return {
-        meta: {
-          [SCHEDULE_META_KEY]: true,
-          kind: parsed.kind,
-          startTime: parsed.startTime,
-          endTime: parsed.endTime,
-          ...(typeof parsed.date === "string" ? { date: parsed.date } : {}),
-          ...(typeof parsed.note === "string" ? { note: parsed.note } : {}),
-        },
-        note: typeof parsed.note === "string" ? parsed.note : "",
-      };
-    }
-  } catch {}
-  return { meta: null, note: raw };
+function MonthStatsPanel({ routines, summary }: { routines: RoutineDTO[]; summary: ReturnType<typeof completionSummary> }) {
+  const bestStreak = Math.max(0, ...routines.map((routine) => routine.streakBest));
+  return (
+    <Panel>
+      <div className="flex items-center gap-2 text-[var(--accent-strong)]"><BarChart3 size={16} /><PanelTitle>本月统计</PanelTitle></div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <Stat value={routines.length} label="日程模板" />
+        <Stat value={`${summary.rate}%`} label="今日完成" />
+        <Stat value={bestStreak} label="最佳连续" />
+      </div>
+      <div className="mt-4 h-2 overflow-hidden bg-[var(--border-soft)]">
+        <div className="h-full bg-[var(--accent)] transition-[width]" style={{ width: `${summary.rate}%` }} />
+      </div>
+    </Panel>
+  );
 }
 
-function encodeNotes(meta: ScheduleMeta) {
-  return JSON.stringify(meta);
+function Panel({ children }: { children: React.ReactNode }) {
+  return <section className="border border-[var(--border)] bg-[rgba(255,252,242,0.7)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">{children}</section>;
 }
 
-function routineMatchesDate(routine: RoutineDTO, selectedDate: string) {
-  const decoded = decodeNotes(routine.notes);
-  if (decoded.meta?.kind === "single") return decoded.meta.date === selectedDate;
-  return parseRoutineDays(routine.daysOfWeek).includes(dayOfWeek(selectedDate));
+function PanelTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="font-display text-sm font-bold text-[var(--fg-strong)]">{children}</h2>;
 }
 
-function isTimed(start: number | null, end: number | null) {
-  return start !== null && end !== null && end > start;
+function IconButton({ label, children, onClick, danger = false, disabled = false }: {
+  label: string;
+  children: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled} className={cn("grid h-7 w-7 place-items-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--gold-tint)] hover:text-[var(--fg-strong)] disabled:opacity-45", danger && "hover:text-[var(--danger)]")}>{children}</button>
+  );
 }
 
-function blockStyle(start: number | null, end: number | null): CSSProperties {
-  const safeStart = clamp(start ?? TIME_START, TIME_START, TIME_END - 30);
-  const safeEnd = clamp(end ?? safeStart + 60, safeStart + 30, TIME_END);
-  return {
-    top: minutesToTop(safeStart),
-    minHeight: 54,
-    height: Math.max(54, ((safeEnd - safeStart) / 60) * HOUR_HEIGHT - 8),
-  };
+function Metric({ value, label, tone }: { value: string | number; label: string; tone: "success" | "warning" | "danger" | "accent" }) {
+  const color = { success: "var(--success)", warning: "var(--warning)", danger: "var(--danger)", accent: "var(--accent)" }[tone];
+  return <div className="bg-white/64 px-2 py-3 text-center"><div className="font-display text-xl font-bold" style={{ color }}>{value}</div><div className="mt-0.5 text-[10px] text-[var(--fg-muted)]">{label}</div></div>;
 }
 
-function minutesToTop(minutes: number) {
-  return ((minutes - TIME_START) / 60) * HOUR_HEIGHT;
+function CompactMetric({ value, label }: { value: string | number; label: string }) {
+  return <div className="border border-[var(--border-soft)] bg-white/52 px-2 py-2 text-center"><div className="font-display text-base font-bold text-[var(--accent-strong)]">{value}</div><div className="text-[9px] text-[var(--fg-muted)]">{label}</div></div>;
 }
 
-function timeToMinutes(value: string | undefined) {
-  if (!value) return null;
-  const [hours, minutes] = value.split(":").map(Number);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-  return hours * 60 + minutes;
+function Stat({ value, label }: { value: string | number; label: string }) {
+  return <div><div className="font-display text-lg font-bold text-[var(--accent)]">{value}</div><div className="mt-1 text-[9px] text-[var(--fg-muted)]">{label}</div></div>;
 }
 
-function formatTime(minutes: number) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-}
-
-function hourMarks() {
-  return Array.from({ length: ((TIME_END - TIME_START) / 60) + 1 }, (_, index) => TIME_START + index * 60);
-}
-
-function formatMonthDay(ymd: string) {
-  const [, month, day] = ymd.split("-");
-  return `${Number(month)}/${Number(day)}`;
-}
-
-function formatFullDate(ymd: string) {
-  const [year, month, day] = ymd.split("-");
-  return `${year}年${Number(month)}月${Number(day)}日`;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
+function EmptyLine({ children }: { children: React.ReactNode }) {
+  return <div className="py-2 text-center text-[11px] text-[var(--fg-subtle)]">{children}</div>;
 }

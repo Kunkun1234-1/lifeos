@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "6f89a8effc835ee8fe9f27756d6fb0128142d56c",
+    "indexed_at": "2026-07-11T15:52:34Z",
+    "project": "game-life",
+    "nodes": 2697,
+    "edges": 6530,
+    "original_size": 7274496,
+    "compressed_size": 1520813,
+    "compression_level": 3
+}

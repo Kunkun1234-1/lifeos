@@ -1,0 +1,461 @@
+.page {
+  --achievement-ink: #26364c;
+  --achievement-gold: #c58b2a;
+  --achievement-line: #ddcfad;
+  position: relative;
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, rgba(202, 181, 139, 0.15), transparent 11%, transparent 89%, rgba(202, 181, 139, 0.14)),
+    #f8f5ee;
+  color: var(--achievement-ink);
+  font-family: var(--font-display-cn), "Songti SC", serif;
+}
+
+.page::before,
+.page::after {
+  content: "";
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 10px;
+  z-index: 8;
+  background: linear-gradient(90deg, #9d8c69, #e2d5b3 42%, transparent);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.page::after {
+  inset: 0 0 0 auto;
+  transform: scaleX(-1);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 0 30px 0 67px;
+  color: #e9dfc2;
+  border-bottom: 2px solid rgba(199, 172, 109, 0.46);
+  background:
+    linear-gradient(110deg, rgba(255,255,255,0.08), transparent 34%),
+    linear-gradient(180deg, #1d385d 0%, #142c4b 100%);
+  box-shadow: inset 0 -2px 0 rgba(4, 18, 39, 0.42), 0 2px 8px rgba(18, 31, 48, 0.16);
+}
+
+.toolbar::before,
+.toolbar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 35px;
+  height: 20px;
+  border-top: 2px solid #b4a071;
+  opacity: 0.65;
+}
+
+.toolbar::before {
+  left: 10px;
+  border-left: 2px solid #b4a071;
+  transform: skewX(-38deg);
+}
+
+.toolbar::after {
+  right: 10px;
+  border-right: 2px solid #b4a071;
+  transform: skewX(38deg);
+}
+
+.tabs {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab,
+.activeTab {
+  position: relative;
+  min-width: 172px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 24px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #e7dcc0;
+  background: rgba(255, 255, 255, 0.025);
+  font: 700 21px/1 var(--font-display-cn), "Songti SC", serif;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff5d8;
+}
+
+.tab b,
+.activeTab b {
+  min-width: 45px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(237, 220, 178, 0.14);
+  color: #e6ce90;
+  font: 700 17px/1 var(--font-geist-sans), sans-serif;
+}
+
+.activeTab {
+  color: #3b3020;
+  border-color: #caaa60;
+  background: linear-gradient(180deg, #fffdf6, #f1e8d4);
+  box-shadow: inset 0 0 0 2px #fff, 0 4px 8px rgba(5, 18, 36, 0.34);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+}
+
+.activeTab b {
+  background: #e9dfca;
+  color: #906e31;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  min-width: 0;
+}
+
+.searchBox,
+.sortBox {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  border: 2px solid rgba(190, 165, 105, 0.36);
+  border-radius: 28px;
+  background: rgba(8, 26, 50, 0.38);
+  color: #d9c485;
+  box-shadow: inset 0 1px 6px rgba(0,0,0,0.18);
+}
+
+.searchBox {
+  width: min(390px, 29vw);
+  padding: 0 20px 0 24px;
+}
+
+.searchBox input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f2e7c9;
+  font: 600 17px/1.2 var(--font-display-cn), "Songti SC", serif;
+}
+
+.searchBox input::placeholder { color: #ab9d84; opacity: 0.84; }
+
+.sortBox {
+  width: 176px;
+  border-radius: 10px;
+  padding: 0 16px;
+}
+
+.sortBox select {
+  min-width: 0;
+  flex: 1;
+  appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e7dcc0;
+  font: 700 17px/1 var(--font-display-cn), "Songti SC", serif;
+  cursor: pointer;
+}
+
+.viewToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.viewToggle button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #9ca7b6;
+  background: transparent;
+  cursor: pointer;
+}
+
+.viewToggle .selectedView {
+  color: #eee6cf;
+  border-color: rgba(205, 184, 132, 0.35);
+  background: rgba(255,255,255,0.1);
+  box-shadow: inset 0 0 8px rgba(255,255,255,0.06);
+}
+
+.content { min-height: calc(100vh - 96px); }
+
+.tier {
+  min-height: 330px;
+  padding: 0 38px 24px 44px;
+  border-bottom: 1px solid #e5dcc8;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(255,255,255,0.72), transparent 25%),
+    linear-gradient(180deg, rgba(255,255,255,0.7), rgba(248,245,238,0.82));
+}
+
+.tierHeading {
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.tierTitleGroup { display: flex; align-items: center; gap: 18px; }
+
+.tierSeal {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  color: #bb7e30;
+  background: #f3dfba;
+  box-shadow: inset 0 0 0 3px #faf3e5, 0 0 0 2px rgba(171,117,43,0.22);
+}
+
+.tierTitleGroup h2 {
+  margin: 0;
+  color: #2d3c50;
+  font: 700 25px/1 var(--font-display-cn), "Songti SC", serif;
+}
+
+.tierEnglish {
+  color: #876e4e;
+  font: 600 15px/1 var(--font-display), Georgia, serif;
+  letter-spacing: 0.15em;
+}
+
+.silver .tierSeal { color: #8f969e; background: #edf0f1; box-shadow: inset 0 0 0 3px #f8f9f9, 0 0 0 2px rgba(126,136,146,0.22); }
+.gold .tierSeal { color: #bd8520; background: #f7dda2; box-shadow: inset 0 0 0 3px #fff4d8, 0 0 0 2px rgba(178,120,24,0.26); }
+.legendary .tierSeal { color: #8769a0; background: #e9dff2; }
+
+.tierCount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8a8175;
+  font: 600 15px/1 var(--font-display-cn), "Songti SC", serif;
+}
+
+.tierCount strong { color: #5a5042; font-family: var(--font-geist-sans), sans-serif; }
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.cardGrid[data-tier="bronze"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.cardList { display: grid; gap: 12px; }
+.cardList .card { min-height: 150px; }
+
+.card {
+  position: relative;
+  min-width: 0;
+  height: 224px;
+  padding: 26px 25px 18px;
+  overflow: hidden;
+  border: 1px solid #d9cba8;
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.9), transparent 45%),
+    linear-gradient(180deg, #fffdf8 0%, #f8f4eb 100%);
+  box-shadow:
+    inset 0 0 0 3px rgba(255,255,255,0.58),
+    0 3px 8px rgba(82, 62, 28, 0.09);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(198, 170, 110, 0.13);
+  pointer-events: none;
+}
+
+.corner,
+.corner::after {
+  position: absolute;
+  z-index: 2;
+  width: 23px;
+  height: 23px;
+  border-color: #d4bd86;
+  border-style: solid;
+  opacity: 0.46;
+}
+
+.corner { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+.corner::after { content: ""; top: -1px; left: -1px; transform: rotate(45deg) scale(0.55); border-width: 1px 0 0 1px; }
+
+.locked { filter: saturate(0.68); }
+.hiddenGlyph { color: #747d87; font-size: 39px; }
+
+.unlockMark {
+  position: absolute;
+  z-index: 4;
+  top: -5px;
+  right: -4px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #fff7e4;
+  border-radius: 50%;
+  color: white;
+  background: #d5a33b;
+  box-shadow: 0 2px 5px rgba(118,82,20,0.25);
+}
+
+.lockIcon { position: absolute; z-index: 3; top: 17px; right: 18px; color: #aeb1b4; }
+
+.cardTop { display: flex; align-items: center; gap: 18px; min-width: 0; }
+
+.medallion {
+  width: 84px;
+  height: 84px;
+  flex: 0 0 84px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #b98a49;
+  border-radius: 50%;
+  background: #f7f4ed;
+  box-shadow: inset 0 0 0 4px #eadab8, 0 2px 5px rgba(84,59,24,0.14);
+}
+
+.medallionInner {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #e0d5be;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 42%, #eee7da 100%);
+}
+
+.silver .medallion { border-color: #9fa5ac; box-shadow: inset 0 0 0 4px #d8dadd, 0 2px 5px rgba(84,59,24,0.12); }
+.gold .medallion { border-color: #c38e28; box-shadow: inset 0 0 0 4px #ead39a, 0 2px 5px rgba(84,59,24,0.14); }
+.locked .medallion { border-color: #c9c5bc; box-shadow: inset 0 0 0 4px #ebe8e1, 0 2px 5px rgba(84,59,24,0.08); }
+
+.emoji { font-size: 37px; line-height: 1; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.12)); }
+.badgeImage { object-fit: cover; }
+
+.cardCopy { min-width: 0; padding-bottom: 2px; }
+.cardCopy h3 { margin: 0; color: #27374c; font: 700 20px/1.2 var(--font-display-cn), "Songti SC", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cardCopy p { margin: 13px 0 0; color: #77716a; font: 600 14px/1.35 var(--font-display-cn), "Songti SC", serif; }
+
+.progressBlock { margin: 2px 5px 0; }
+.progressNumbers { height: 34px; display: flex; align-items: end; justify-content: space-between; color: #77736c; font: 600 14px/1 var(--font-geist-sans), sans-serif; }
+.progressTrack { height: 9px; overflow: hidden; border-radius: 6px; background: #e4e0d8; box-shadow: inset 0 1px 2px rgba(63,61,57,0.14); }
+.progressTrack span { display: block; height: 100%; border-radius: inherit; background: #687f9e; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); }
+
+.cardFooter {
+  position: absolute;
+  z-index: 3;
+  left: 26px;
+  right: 26px;
+  bottom: 17px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.reward { display: flex; align-items: center; gap: 5px; color: #cf8e24; }
+.reward b { font: 700 19px/1 var(--font-geist-sans), sans-serif; }
+
+.rarity {
+  padding: 3px 10px;
+  border-radius: 4px;
+  color: #69665f;
+  background: #eeece6;
+  font: 700 12px/1.2 var(--font-display-cn), "Songti SC", serif;
+}
+
+.rarity稀有 { color: #6d5cca; background: #ece9f7; }
+.rarity传说 { color: #8e58bc; background: #eee5f4; }
+
+.cardFooter time {
+  margin-left: auto;
+  color: #85817b;
+  font: 500 13px/1 var(--font-geist-sans), sans-serif;
+  white-space: nowrap;
+}
+
+.empty { padding: 100px 20px; text-align: center; color: #77716a; font-size: 18px; }
+
+@media (max-width: 1350px) {
+  .toolbar { padding-left: 28px; }
+  .tab, .activeTab { min-width: 124px; padding-inline: 15px; }
+  .searchBox { width: 260px; }
+  .cardGrid[data-tier="bronze"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cardGrid[data-tier="bronze"] .card:nth-child(5) { display: none; }
+}
+
+@media (max-width: 1023px) {
+  .toolbar { position: relative; min-height: 154px; flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 20px; }
+  .tabs { min-height: 58px; overflow-x: auto; }
+  .tab, .activeTab { flex: 1 0 132px; }
+  .toolbarActions { justify-content: stretch; }
+  .searchBox { width: auto; flex: 1; }
+  .sortBox { flex: 0 0 166px; }
+  .tier { padding-inline: 24px; }
+  .cardGrid, .cardGrid[data-tier="bronze"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cardGrid[data-tier="bronze"] .card:nth-child(5) { display: block; }
+  .tier { min-height: auto; }
+}
+
+@media (max-width: 640px) {
+  .toolbar { min-height: 188px; padding-inline: 12px; }
+  .toolbarActions { flex-wrap: wrap; gap: 8px; }
+  .tab, .activeTab {
+    min-width: 118px;
+    flex-basis: 118px;
+    gap: 8px;
+    padding-inline: 10px;
+    font-size: 17px;
+    white-space: nowrap;
+  }
+  .tab b, .activeTab b { min-width: 34px; height: 30px; font-size: 15px; }
+  .searchBox { flex-basis: calc(100% - 96px); height: 48px; }
+  .sortBox { flex: 1 0 150px; height: 48px; }
+  .viewToggle { margin-left: auto; }
+  .tier { padding: 0 14px 18px; }
+  .tierHeading { height: 70px; }
+  .tierTitleGroup { gap: 10px; }
+  .tierTitleGroup h2 { font-size: 21px; }
+  .tierEnglish { font-size: 11px; }
+  .tierCount { font-size: 12px; }
+  .cardGrid, .cardGrid[data-tier="bronze"] { grid-template-columns: 1fr; gap: 12px; }
+  .card { height: 216px; }
+  .cardGrid[data-tier="bronze"] .card:nth-child(5) { display: block; }
+}
