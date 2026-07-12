@@ -55,6 +55,7 @@ import {
   hourMarks,
   isTimed,
   minutesToTop,
+  rangesOverlap,
   shiftMonth,
   tasksForDate,
   timeToMinutes,
@@ -409,6 +410,13 @@ function Timeline({ view, entries, selectedDate, loading, conflicts, onEdit, onC
 }) {
   const showIdeal = view === "timeline" || view === "ideal";
   const showActual = view === "timeline" || view === "actual";
+  const idealBlocks = view === "timeline"
+    ? IDEAL_BLOCKS.filter((block) => {
+        const idealStart = timeToMinutes(block.startTime);
+        const idealEnd = timeToMinutes(block.endTime);
+        return !entries.some((entry) => rangesOverlap(entry.start, entry.end, idealStart, idealEnd));
+      })
+    : IDEAL_BLOCKS;
   return (
     <div className="mt-3 h-[720px] min-h-[520px] overflow-auto border border-[var(--border-soft)] bg-[rgba(255,255,255,0.46)] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
       <div className="grid min-w-0 grid-cols-[64px_minmax(0,1fr)] sm:min-w-[560px] sm:grid-cols-[72px_minmax(0,1fr)]" style={{ height: GRID_HEIGHT }}>
@@ -427,7 +435,7 @@ function Timeline({ view, entries, selectedDate, loading, conflicts, onEdit, onC
             className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(107,100,88,0.05)_1px,transparent_1px)]"
             style={{ backgroundSize: `100% ${HOUR_HEIGHT / 2}px` }}
           />
-          {showIdeal && IDEAL_BLOCKS.map((block) => <IdealBlock key={`${block.startTime}-${block.title}`} block={block} background={view === "timeline"} />)}
+          {showIdeal && idealBlocks.map((block) => <IdealBlock key={`${block.startTime}-${block.title}`} block={block} background={view === "timeline"} />)}
           {showActual && entries.map((entry) => (
             <ActualBlock key={entry.routine.id} entry={entry} selectedDate={selectedDate} conflict={conflicts.has(entry.routine.id)} onEdit={() => onEdit(entry.routine)} />
           ))}
@@ -450,6 +458,8 @@ function Timeline({ view, entries, selectedDate, loading, conflicts, onEdit, onC
 }
 
 function IdealBlock({ block, background }: { block: (typeof IDEAL_BLOCKS)[number]; background: boolean }) {
+  const duration = (timeToMinutes(block.endTime) ?? 0) - (timeToMinutes(block.startTime) ?? 0);
+  const compact = duration <= 30;
   const toneClass = {
     success: "border-l-[var(--success)] bg-[rgba(76,138,116,0.12)] text-[var(--success)]",
     accent: "border-l-[var(--accent)] bg-[rgba(58,107,142,0.12)] text-[var(--accent-strong)]",
@@ -460,7 +470,8 @@ function IdealBlock({ block, background }: { block: (typeof IDEAL_BLOCKS)[number
   return (
     <div
       className={cn(
-        "absolute left-3 right-3 overflow-hidden border border-[var(--border-soft)] border-l-[3px] px-3 py-2",
+        "absolute left-3 right-3 overflow-hidden border border-[var(--border-soft)] border-l-[3px] px-3",
+        compact ? "py-1" : "py-2",
         toneClass,
         background && "opacity-45",
       )}
@@ -470,7 +481,10 @@ function IdealBlock({ block, background }: { block: (typeof IDEAL_BLOCKS)[number
         <span className="truncate font-display text-sm font-bold">{block.title}</span>
         <span className="shrink-0 font-mono text-[10px] opacity-80">{block.startTime}-{block.endTime}</span>
       </div>
-      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--fg-muted)]">{block.detail}</p>
+      <p className={cn(
+        "line-clamp-2 text-[var(--fg-muted)]",
+        compact ? "mt-0.5 text-[10px] leading-4" : "mt-1 text-xs leading-5",
+      )}>{block.detail}</p>
     </div>
   );
 }
@@ -486,14 +500,18 @@ function ActualBlock({ entry, selectedDate, conflict, onEdit }: {
   const isToday = selectedDate === todayYMD();
   const done = isToday && entry.routine.completedToday;
   const color = entry.routine.area?.color ?? "var(--accent)";
+  const duration = (entry.end ?? 0) - (entry.start ?? 0);
+  const compact = duration < 60;
+  const showNote = duration >= 60;
   return (
     <article
       id={`schedule-${entry.routine.id}`}
       tabIndex={0}
       onKeyDown={(event) => event.key === "Enter" && onEdit()}
       className={cn(
-        "group absolute left-5 right-5 overflow-hidden border border-l-[4px] px-3 py-2.5 shadow-[0_12px_28px_-24px_rgba(4,12,24,0.9)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)]/55",
-        done ? "bg-[rgba(76,138,116,0.2)]" : "bg-[rgba(255,252,242,0.92)]",
+        "group absolute left-5 right-5 overflow-hidden border border-l-[4px] px-3 shadow-[0_12px_28px_-24px_rgba(4,12,24,0.9)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)]/55",
+        duration < 120 ? "py-1.5" : "py-2.5",
+        done ? "bg-[#e4eee7]" : "bg-[var(--bg-card)]",
         conflict ? "border-[var(--warning)]" : "border-[var(--border)]",
       )}
       style={{ ...blockStyle(entry.start, entry.end), borderLeftColor: color }}
@@ -501,7 +519,10 @@ function ActualBlock({ entry, selectedDate, conflict, onEdit }: {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-display text-sm font-bold text-[var(--fg-strong)]">{entry.routine.title}</span>
+            <span className={cn(
+              "font-display text-sm font-bold text-[var(--fg-strong)]",
+              compact ? "truncate" : "line-clamp-2",
+            )}>{entry.routine.title}</span>
             {conflict && <AlertTriangle className="shrink-0 text-[var(--warning)]" size={13} aria-label="时间冲突" />}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--fg-muted)]">
@@ -511,6 +532,20 @@ function ActualBlock({ entry, selectedDate, conflict, onEdit }: {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+          {compact && (
+            <button
+              type="button"
+              aria-label={done ? "日程已完成" : "完成日程"}
+              title={isToday ? "完成今日安排" : "只能完成今天的安排"}
+              disabled={!isToday || done || complete.isPending}
+              onClick={() => complete.mutate(entry.routine.id)}
+              className={cn(
+                "grid h-7 w-7 place-items-center rounded-sm transition-colors",
+                done ? "text-[var(--success)]" : "text-[var(--fg-muted)] hover:bg-[var(--success)]/10 hover:text-[var(--success)]",
+                (!isToday || complete.isPending) && "opacity-45",
+              )}
+            ><Check size={13} /></button>
+          )}
           <IconButton label="编辑日程" onClick={onEdit}><Pencil size={13} /></IconButton>
           <IconButton
             label="归档日程"
@@ -521,8 +556,14 @@ function ActualBlock({ entry, selectedDate, conflict, onEdit }: {
           ><Trash2 size={13} /></IconButton>
         </div>
       </div>
-      {entry.note && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--fg-muted)]">{entry.note}</p>}
-      <div className="mt-1.5 flex items-center justify-between gap-2">
+      {showNote && entry.note && <p
+        className={cn(
+          "text-[var(--fg-muted)]",
+          duration < 120 ? "mt-0.5 line-clamp-1 text-[11px] leading-4" : "mt-1 line-clamp-2 text-xs leading-5",
+        )}
+        title={entry.note}
+      >{entry.note}</p>}
+      {!compact && <div className={cn("flex items-center justify-between gap-2", duration < 120 ? "mt-0.5" : "mt-1.5")}>
         <span className="text-[10px] text-[var(--fg-subtle)]">+{entry.routine.xpReward} XP · +{entry.routine.goldReward} Gold</span>
         <button
           type="button"
@@ -535,7 +576,7 @@ function ActualBlock({ entry, selectedDate, conflict, onEdit }: {
           )}
           title={isToday ? "完成今日安排" : "只能完成今天的安排"}
         ><Check size={11} />{done ? "已完成" : "完成"}</button>
-      </div>
+      </div>}
     </article>
   );
 }

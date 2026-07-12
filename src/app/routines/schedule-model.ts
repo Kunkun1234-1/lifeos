@@ -7,7 +7,7 @@ export const DAY_SHORT = ["日", "一", "二", "三", "四", "五", "六"];
 export const SCHEDULE_META_KEY = "__lifeosSchedule";
 export const TIME_START = 6 * 60;
 export const TIME_END = 24 * 60;
-export const HOUR_HEIGHT = 68;
+export const HOUR_HEIGHT = 112;
 export const TIMELINE_TOP_PADDING = 16;
 export const GRID_HEIGHT = ((TIME_END - TIME_START) / 60) * HOUR_HEIGHT + TIMELINE_TOP_PADDING + 8;
 
@@ -231,6 +231,16 @@ export function conflictIds(entries: ScheduleEntry[]) {
     }
   }
   return ids;
+}
+
+export function rangesOverlap(
+  firstStart: number | null,
+  firstEnd: number | null,
+  secondStart: number | null,
+  secondEnd: number | null,
+) {
+  if (firstStart === null || firstEnd === null || secondStart === null || secondEnd === null) return false;
+  return firstStart < secondEnd && firstEnd > secondStart;
 }
 
 function datePart(value: string | null | undefined) {

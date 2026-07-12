@@ -7,6 +7,7 @@ import {
   completionSummary,
   conflictIds,
   decodeNotes,
+  rangesOverlap,
   tasksForDate,
 } from "../src/app/routines/schedule-model";
 
@@ -51,6 +52,8 @@ const entries = buildEntries([
 assert.equal(entries.length, 2);
 assert.equal(entries[0].note, "完成重构");
 assert.deepEqual([...conflictIds(entries)].sort(), ["routine-1", "routine-2"]);
+assert.equal(rangesOverlap(9 * 60, 10 * 60, 8 * 60 + 30, 9 * 60 + 30), true);
+assert.equal(rangesOverlap(9 * 60, 10 * 60, 10 * 60, 11 * 60), false);
 assert.equal(decodeNotes("普通备注").note, "普通备注");
 assert.equal(calendarDates("2026-07-11").length, 42);
 assert.deepEqual(completionSummary(entries, "2026-07-11", "2026-07-11", new Date(2026, 6, 11, 9, 30)), {
