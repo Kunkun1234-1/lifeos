@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
  * Auth gate. Protects everything except:
  *   - /login                — sign-in page
  *   - /api/auth/*           — Auth.js routes
+ *   - OAuth discovery, registration, and token endpoints
  *   - /_next/*              — Next.js assets
  *   - /favicon.ico, /lifeos/*, /uploads/*, /gacha/items/*, /gacha/videos/*, /gacha/audio/* — static
  */
@@ -13,6 +14,9 @@ export default auth((req) => {
   const isPublic =
     path === "/login" ||
     path.startsWith("/api/auth") ||
+    path === "/.well-known/oauth-authorization-server" ||
+    path === "/oauth/register" ||
+    path === "/oauth/token" ||
     path.startsWith("/_next") ||
     path.startsWith("/lifeos") ||
     path.startsWith("/gacha/audio") ||
@@ -34,7 +38,7 @@ export default auth((req) => {
     }
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("from", path);
+    url.searchParams.set("from", `${path}${req.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 

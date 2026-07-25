@@ -10,10 +10,13 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ from?: string }>;
 }) {
-  const session = await auth();
-  if (session?.user) redirect("/");
   const sp = await searchParams;
-  const from = sp.from && sp.from.startsWith("/") ? sp.from : "/";
+  const from =
+    sp.from && sp.from.startsWith("/") && !sp.from.startsWith("//")
+      ? sp.from
+      : "/";
+  const session = await auth();
+  if (session?.user) redirect(from);
 
   return (
     <div className="relative z-10 grid min-h-[100dvh] place-items-center px-4">

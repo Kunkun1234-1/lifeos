@@ -61,34 +61,37 @@ model User {
   resin          Int      @default(200)
   resinUpdatedAt DateTime @default(now())
 
-  areas              Area[]
-  tasks              Task[]
-  habits             Habit[]
-  routines           Routine[]
-  xpEntries          XpLedger[]
-  currency           Currency?
-  walletPools        WalletPool[]
-  walletMonthlyPlans WalletMonthlyPlan[]
-  walletTransactions WalletTransaction[]
-  commissions        DailyCommission[]
-  reviews            Review[]
-  goals              Goal[]
-  projects           Project[]
-  rewards            RewardItem[]
-  redemptions        RewardRedemption[]
-  pulls              GachaPull[]
-  pullBatches        GachaPullBatch[]
-  unlocks            AchievementUnlock[]
-  freezeStash        StreakFreeze?
-  battlePasses       BattlePass[]
-  principles         Principle[]
-  decisions          Decision[]
-  titles             UserTitle[]
-  notes              Note[]
-  eventClaims        UserEventClaim[]
-  equipment          UserEquipment[]
-  customAchievements Achievement[]       @relation("UserCustomAchievements")
-  customEvents       Event[]             @relation("UserCustomEvents")
+  areas                   Area[]
+  tasks                   Task[]
+  habits                  Habit[]
+  routines                Routine[]
+  xpEntries               XpLedger[]
+  currency                Currency?
+  walletPools             WalletPool[]
+  walletMonthlyPlans      WalletMonthlyPlan[]
+  walletTransactions      WalletTransaction[]
+  commissions             DailyCommission[]
+  reviews                 Review[]
+  goals                   Goal[]
+  projects                Project[]
+  rewards                 RewardItem[]
+  redemptions             RewardRedemption[]
+  pulls                   GachaPull[]
+  pullBatches             GachaPullBatch[]
+  unlocks                 AchievementUnlock[]
+  freezeStash             StreakFreeze?
+  battlePasses            BattlePass[]
+  principles              Principle[]
+  decisions               Decision[]
+  titles                  UserTitle[]
+  notes                   Note[]
+  eventClaims             UserEventClaim[]
+  equipment               UserEquipment[]
+  customAchievements      Achievement[]            @relation("UserCustomAchievements")
+  customEvents            Event[]                  @relation("UserCustomEvents")
+  oauthAuthorizationCodes OAuthAuthorizationCode[]
+  oauthRefreshTokens      OAuthRefreshToken[]
+  agentActions            AgentAction[]
 
   // Auth.js (next-auth v5) relations
   accounts Account[]
@@ -984,4 +987,71 @@ model Note {
   @@index([userId, projectId])
   @@index([userId, goalId])
   @@index([userId, parentId, position])
+}
+
+// ============================================================
+// LifeOS MCP OAuth 2.1 + agent action audit
+// ============================================================
+
+model OAuthClient {
+  id                      String   @id
+  name                    String
+  redirectUris            Json
+  grantTypes              Json
+  tokenEndpointAuthMethod String   @default("none")
+  createdAt               DateTime @default(now())
+
+  authorizationCodes OAuthAuthorizationCode[]
+  refreshTokens      OAuthRefreshToken[]
+}
+
+model OAuthAuthorizationCode {
+  id            String      @id // SHA-256 hash of the opaque code
+  clientId      String
+  client        OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redirectUri   String
+  scope         String
+  resource      String
+  codeChallenge String
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+
+  @@index([clientId, expiresAt])
+  @@index([userId, expiresAt])
+}
+
+model OAuthRefreshToken {
+  id        String      @id // SHA-256 hash of the opaque token
+  clientId  String
+  client    OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope     String
+  resource  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime    @default(now())
+
+  @@index([clientId, expiresAt])
+  @@index([userId, expiresAt])
+}
+
+model AgentAction {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId       String
+  toolName       String
+  idempotencyKey String
+  arguments      Json
+  result         Json?
+  status         String   @default("pending") // pending | succeeded | failed
+  error          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, toolName, idempotencyKey])
+  @@index([userId, createdAt])
 }

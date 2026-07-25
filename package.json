@@ -22,6 +22,7 @@
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:wallet": "node scripts/smoke-wallet.mjs",
     "smoke:notes": "node scripts/smoke-notes.mjs",
+    "smoke:mcp": "node scripts/smoke-mcp.mjs",
     "test:store-wish": "tsx scripts/test-store-wish.ts",
     "test:schedule": "tsx scripts/test-schedule-model.ts",
     "verify:predeploy": "npm run verify:split && npm run smoke:notes",

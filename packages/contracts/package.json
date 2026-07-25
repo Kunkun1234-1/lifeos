@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./areas": "./src/areas.ts",
+    "./goals": "./src/goals.ts",
     "./tasks": "./src/tasks.ts"
   },
   "dependencies": {

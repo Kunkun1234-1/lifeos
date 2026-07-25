@@ -14,6 +14,29 @@ environment variables, local commands, rollback behavior, and the next stages.
 Database models, ownership boundaries, relationships, migrations, and operational
 commands are documented in [`docs/Database_Design.md`](docs/Database_Design.md).
 
+## ChatGPT / MCP connection
+
+The API application exposes a tool-only MCP server at `POST /mcp`. After OAuth
+authorization, ChatGPT or another MCP client can list the signed-in user's areas,
+projects, goals, and tasks, then create goals/tasks or complete tasks. Every write
+requires an idempotency key and is recorded in `AgentAction`.
+
+Local endpoints:
+
+- MCP resource: `http://127.0.0.1:4000/mcp`
+- protected-resource metadata: `http://127.0.0.1:4000/.well-known/oauth-protected-resource`
+- OAuth issuer and consent UI: `http://localhost:3000`
+
+Set `MCP_OAUTH_SECRET` to the same 32+ character value in both deployments, set
+`MCP_AUTH_ISSUER` to the public Web origin, and set `MCP_RESOURCE_URL` to the exact
+public API `/mcp` URL. Apply migrations with `npm run db:deploy` before connecting.
+The OAuth implementation supports dynamic client registration, authorization code
+with PKCE (`S256`), refresh-token rotation, resource indicators, and scoped access.
+
+When adding the deployed connector to ChatGPT, use the public HTTPS
+`MCP_RESOURCE_URL`. The user will be redirected to LifeOS to sign in and approve
+the requested permissions.
+
 ## Getting Started
 
 First, run the development server:

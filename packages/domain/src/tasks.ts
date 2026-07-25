@@ -14,7 +14,7 @@ export class TaskLinkError extends Error {}
 export async function listTasks(
   db: PrismaClient,
   userId: string,
-  filters: { status?: string; projectId?: string },
+  filters: { status?: string; projectId?: string; limit?: number },
 ) {
   return db.task.findMany({
     where: {
@@ -29,6 +29,7 @@ export async function listTasks(
       { priority: "asc" },
       { createdAt: "desc" },
     ],
+    ...(filters.limit ? { take: filters.limit } : {}),
   });
 }
 

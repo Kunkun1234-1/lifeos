@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./achievements": "./src/achievements.ts",
+    "./goals": "./src/goals.ts",
     "./rewards": "./src/rewards.ts",
     "./tasks": "./src/tasks.ts"
   },

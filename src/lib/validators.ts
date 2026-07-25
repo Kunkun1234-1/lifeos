@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { GoalCreateSchema } from "@lifeos/contracts/goals";
+
+export { GoalCreateSchema };
 import { NOTE_BODY_MAX_LENGTH, NOTE_TITLE_MAX_LENGTH } from "./notes";
 
 // ---------- Task ----------
@@ -128,28 +131,6 @@ export const AreaUpdateSchema = z.object({
 });
 
 // ---------- Goal / KR ----------
-export const GoalCreateSchema = z.object({
-  objective: z.string().min(1).max(200),
-  notes: z.string().max(2000).optional().nullable(),
-  type: z.enum(["okr", "milestone", "main"]).default("okr"),
-  areaId: z.string().optional().nullable(),
-  timeframe: z.string().min(1).max(40),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  confidence: z.number().int().min(1).max(10).optional(),
-  keyResults: z
-    .array(
-      z.object({
-        description: z.string().min(1).max(200),
-        unit: z.string().max(40).optional().nullable(),
-        target: z.number().min(0).max(100000),
-        current: z.number().min(0).max(100000).default(0),
-      })
-    )
-    .max(6)
-    .optional(),
-});
-
 export const GoalUpdateSchema = z.object({
   objective: z.string().min(1).max(200).optional(),
   notes: z.string().max(2000).optional().nullable(),

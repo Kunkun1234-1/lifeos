@@ -13,6 +13,7 @@
     "@auth/prisma-adapter": "^2.11.2",
     "@lifeos/contracts": "0.1.0",
     "@lifeos/domain": "0.1.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/client": "^5.22.0",
     "@vercel/blob": "^1.1.1",
     "date-fns": "^4.1.0",
