@@ -30,11 +30,17 @@ function firstConfiguredOrigin(value: string | undefined) {
   return value?.split(",")[0]?.trim().replace(/\/$/, "");
 }
 
+function vercelProductionOrigin() {
+  const hostname = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim().replace(/^https?:\/\//, "").replace(/\/$/, "");
+  return hostname ? `https://${hostname}` : undefined;
+}
+
 export function getMcpAuthIssuer() {
   return (
     firstConfiguredOrigin(process.env.MCP_AUTH_ISSUER) ||
     firstConfiguredOrigin(process.env.AUTH_URL) ||
     firstConfiguredOrigin(process.env.WEB_ORIGIN) ||
+    vercelProductionOrigin() ||
     "http://localhost:3000"
   );
 }
@@ -42,6 +48,10 @@ export function getMcpAuthIssuer() {
 export function getMcpResourceUrl() {
   return (
     process.env.MCP_RESOURCE_URL?.trim().replace(/\/$/, "") ||
+    (firstConfiguredOrigin(process.env.NEXT_PUBLIC_API_URL)
+      ? `${firstConfiguredOrigin(process.env.NEXT_PUBLIC_API_URL)}/mcp`
+      : undefined) ||
+    (vercelProductionOrigin() ? `${vercelProductionOrigin()}/mcp` : undefined) ||
     "http://127.0.0.1:4000/mcp"
   );
 }

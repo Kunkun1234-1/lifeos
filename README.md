@@ -138,6 +138,8 @@ curl https://lifeos-topaz-chi.vercel.app/.well-known/oauth-authorization-server
 ```
 
 Protected Resource Metadata 中的 `resource` 必须是 `https://lifeos-api-nine.vercel.app/mcp`，不能是 `127.0.0.1`。
+代码在未设置显式 MCP 变量时会依次回退到 `NEXT_PUBLIC_API_URL` 和 Vercel 的
+`VERCEL_PROJECT_PRODUCTION_URL`，但生产环境仍建议显式填写上表的稳定地址，便于以后更换域名。
 
 ## 本地开发
 
