@@ -144,7 +144,7 @@ async function main() {
       clientId,
       userId,
       redirectUri,
-      scope: "lifeos:read tasks:write goals:write",
+      scope: "lifeos:read lifeos:write lifeos:economy lifeos:ai tasks:write goals:write",
       resource,
       codeChallenge: challenge,
       expiresAt: new Date(Date.now() + 60_000),
@@ -188,13 +188,18 @@ async function main() {
   await client.connect(transport);
 
   const tools = await client.listTools();
-  const expected = ["list_areas", "list_projects", "list_goals", "list_tasks", "create_task", "create_goal", "complete_task"];
+  const expected = [
+    "get_dashboard", "list_areas", "list_projects", "list_goals", "list_tasks",
+    "list_habits", "list_routines", "search_notes", "get_assets", "get_inventory",
+    "create_task", "update_task", "delete_task", "complete_task", "create_goal",
+    "create_note", "create_asset_transaction", "pull_gacha", "decision_coach", "upload_media",
+  ];
   for (const name of expected) {
     if (!tools.tools.some((tool) => tool.name === name)) throw new Error(`Missing MCP tool: ${name}`);
   }
 
   const areas = await client.callTool({ name: "list_areas", arguments: {} });
-  if (areas.isError || !Array.isArray(areas.structuredContent?.areas)) {
+  if (areas.isError || !Array.isArray(areas.structuredContent?.data)) {
     throw new Error(`list_areas failed: ${JSON.stringify(areas)}`);
   }
 
@@ -203,7 +208,7 @@ async function main() {
     name: "create_task",
     arguments: { idempotencyKey, title, priority: 3 },
   });
-  taskId = first.structuredContent?.task?.id;
+  taskId = first.structuredContent?.data?.id;
   if (first.isError || typeof taskId !== "string") {
     throw new Error(`create_task failed: ${JSON.stringify(first)}`);
   }
@@ -212,12 +217,13 @@ async function main() {
     name: "create_task",
     arguments: { idempotencyKey, title, priority: 3 },
   });
-  if (replay.structuredContent?.task?.id !== taskId) {
+  if (replay.structuredContent?.data?.id !== taskId) {
     throw new Error("create_task idempotency replay created a different task");
   }
 
   await client.close();
-  console.log(`MCP smoke passed: OAuth registration/code/PKCE/refresh, ${expected.length} tools, read, write, and idempotency`);
+  if (tools.tools.length < 90) throw new Error(`Expected the complete MCP catalog, found only ${tools.tools.length} tools`);
+  console.log(`MCP smoke passed: OAuth registration/code/PKCE/refresh, ${tools.tools.length} tools, read, write, and idempotency`);
 }
 
 try {

@@ -1,6 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { authenticateMcpRequest } from "../../mcp/auth";
 import { createLifeOsMcpServer } from "../../mcp/server";
+import { getMcpResourceUrl } from "@/lib/mcp-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ async function handle(req: Request) {
   const authInfo = await authenticateMcpRequest(req);
   if (authInfo instanceof Response) return withCors(authInfo);
 
-  const server = createLifeOsMcpServer();
+  const server = createLifeOsMcpServer({ apiOrigin: new URL(getMcpResourceUrl()).origin });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

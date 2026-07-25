@@ -3,6 +3,10 @@ import { jwtVerify, SignJWT } from "jose";
 
 export const MCP_SCOPES = [
   "lifeos:read",
+  "lifeos:write",
+  "lifeos:economy",
+  "lifeos:ai",
+  // Retained so already-authorized clients can keep using the original tools.
   "tasks:write",
   "goals:write",
 ] as const;
@@ -10,9 +14,12 @@ export const MCP_SCOPES = [
 export type McpScope = (typeof MCP_SCOPES)[number];
 
 export const MCP_SCOPE_LABELS: Record<McpScope, string> = {
-  "lifeos:read": "查看你的领域、项目、目标和任务",
-  "tasks:write": "创建和完成任务",
-  "goals:write": "创建目标和关键结果",
+  "lifeos:read": "查看 LifeOS 中的个人资料、计划、知识库、资产与游戏状态",
+  "lifeos:write": "创建、修改、归档或删除 LifeOS 内容",
+  "lifeos:economy": "执行余额、奖励、祈愿和领取等有经济副作用的操作",
+  "lifeos:ai": "调用 AI 教练并消耗树脂",
+  "tasks:write": "兼容旧版：创建、修改和完成任务",
+  "goals:write": "兼容旧版：创建、修改目标和关键结果",
 };
 
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
