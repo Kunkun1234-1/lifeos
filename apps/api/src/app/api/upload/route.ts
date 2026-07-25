@@ -5,8 +5,27 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { getCurrentUserId } from "@/lib/user";
 
-const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"]);
-const MAX_BYTES = 4 * 1024 * 1024; // 4 MB
+const IMAGE_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
+const AUDIO_MIME = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/aac",
+  "audio/ogg",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+  "audio/webm",
+  "audio/x-m4a",
+]);
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB
+const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15 MB
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
 // Auto-detect: if BLOB_READ_WRITE_TOKEN is configured (e.g. on Vercel), use
@@ -33,34 +52,48 @@ export async function POST(req: Request) {
     const size = file.size ?? 0;
     const name = file.name ?? "upload.bin";
 
-    if (!ALLOWED_MIME.has(type)) {
+    const isImage = IMAGE_MIME.has(type);
+    const isAudio = AUDIO_MIME.has(type) || looksLikeAudio(name, type);
+    if (!isImage && !isAudio) {
       return NextResponse.json(
-        { error: `Unsupported type ${type}. Allowed: PNG, JPEG, WebP, GIF, SVG.` },
+        {
+          error:
+            `Unsupported type ${type}. Allowed: images (PNG/JPEG/WebP/GIF/SVG) ` +
+            `or audio (MP3/M4A/AAC/OGG/WAV/WebM).`,
+        },
         { status: 400 },
       );
     }
 
-    if (size > MAX_BYTES) {
+    const maxBytes = isAudio ? MAX_AUDIO_BYTES : MAX_IMAGE_BYTES;
+    if (size > maxBytes) {
       return NextResponse.json(
-        { error: `File too large (${(size / 1024 / 1024).toFixed(1)} MB). Max 4 MB.` },
+        {
+          error: `File too large (${(size / 1024 / 1024).toFixed(1)} MB). Max ${
+            isAudio ? 15 : 4
+          } MB.`,
+        },
         { status: 400 },
       );
     }
 
-    const ext = extFor(type, name);
+    const contentType = isAudio && type === "application/octet-stream"
+      ? mimeFromName(name)
+      : type;
+    const ext = extFor(contentType, name);
     const filename = `${userId.slice(-6)}-${Date.now().toString(36)}-${randomBytes(4).toString("hex")}${ext}`;
 
     if (useBlob) {
       const { put } = await import("@vercel/blob");
       const blob = await put(`uploads/${filename}`, file, {
         access: "public",
-        contentType: type,
+        contentType,
         addRandomSuffix: false,
       });
       return NextResponse.json({
         url: blob.url,
         bytes: size,
-        contentType: type,
+        contentType,
         backend: "blob",
       });
     }
@@ -88,13 +121,38 @@ export async function POST(req: Request) {
     return NextResponse.json({
       url: `${new URL(req.url).origin}/uploads/${filename}`,
       bytes: buf.length,
-      contentType: type,
+      contentType,
       backend: "disk",
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[/api/upload] failed:", msg);
     return NextResponse.json({ error: `Upload failed: ${msg}` }, { status: 500 });
+  }
+}
+
+function looksLikeAudio(name: string, type: string) {
+  if (type.startsWith("audio/")) return true;
+  return /\.(mp3|m4a|aac|ogg|wav|webm)$/i.test(name);
+}
+
+function mimeFromName(name: string): string {
+  const ext = path.extname(name).toLowerCase();
+  switch (ext) {
+    case ".mp3":
+      return "audio/mpeg";
+    case ".m4a":
+      return "audio/mp4";
+    case ".aac":
+      return "audio/aac";
+    case ".ogg":
+      return "audio/ogg";
+    case ".wav":
+      return "audio/wav";
+    case ".webm":
+      return "audio/webm";
+    default:
+      return "audio/mpeg";
   }
 }
 
@@ -112,6 +170,22 @@ function extFor(mime: string, originalName: string): string {
       return ".gif";
     case "image/svg+xml":
       return ".svg";
+    case "audio/mpeg":
+    case "audio/mp3":
+      return ".mp3";
+    case "audio/mp4":
+    case "audio/x-m4a":
+      return ".m4a";
+    case "audio/aac":
+      return ".aac";
+    case "audio/ogg":
+      return ".ogg";
+    case "audio/wav":
+    case "audio/x-wav":
+    case "audio/wave":
+      return ".wav";
+    case "audio/webm":
+      return ".webm";
     default:
       return "";
   }

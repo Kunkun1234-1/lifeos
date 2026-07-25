@@ -3,7 +3,7 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { provisionUserDefaults } from "@/lib/provision";
+import { provisionUserDefaults, ensureDevTestCurrency } from "@/lib/provision";
 
 const isDev = process.env.NODE_ENV !== "production";
 const hasGoogle =
@@ -49,8 +49,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 user = await prisma.user.create({
                   data: { email: "dev@local", name: "Dev Player" },
                 });
-                await provisionUserDefaults(user.id);
               }
+              await provisionUserDefaults(user.id);
+              // Existing local accounts still get topped up to the generous floor.
+              await ensureDevTestCurrency(user.id);
               return { id: user.id, email: user.email, name: user.name };
             },
           }),

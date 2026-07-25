@@ -44,11 +44,12 @@ function withCors(response: NextResponse, origin: string | null) {
       .split(",")
       .map((value) => value.trim()),
   );
-  if (process.env.NODE_ENV !== "production") {
-    allowed.add("http://localhost:3000");
-    allowed.add("http://127.0.0.1:3000");
-  }
-  if (origin && allowed.has(origin)) {
+  const isLocalDevelopmentOrigin =
+    process.env.NODE_ENV !== "production" &&
+    !!origin &&
+    /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/.test(origin);
+
+  if (origin && (allowed.has(origin) || isLocalDevelopmentOrigin)) {
     response.headers.set("Access-Control-Allow-Origin", origin);
     response.headers.set("Vary", "Origin");
   }

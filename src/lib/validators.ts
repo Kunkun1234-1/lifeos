@@ -20,6 +20,13 @@ export const HabitCreateSchema = z.object({
 
 export const HabitTickSchema = z.object({
   direction: z.enum(["+", "-"]),
+  /** Civil day YYYY-MM-DD in the user's timezone; defaults to today. */
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  /** When true, a second tap on the same day undoes that day's tick. */
+  toggle: z.boolean().optional().default(true),
 });
 
 // ---------- Routine ----------
@@ -124,7 +131,7 @@ export const AreaUpdateSchema = z.object({
 export const GoalCreateSchema = z.object({
   objective: z.string().min(1).max(200),
   notes: z.string().max(2000).optional().nullable(),
-  type: z.enum(["okr", "milestone"]).default("okr"),
+  type: z.enum(["okr", "milestone", "main"]).default("okr"),
   areaId: z.string().optional().nullable(),
   timeframe: z.string().min(1).max(40),
   startDate: z.string().datetime().optional(),
@@ -146,6 +153,7 @@ export const GoalCreateSchema = z.object({
 export const GoalUpdateSchema = z.object({
   objective: z.string().min(1).max(200).optional(),
   notes: z.string().max(2000).optional().nullable(),
+  type: z.enum(["okr", "milestone", "main"]).optional(),
   areaId: z.string().optional().nullable(),
   status: z.enum(["active", "done", "paused", "archived"]).optional(),
   confidence: z.number().int().min(1).max(10).optional(),
@@ -331,7 +339,14 @@ export const DecisionReviewSchema = z.object({
 });
 
 // ---------- Knowledge Base / Notes ----------
-export const NOTE_KINDS = ["note", "highlight", "quote", "link", "inspiration"] as const;
+export const NOTE_KINDS = [
+  "note",
+  "folder",
+  "highlight",
+  "quote",
+  "link",
+  "inspiration",
+] as const;
 
 // Treat empty string as `null` for optional URL — friendlier for PATCH-clear flows
 const optionalUrl = z.preprocess(
@@ -343,6 +358,10 @@ export const NoteCreateSchema = z.object({
   kind: z.enum(NOTE_KINDS).default("note"),
   title: z.string().max(NOTE_TITLE_MAX_LENGTH).optional().nullable(),
   body: z.string().max(NOTE_BODY_MAX_LENGTH).default(""),
+  parentId: z.string().cuid().optional().nullable(),
+  position: z.number().int().min(0).max(10_000).optional(),
+  icon: z.string().max(16).optional().nullable(),
+  coverUrl: optionalUrl,
   sourceUrl: optionalUrl,
   sourceTitle: z.string().max(200).optional().nullable(),
   author: z.string().max(120).optional().nullable(),
@@ -355,4 +374,9 @@ export const NoteCreateSchema = z.object({
 
 export const NoteUpdateSchema = NoteCreateSchema.partial().extend({
   archived: z.boolean().optional(),
+});
+
+export const NoteMoveSchema = z.object({
+  parentId: z.string().cuid().nullable(),
+  position: z.number().int().min(0).max(10_000),
 });

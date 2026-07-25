@@ -238,12 +238,57 @@ async function smokeNotes() {
     throw new Error(`Created note was not returned by search: ${JSON.stringify(notes)}`);
   }
 
+  const childRes = await businessRequest("/api/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      kind: "note",
+      title: `Child of ${firstLine}`,
+      body: "Nested page smoke",
+      parentId: note.id,
+    }),
+  });
+  if (childRes.status !== 201) {
+    throw new Error(`Create child note failed: ${childRes.status} ${JSON.stringify(await readResponse(childRes))}`);
+  }
+  const child = (await readResponse(childRes))?.note;
+  if (!child?.id || child.parentId !== note.id) {
+    throw new Error(`Unexpected child note payload: ${JSON.stringify(child)}`);
+  }
+
+  const treeRes = await businessRequest("/api/notes/tree");
+  if (!treeRes.ok) {
+    throw new Error(`Tree failed: ${treeRes.status} ${JSON.stringify(await readResponse(treeRes))}`);
+  }
+  const tree = await readResponse(treeRes);
+  if (!Array.isArray(tree?.nodes) || !tree.nodes.some((n) => n.id === note.id)) {
+    throw new Error(`Created note missing from tree: ${JSON.stringify(tree)}`);
+  }
+
+  const moveRes = await businessRequest(`/api/notes/${child.id}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ parentId: null, position: 0 }),
+  });
+  if (!moveRes.ok) {
+    throw new Error(`Move note failed: ${moveRes.status} ${JSON.stringify(await readResponse(moveRes))}`);
+  }
+  const moved = await readResponse(moveRes);
+  if (moved?.parentId !== null) {
+    throw new Error(`Expected child moved to root: ${JSON.stringify(moved)}`);
+  }
+
+  const deleteChildRes = await businessRequest(`/api/notes/${child.id}`, { method: "DELETE" });
+  if (!deleteChildRes.ok) {
+    throw new Error(`Cleanup child delete failed: ${deleteChildRes.status} ${JSON.stringify(await readResponse(deleteChildRes))}`);
+  }
+
   const deleteRes = await businessRequest(`/api/notes/${note.id}`, { method: "DELETE" });
   if (!deleteRes.ok) {
     throw new Error(`Cleanup delete failed: ${deleteRes.status} ${JSON.stringify(await readResponse(deleteRes))}`);
   }
 
-  console.log(`Notes smoke passed: body-only note saved as "${firstLine}"`);
+  console.log(`Notes smoke passed: body-only note + tree/move as "${firstLine}"`);
 }
 
 async function smokeBackendBridge() {

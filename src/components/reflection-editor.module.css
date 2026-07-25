@@ -1,0 +1,123 @@
+.editor {
+  display: grid;
+  gap: 10px;
+  min-height: 100%;
+}
+
+.paper {
+  display: grid;
+  gap: 6px;
+  min-height: min(58vh, 560px);
+  align-content: start;
+  padding: 2px 2px 8px;
+}
+
+.textBlock {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  padding: 2px 0;
+  border: 0;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: #1b2634;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.7;
+  outline: none;
+  box-shadow: none;
+}
+
+.textBlockTall {
+  min-height: 180px;
+}
+
+.textBlock::placeholder {
+  color: #9a8f7f;
+}
+
+.imageBlock {
+  position: relative;
+  max-width: 100%;
+  margin: 2px 0;
+  padding: 6px;
+  border: 1px solid #d9d4c0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 24px rgba(41, 62, 52, 0.06);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  user-select: none;
+  pointer-events: none;
+  background: #f7f4ea;
+}
+
+.imageMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: #6b6458;
+  font-size: 11px;
+}
+
+.imageName {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imageSize {
+  flex: 0 0 auto;
+  font-family: var(--font-geist-mono), monospace;
+  color: #8a6a12;
+}
+
+.imageRemove {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #c5554a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.imageRemove:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.resizeHandle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 3px;
+  background:
+    linear-gradient(135deg, transparent 45%, #c9a227 45%, #c9a227 55%, transparent 55%),
+    linear-gradient(135deg, transparent 65%, #8a6a12 65%, #8a6a12 75%, transparent 75%);
+  cursor: ew-resize;
+}
+
+.resizeHandle:hover {
+  background-color: rgba(201, 162, 39, 0.12);
+}
+
+.hint {
+  margin: 0;
+  color: #8a8376;
+  font-size: 12px;
+  line-height: 1.5;
+}

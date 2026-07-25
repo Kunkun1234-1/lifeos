@@ -25,6 +25,7 @@ import type {
   DecisionDTO,
   TitlesSnapshot,
   NoteDTO,
+  NoteTreeNodeDTO,
   EventSnapshotDTO,
   EquipmentSnapshotDTO,
   AssetsSnapshotDTO,
@@ -56,6 +57,8 @@ export const qk = {
   titles: ["titles"] as const,
   resin: ["resin"] as const,
   notes: (filters?: Record<string, string | undefined>) => ["notes", filters ?? {}] as const,
+  notesTree: (archived?: "1" | "0") => ["notes", "tree", archived ?? "0"] as const,
+  note: (id: string) => ["notes", "detail", id] as const,
   events: ["events"] as const,
   equipment: ["equipment"] as const,
   assets: ["assets"] as const,
@@ -270,28 +273,71 @@ export function useTickHabit() {
   const qc = useQueryClient();
   const push = useRewardsStore((s) => s.push);
   return useMutation({
-    mutationFn: ({ id, direction }: { id: string; direction: "+" | "-" }) =>
-      api<{ habit: HabitDTO; reward: RewardResult }>(`/api/habits/${id}/tick`, {
+    mutationFn: ({
+      id,
+      direction,
+      date,
+      toggle = true,
+    }: {
+      id: string;
+      direction: "+" | "-";
+      date?: string;
+      toggle?: boolean;
+    }) =>
+      api<{
+        habit: HabitDTO;
+        reward: RewardResult;
+        toggledOff?: boolean;
+      }>(`/api/habits/${id}/tick`, {
         method: "POST",
-        json: { direction },
+        json: { direction, date, toggle },
       }),
-    // Optimistic: bump positive/negative count immediately so repeated taps
-    // feel responsive on the habits list.
-    onMutate: async ({ id, direction }) => {
+    onMutate: async ({ id, direction, date, toggle = true }) => {
       await qc.cancelQueries({ queryKey: qk.habits });
       const snapshot = qc.getQueryData<HabitDTO[]>(qk.habits);
+      const day = date;
       qc.setQueryData<HabitDTO[]>(qk.habits, (old) =>
-        old?.map((h) =>
-          h.id === id
-            ? {
-                ...h,
-                positiveCount:
-                  direction === "+" ? h.positiveCount + 1 : h.positiveCount,
-                negativeCount:
-                  direction === "-" ? h.negativeCount + 1 : h.negativeCount,
-              }
-            : h,
-        ),
+        old?.map((h) => {
+          if (h.id !== id) return h;
+          const ticks = h.ticks ?? [];
+          const existing =
+            day != null
+              ? ticks.find((t) => t.date === day && t.direction === direction)
+              : undefined;
+          if (toggle && existing && day) {
+            return {
+              ...h,
+              positiveCount:
+                direction === "+"
+                  ? Math.max(0, h.positiveCount - 1)
+                  : h.positiveCount,
+              negativeCount:
+                direction === "-"
+                  ? Math.max(0, h.negativeCount - 1)
+                  : h.negativeCount,
+              ticks: ticks.filter((t) => t.id !== existing.id),
+            };
+          }
+          if (existing && !toggle) return h;
+          return {
+            ...h,
+            positiveCount:
+              direction === "+" ? h.positiveCount + 1 : h.positiveCount,
+            negativeCount:
+              direction === "-" ? h.negativeCount + 1 : h.negativeCount,
+            ticks: day
+              ? [
+                  ...ticks,
+                  {
+                    id: `optimistic-${id}-${day}-${direction}`,
+                    direction,
+                    date: day,
+                    createdAt: new Date().toISOString(),
+                  },
+                ]
+              : ticks,
+          };
+        }),
       );
       return { snapshot };
     },
@@ -299,23 +345,35 @@ export function useTickHabit() {
       if (ctx?.snapshot) qc.setQueryData(qk.habits, ctx.snapshot);
     },
     onSuccess: (data, vars) => {
+      if (data.habit) {
+        qc.setQueryData<HabitDTO[]>(qk.habits, (old) =>
+          old?.map((h) => (h.id === vars.id ? { ...h, ...data.habit } : h)),
+        );
+      }
+      const sign = data.toggledOff
+        ? vars.direction === "+"
+          ? -1
+          : 1
+        : vars.direction === "+"
+          ? 1
+          : -1;
       if (vars.direction === "+") {
         push({
-          xp: data.reward.xpGranted,
-          gold: data.reward.goldGranted,
+          xp: sign * Math.abs(data.reward.xpGranted || data.habit.xpPerTick),
+          gold: sign * Math.abs(data.reward.goldGranted || data.habit.goldPerTick),
           gems: 0,
           fate: 0,
           areaKey: data.reward.areaKey,
-          label: "Habit +",
+          label: data.toggledOff ? "取消打卡" : "习惯打卡",
         });
       } else {
         push({
-          xp: -data.habit.xpPerTick,
-          gold: -data.habit.goldPerTick,
+          xp: sign * data.habit.xpPerTick,
+          gold: sign * data.habit.goldPerTick,
           gems: 0,
           fate: 0,
           areaKey: data.reward.areaKey,
-          label: "Habit −",
+          label: data.toggledOff ? "撤销破戒" : "习惯破戒",
         });
       }
     },
@@ -1201,6 +1259,16 @@ export type NoteFilters = {
   archived?: "1" | "0";
 };
 
+export type NotesTreeResponse = {
+  nodes: NoteTreeNodeDTO[];
+  forest: NoteTreeNodeDTO[] | null;
+};
+
+function invalidateNotes(qc: ReturnType<typeof useQueryClient>, noteId?: string) {
+  qc.invalidateQueries({ queryKey: ["notes"] });
+  if (noteId) qc.invalidateQueries({ queryKey: qk.note(noteId) });
+}
+
 export const useNotes = (filters: NoteFilters = {}) =>
   useQuery({
     queryKey: qk.notes(filters),
@@ -1212,6 +1280,24 @@ export const useNotes = (filters: NoteFilters = {}) =>
       const qs = params.toString();
       return api<NoteDTO[]>(`/api/notes${qs ? `?${qs}` : ""}`);
     },
+  });
+
+export const useNotesTree = (archived: "1" | "0" = "0") =>
+  useQuery({
+    queryKey: qk.notesTree(archived),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (archived === "1") params.set("archived", "1");
+      const qs = params.toString();
+      return api<NotesTreeResponse>(`/api/notes/tree${qs ? `?${qs}` : ""}`);
+    },
+  });
+
+export const useNote = (id: string | null | undefined) =>
+  useQuery({
+    queryKey: qk.note(id ?? ""),
+    queryFn: () => api<NoteDTO>(`/api/notes/${id}`),
+    enabled: Boolean(id),
   });
 
 export function useCreateNote() {
@@ -1234,7 +1320,7 @@ export function useCreateNote() {
           label: "📓 Note",
         });
       }
-      qc.invalidateQueries({ queryKey: ["notes"] });
+      invalidateNotes(qc, data.note.id);
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.achievements });
       invalidateDashboard(qc);
@@ -1246,16 +1332,39 @@ export function useUpdateNote() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
-      api(`/api/notes/${id}`, { method: "PATCH", json: body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
+      api<NoteDTO>(`/api/notes/${id}`, { method: "PATCH", json: body }),
+    onSuccess: (data) => invalidateNotes(qc, data.id),
+  });
+}
+
+export function useMoveNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      parentId,
+      position,
+    }: {
+      id: string;
+      parentId: string | null;
+      position: number;
+    }) =>
+      api<NoteDTO>(`/api/notes/${id}/move`, {
+        method: "POST",
+        json: { parentId, position },
+      }),
+    onSuccess: (data) => invalidateNotes(qc, data.id),
   });
 }
 
 export function useDeleteNote() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api(`/api/notes/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notes"] }),
+    mutationFn: (id: string) =>
+      api<{ ok: true; deletedSubtreeSize: number }>(`/api/notes/${id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => invalidateNotes(qc),
   });
 }
 

@@ -137,6 +137,15 @@ export function calendarDates(selectedDate: string) {
   return Array.from({ length: 42 }, (_, index) => addDaysYMD(first, index - offset));
 }
 
+/** Monday-first month grid (周一 … 周日), matching the cream calendar UI. */
+export function calendarDatesMonday(selectedDate: string) {
+  const [year, month] = selectedDate.split("-").map(Number);
+  const first = `${year}-${String(month).padStart(2, "0")}-01`;
+  const dow = dayOfWeek(first); // 0=Sun..6=Sat
+  const offset = dow === 0 ? 6 : dow - 1;
+  return Array.from({ length: 42 }, (_, index) => addDaysYMD(first, index - offset));
+}
+
 export function shiftMonth(selectedDate: string, delta: number) {
   const [year, month, day] = selectedDate.split("-").map(Number);
   const target = new Date(year, month - 1 + delta, 1);

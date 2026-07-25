@@ -1,6 +1,5 @@
 import { signIn, auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Image from "next/image";
 
 const isDev = process.env.NODE_ENV !== "production";
 const hasGoogle =
@@ -17,17 +16,14 @@ export default async function LoginPage({
   const from = sp.from && sp.from.startsWith("/") ? sp.from : "/";
 
   return (
-    <div className="grid min-h-[100dvh] place-items-center px-4">
+    <div className="relative z-10 grid min-h-[100dvh] place-items-center px-4">
       <div className="w-full max-w-sm space-y-6 rounded-sm border border-[var(--border)] bg-[var(--bg-card)] p-8 shadow-lg">
         <div className="flex flex-col items-center gap-2">
           <div className="text-[var(--gold-deep)]">
             <CompassStar size={56} />
           </div>
-          <div className="font-display text-2xl font-bold tracking-[0.14em] text-[var(--fg-strong)]">
-            人生管理系统
-          </div>
-          <div className="font-display-en text-[10px] tracking-[0.25em] text-[var(--gold-deep)]">
-            LIFE MANAGEMENT SYSTEM
+          <div className="font-display text-2xl font-bold tracking-[0.08em] text-[var(--fg-strong)]">
+            Game Life
           </div>
         </div>
 

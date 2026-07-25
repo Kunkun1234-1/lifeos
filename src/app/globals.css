@@ -135,25 +135,51 @@ body::after {
   color: var(--fg-strong);
 }
 
-.top-brand-panel {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: clamp(320px, 24vw, 520px);
+/* Floating top-nav islands — cream logo plaque + navy glass function bar */
+.top-nav-logo-island {
+  isolation: isolate;
   background:
-    linear-gradient(105deg, rgba(255, 252, 242, 0.98) 0%, rgba(255, 252, 242, 0.92) 66%, rgba(255, 252, 242, 0) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(232, 220, 192, 0.58));
-  clip-path: polygon(0 0, calc(100% - 64px) 0, 100% 100%, 0 100%);
-  pointer-events: none;
+    linear-gradient(160deg, rgba(255, 252, 242, 0.94) 0%, rgba(244, 234, 210, 0.88) 100%),
+    rgba(255, 252, 242, 0.72);
 }
 
-.top-brand-panel::after {
+.top-nav-logo-island::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(circle at 14% 18%, rgba(182, 136, 56, 0.18), transparent 30%),
-    linear-gradient(90deg, rgba(182, 136, 56, 0.18), transparent 70%);
-  opacity: 0.5;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(182, 136, 56, 0.2), transparent 42%),
+    linear-gradient(90deg, rgba(182, 136, 56, 0.12), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.top-nav-logo-island > * {
+  position: relative;
+  z-index: 1;
+}
+
+.top-nav-func-island {
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(36, 52, 74, 0.78), rgba(18, 30, 48, 0.72)),
+    rgba(23, 36, 55, 0.62);
+}
+
+.top-nav-func-island::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0.1), transparent 42%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.top-nav-func-island > * {
+  position: relative;
+  z-index: 1;
 }
 
 .nav-plaque {
@@ -164,13 +190,6 @@ body::after {
     inset 0 0 0 1px rgba(255, 255, 255, 0.72),
     0 12px 28px -22px rgba(4, 12, 24, 0.9);
   clip-path: polygon(13px 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 13px 100%, 0 50%);
-}
-
-@media (max-width: 767px) {
-  .top-brand-panel {
-    width: 126px;
-    clip-path: polygon(0 0, calc(100% - 34px) 0, 100% 100%, 0 100%);
-  }
 }
 
 /* ============================================================
@@ -224,15 +243,16 @@ body::after {
 .panel-cream {
   position: relative;
   background:
-    linear-gradient(180deg, rgba(255, 252, 242, 0.96) 0%, rgba(239, 232, 211, 0.9) 100%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.12));
-  backdrop-filter: blur(22px) saturate(1.08);
-  border: 1px solid var(--border);
+    linear-gradient(180deg, rgba(255, 252, 242, 0.985) 0%, rgba(239, 232, 211, 0.96) 100%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.2));
+  backdrop-filter: blur(30px) saturate(1.12);
+  -webkit-backdrop-filter: blur(30px) saturate(1.12);
+  border: 1px solid rgba(182, 136, 56, 0.48);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -1px 0 rgba(138, 104, 32, 0.08),
-    0 1px 2px rgba(43, 34, 15, 0.05),
-    0 18px 42px -24px rgba(7, 20, 36, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -1px 0 rgba(138, 104, 32, 0.1),
+    0 1px 3px rgba(43, 34, 15, 0.08),
+    0 22px 48px -20px rgba(7, 20, 36, 0.62);
   transition:
     border-color 220ms ease,
     box-shadow 220ms ease,
@@ -242,11 +262,11 @@ body::after {
 /* Gold double-line inset frame (adds 6px inside gold hairline) */
 .panel-cream.framed {
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.64),
-    inset 0 0 0 6px rgba(255, 251, 240, 0.36),
-    inset 0 0 0 7px var(--gold-tint),
-    0 1px 2px rgba(43, 34, 15, 0.05),
-    0 18px 42px -24px rgba(7, 20, 36, 0.55);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+    inset 0 0 0 6px rgba(255, 251, 240, 0.42),
+    inset 0 0 0 7px rgba(182, 136, 56, 0.18),
+    0 1px 3px rgba(43, 34, 15, 0.08),
+    0 22px 48px -20px rgba(7, 20, 36, 0.62);
 }
 
 /* Ornate corner markers — for headline panels */
@@ -494,22 +514,21 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
 }
 
 /* ============================================================
-   System terminal page
+   System modules page — cream parchment (aligned with life-game shell)
    ============================================================ */
 
 .system-terminal-shell {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(216, 197, 147, 0.42);
+  border: 1px solid #b7c49a;
+  border-radius: 18px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(132, 175, 220, 0.22), transparent 34%),
-    radial-gradient(circle at 76% 52%, rgba(138, 198, 177, 0.1), transparent 28%),
-    linear-gradient(135deg, rgba(8, 18, 31, 0.7), rgba(16, 35, 58, 0.5) 48%, rgba(6, 14, 25, 0.72));
+    radial-gradient(circle at 88% 0%, rgba(185, 202, 49, 0.28), transparent 22rem),
+    radial-gradient(circle at 8% 100%, rgba(36, 157, 109, 0.18), transparent 20rem),
+    linear-gradient(165deg, #e7efd4 0%, #dfe9c8 42%, #d4e4c0 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 0 0 6px rgba(216, 197, 147, 0.03),
-    0 30px 90px -48px rgba(2, 8, 18, 0.95);
-  backdrop-filter: blur(10px) saturate(1.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 18px 40px rgba(28, 58, 42, 0.12);
 }
 
 .system-terminal-shell::before {
@@ -517,11 +536,10 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(216, 197, 147, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(216, 197, 147, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.08), transparent 22%);
-  background-size: 44px 44px, 44px 44px, 100% 100%;
-  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.22) 62%, rgba(0, 0, 0, 0.58));
+    linear-gradient(rgba(20, 84, 58, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 84, 58, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 90%);
   pointer-events: none;
 }
 
@@ -529,7 +547,8 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   content: "";
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: inherit;
   pointer-events: none;
 }
 
@@ -537,15 +556,16 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
 .system-quickdock,
 .system-module-card {
   position: relative;
-  border: 1px solid rgba(216, 197, 147, 0.32);
+  border: 1px solid #aec49a;
   background:
-    linear-gradient(180deg, rgba(18, 34, 53, 0.72), rgba(6, 16, 30, 0.74)),
-    linear-gradient(135deg, rgba(216, 197, 147, 0.06), transparent 58%);
+    linear-gradient(165deg, #f0f4df 0%, #e4ecd0 55%, #d7e4c4 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
-    inset 0 12px 40px rgba(255, 255, 255, 0.03),
-    0 18px 46px -36px rgba(2, 8, 18, 0.95);
-  backdrop-filter: blur(13px) saturate(1.06);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 12px 28px rgba(28, 58, 42, 0.1);
+}
+
+.system-profile-card {
+  color: #18231f;
 }
 
 .system-profile-card::before,
@@ -554,7 +574,7 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   content: "";
   position: absolute;
   inset: 8px;
-  border: 1px solid rgba(216, 197, 147, 0.12);
+  border: 1px solid rgba(36, 157, 109, 0.22);
   pointer-events: none;
 }
 
@@ -562,12 +582,12 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
 .system-module-card::after {
   content: "";
   position: absolute;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   right: 10px;
   top: 10px;
-  border-right: 1px solid rgba(232, 201, 119, 0.38);
-  border-top: 1px solid rgba(232, 201, 119, 0.38);
+  border-right: 1px solid rgba(36, 157, 109, 0.4);
+  border-top: 1px solid rgba(36, 157, 109, 0.4);
   pointer-events: none;
 }
 
@@ -575,8 +595,8 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   position: relative;
   display: grid;
   place-items: center;
-  width: 136px;
-  height: 136px;
+  width: 124px;
+  height: 124px;
 }
 
 .system-avatar-ring::before,
@@ -585,9 +605,9 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  border: 1px solid rgba(216, 197, 147, 0.38);
+  border: 1px solid rgba(36, 157, 109, 0.28);
   background:
-    conic-gradient(from 0deg, transparent 0deg, rgba(232, 201, 119, 0.28) 38deg, transparent 72deg, transparent 180deg, rgba(232, 201, 119, 0.2) 220deg, transparent 260deg);
+    conic-gradient(from 0deg, transparent 0deg, rgba(185, 202, 49, 0.35) 38deg, transparent 72deg, transparent 180deg, rgba(36, 157, 109, 0.25) 220deg, transparent 260deg);
   mask: radial-gradient(circle, transparent 61%, #000 62%);
   animation: spin-slow 18s linear infinite;
 }
@@ -602,7 +622,8 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
 .system-module-card {
   isolation: isolate;
   overflow: hidden;
-  color: #f4e8c8;
+  color: #18231f;
+  border-radius: 14px;
   transition:
     transform 220ms ease,
     border-color 220ms ease,
@@ -613,29 +634,34 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
 .system-module-card:hover,
 .system-module-card.is-active {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--module-tone, #e8c977) 72%, white 8%);
+  border-color: color-mix(in srgb, var(--module-tone, #249d6d) 60%, #8faf6a);
   background:
-    radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--module-tone, #e8c977) 20%, transparent), transparent 40%),
-    linear-gradient(180deg, rgba(27, 48, 72, 0.84), rgba(7, 18, 33, 0.82));
+    radial-gradient(circle at 50% 24%, color-mix(in srgb, var(--module-tone, #249d6d) 28%, transparent), transparent 46%),
+    linear-gradient(165deg, #f3f7e4, #d8e8c4 70%, #c9dfb4);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-    0 24px 62px -38px rgba(2, 8, 18, 0.95),
-    0 0 28px -20px var(--module-tone, #e8c977);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 18px 36px -20px rgba(28, 58, 42, 0.28),
+    0 0 0 1px color-mix(in srgb, var(--module-tone, #249d6d) 24%, transparent);
 }
 
 .system-module-card:hover::before,
 .system-module-card.is-active::before {
-  border-color: color-mix(in srgb, var(--module-tone, #e8c977) 52%, rgba(216, 197, 147, 0.18));
+  border-color: color-mix(in srgb, var(--module-tone, #249d6d) 42%, rgba(185, 202, 49, 0.28));
 }
 
 .system-module-orbit {
   position: relative;
+  z-index: 1;
   display: grid;
   width: 70px;
   height: 70px;
   place-items: center;
-  color: color-mix(in srgb, var(--module-tone, #e8c977) 68%, #fff3ce);
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--module-tone, #e8c977) 35%, transparent));
+  color: color-mix(in srgb, var(--module-tone, #249d6d) 68%, #0a5240);
+}
+
+.system-module-orbit > svg {
+  position: relative;
+  z-index: 1;
 }
 
 .system-module-orbit::before,
@@ -643,34 +669,28 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
   border-radius: 999px;
-  border: 1px solid rgba(216, 197, 147, 0.26);
+  border: 1px solid rgba(36, 157, 109, 0.28);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 55%),
+    color-mix(in srgb, var(--module-tone, #249d6d) 14%, #d7e5c2);
+  pointer-events: none;
 }
 
 .system-module-orbit::after {
   inset: 11px;
-  border-color: color-mix(in srgb, var(--module-tone, #e8c977) 38%, rgba(216, 197, 147, 0.12));
+  border-color: color-mix(in srgb, var(--module-tone, #249d6d) 40%, rgba(185, 202, 49, 0.28));
+  background: transparent;
   clip-path: polygon(0 0, 100% 0, 100% 42%, 0 72%);
-}
-
-.system-signal {
-  position: absolute;
-  right: 18px;
-  top: 18px;
-  z-index: 2;
-  width: 11px;
-  height: 11px;
-  transform: rotate(45deg);
-  border: 1px solid rgba(255, 235, 202, 0.88);
-  background: #e44f62;
-  box-shadow: 0 0 14px rgba(228, 79, 98, 0.78);
 }
 
 .system-quickdock {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 10px 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
 }
 
 @keyframes spin-slow {
@@ -690,7 +710,7 @@ a.link-gold:hover { text-decoration-color: var(--gold); }
   }
 
   .system-avatar-ring {
-    width: 126px;
-    height: 126px;
+    width: 116px;
+    height: 116px;
   }
 }

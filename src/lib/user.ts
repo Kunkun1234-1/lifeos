@@ -9,7 +9,16 @@ const provisionCache = new Map<string, Promise<void>>();
 async function provisionUserDefaultsOnce(userId: string) {
   let pending = provisionCache.get(userId);
   if (!pending) {
-    pending = provisionUserDefaults(userId).catch((error) => {
+    pending = (async () => {
+      // JWT sessions can outlive a local database reset. Recreate the signed-in
+      // identity before provisioning records that reference User via foreign keys.
+      await prisma.user.upsert({
+        where: { id: userId },
+        create: { id: userId },
+        update: {},
+      });
+      await provisionUserDefaults(userId);
+    })().catch((error) => {
       provisionCache.delete(userId);
       throw error;
     });
@@ -27,14 +36,7 @@ async function provisionUserDefaultsOnce(userId: string) {
  *   reach here, but API routes that bypass the page chain still need a guard.
  */
 export async function getCurrentUser() {
-  const userId = (await getApiTokenUserId()) ?? (await getSessionUserId());
-
-  if (!userId) {
-    throw new Response("Unauthenticated", { status: 401 });
-  }
-
-  // Idempotent — short-circuits when defaults already exist.
-  await provisionUserDefaultsOnce(userId);
+  const userId = await getCurrentUserId();
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -52,6 +54,9 @@ export async function getCurrentUserId(): Promise<string> {
   if (!userId) {
     throw new Response("Unauthenticated", { status: 401 });
   }
+
+  // Idempotent — also repairs a stale development session after a DB reset.
+  await provisionUserDefaultsOnce(userId);
 
   return userId;
 }

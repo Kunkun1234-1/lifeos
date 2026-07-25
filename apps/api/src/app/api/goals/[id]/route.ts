@@ -24,6 +24,7 @@ export async function PATCH(req: Request, { params }: Params) {
     data: {
       objective: data.objective,
       notes: data.notes,
+      type: data.type,
       areaId: data.areaId,
       status: data.status,
       confidence: data.confidence,

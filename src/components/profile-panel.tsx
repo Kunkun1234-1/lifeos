@@ -8,7 +8,7 @@ import { Sparkles } from "lucide-react";
 
 /**
  * Left profile — flat on parchment (no outer panel).
- * Six attributes match the project's 6 dimensions (per docs §4.1 + /help):
+ * Six attributes match the project's 6 dimensions (per docs §4.1):
  *   STR→健康  INT→学习  CHA→关系  WIS→心智  CRE→创造  GOLD→财富
  * The radar renders cumulative `xpByArea` and links to /analytics.
  */

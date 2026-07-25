@@ -1,1322 +1,1226 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type MouseEvent as ReactMouseEvent,
-} from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
-  CheckCircle2,
-  Clock3,
-  Grid2x2,
-  GripVertical,
-  LayoutDashboard,
-  List,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
   Pencil,
-  PlayCircle,
   Plus,
   Trash2,
-  X,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input, Textarea, Label, Select } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { AreaSelect } from "@/components/area-select";
 import { ProjectSelect } from "@/components/project-select";
-import { useTasks, useCreateTask, useCompleteTask, useDeleteTask, useUpdateTask } from "@/hooks/queries";
+import {
+  useAreas,
+  useCompleteTask,
+  useCreateTask,
+  useDeleteTask,
+  useRoutines,
+  useTasks,
+  useUpdateTask,
+} from "@/hooks/queries";
+import { addDaysYMD, endOfWeekYMD, startOfWeekYMD, todayYMD, toYMD } from "@/lib/date";
+import { defaultTaskPriorityNumber } from "@/lib/settings-prefs";
 import type { TaskDTO } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import styles from "./page.module.css";
 
-type BoardColumn = "TODO" | "IN_PROGRESS" | "DONE";
-type TaskStatus = TaskDTO["status"];
-type TaskView = "board" | "matrix" | "all";
-type DragTarget = { column: BoardColumn; beforeId: string | null };
-type TaskOverride = { status: TaskStatus; completedAt: string | null };
+type ViewTab = "mine" | "schedule" | "week" | "month";
+/** 任务类型：主线=挂项目；支线=一次性无项目；日/周循环归 Routines */
+type TypeId = "all" | "main" | "side" | "done";
+type AreaFilter = "all" | "none" | string; // area id
 
-const BOARD_COLUMNS: Array<{
-  key: BoardColumn;
-  cn: string;
-  en: string;
-  hint: string;
-  icon: typeof Clock3;
-  tone: string;
-}> = [
-  {
-    key: "TODO",
-    cn: "准备开始",
-    en: "Ready",
-    hint: "已经明确，但还没有开动。",
-    icon: Clock3,
-    tone: "border-[var(--gold)]/45 bg-[rgba(255,252,242,0.86)]",
-  },
-  {
-    key: "IN_PROGRESS",
-    cn: "正在进行中",
-    en: "In Progress",
-    hint: "当前正在推进的任务。",
-    icon: PlayCircle,
-    tone: "border-[#3a6b8e]/45 bg-[rgba(238,247,255,0.84)]",
-  },
-  {
-    key: "DONE",
-    cn: "最近完成",
-    en: "Done · 2 Days",
-    hint: "只显示最近两天完成的任务。",
-    icon: CheckCircle2,
-    tone: "border-[var(--success)]/45 bg-[rgba(240,250,244,0.84)]",
-  },
+type PriorityFilter = Set<number>; // 1 high, 2 mid, 3 low; empty = all
+type StatusFilter = "all" | "TODO" | "IN_PROGRESS" | "DONE" | "CANCELED";
+type DueFilter = "all" | "today" | "week" | "overdue" | "none";
+
+const VIEW_TABS: Array<{ id: ViewTab; label: string }> = [
+  { id: "mine", label: "我的任务" },
+  { id: "schedule", label: "日程视图" },
+  { id: "week", label: "周视图" },
+  { id: "month", label: "月视图" },
 ];
 
-const PRIORITY_LABEL = ["", "High", "Normal", "Low"];
-const DONE_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
-
-const VIEW_TABS: Array<{
-  key: TaskView;
-  cn: string;
-  en: string;
-  icon: typeof LayoutDashboard;
-}> = [
-  { key: "board", cn: "任务排布", en: "Board", icon: LayoutDashboard },
-  { key: "matrix", cn: "四象限图", en: "Matrix", icon: Grid2x2 },
-  { key: "all", cn: "全部任务", en: "All Tasks", icon: List },
+const TYPE_CATEGORIES: Array<{ id: TypeId; label: string; icon: string }> = [
+  { id: "all", label: "全部任务", icon: "☰" },
+  { id: "main", label: "主线任务", icon: "⚔" },
+  { id: "side", label: "支线任务", icon: "🗺" },
+  { id: "done", label: "已完成", icon: "✓" },
 ];
 
-const STATUS_META: Record<TaskStatus, { cn: string; en: string; tone: "default" | "accent" | "success" | "warning" | "danger" }> = {
-  TODO: { cn: "准备开始", en: "Ready", tone: "warning" },
-  IN_PROGRESS: { cn: "进行中", en: "In Progress", tone: "accent" },
-  DONE: { cn: "已完成", en: "Done", tone: "success" },
-  CANCELED: { cn: "已取消", en: "Canceled", tone: "default" },
+const RECOMMENDATIONS = [
+  { title: "每日冥想", notes: "静心 10 分钟，恢复专注", xp: 80, gold: 20 },
+  { title: "清理背包道具", notes: "整理库存，腾出空间", xp: 50, gold: 15 },
+  { title: "阅读 30 分钟", notes: "学习成长日常", xp: 60, gold: 10 },
+  { title: "散步 20 分钟", notes: "健康生活小目标", xp: 40, gold: 10 },
+];
+
+const TIME_SLOTS = ["08:00", "10:00", "14:00", "16:00", "20:00"];
+const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
+
+function shiftMonth(ymd: string, delta: number) {
+  const [y, m] = ymd.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return toYMD(d);
+}
+
+const ATTR_TONE: Record<string, string> = {
+  STR: "green",
+  INT: "blue",
+  CHA: "purple",
+  WIS: "blue",
+  CRE: "purple",
+  GOLD: "orange",
 };
 
-const STATUS_FILTERS: Array<"all" | TaskStatus> = ["all", "TODO", "IN_PROGRESS", "DONE", "CANCELED"];
-const STATUS_ORDER: Record<TaskStatus, number> = {
-  TODO: 0,
-  IN_PROGRESS: 1,
-  DONE: 2,
-  CANCELED: 3,
-};
+function dueYmd(task: TaskDTO): string | null {
+  if (!task.dueDate) return null;
+  return toYMD(new Date(task.dueDate));
+}
+
+function isOverdue(task: TaskDTO, today = todayYMD()) {
+  if (task.status === "DONE" || task.status === "CANCELED") return false;
+  const ymd = dueYmd(task);
+  return Boolean(ymd && ymd < today);
+}
+
+function progressOf(task: TaskDTO) {
+  if (task.status === "DONE") return 100;
+  if (task.status === "IN_PROGRESS") return 55;
+  if (task.status === "CANCELED") return 0;
+  return 0;
+}
+
+function matchesType(task: TaskDTO, type: TypeId) {
+  switch (type) {
+    case "all":
+      return task.status !== "CANCELED";
+    case "main":
+      return Boolean(task.projectId) && task.status !== "DONE" && task.status !== "CANCELED";
+    case "side":
+      return !task.projectId && task.status !== "DONE" && task.status !== "CANCELED";
+    case "done":
+      return task.status === "DONE";
+    default:
+      return true;
+  }
+}
+
+function matchesArea(task: TaskDTO, areaFilter: AreaFilter) {
+  if (areaFilter === "all") return true;
+  if (areaFilter === "none") return !task.areaId;
+  return task.areaId === areaFilter;
+}
+
+function taskIcon(task: TaskDTO) {
+  if (task.area?.icon) return task.area.icon;
+  if (task.projectId) return "⚔";
+  return "📜";
+}
+
+function taskTags(task: TaskDTO): Array<{ label: string; tone: string }> {
+  const tags: Array<{ label: string; tone: string }> = [];
+  if (task.projectId) tags.push({ label: "主线", tone: "orange" });
+  else if (task.status !== "DONE") tags.push({ label: "支线", tone: "green" });
+  if (task.area) {
+    tags.push({
+      label: task.area.name,
+      tone: ATTR_TONE[task.area.attributeKey] ?? "blue",
+    });
+  }
+  return tags;
+}
+
+function formatDue(task: TaskDTO, today = todayYMD()) {
+  const ymd = dueYmd(task);
+  if (!ymd) return "无截止日期";
+  if (ymd === today) {
+    const d = task.dueDate ? new Date(task.dueDate) : null;
+    const hh = d ? String(d.getHours()).padStart(2, "0") : "23";
+    const mm = d ? String(d.getMinutes()).padStart(2, "0") : "59";
+    return `今天 ${hh}:${mm}`;
+  }
+  const tomorrow = addDaysYMD(today, 1);
+  if (ymd === tomorrow) return "明天";
+  const diff =
+    (new Date(ymd + "T12:00:00").getTime() - new Date(today + "T12:00:00").getTime()) /
+    (24 * 60 * 60 * 1000);
+  if (diff > 0 && diff <= 7) return `${Math.round(diff)} 天后`;
+  if (diff < 0) return `逾期 ${Math.abs(Math.round(diff))} 天`;
+  return ymd.slice(5);
+}
+
+function priorityLabel(p: number) {
+  if (p === 1) return "高";
+  if (p === 3) return "低";
+  return "中";
+}
+
+function Ring({ value, label, color }: { value: number; label: string; color: string }) {
+  const r = 30;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, value));
+  const offset = c * (1 - pct / 100);
+  return (
+    <div className={styles.ringWrap}>
+      <div className={styles.ring}>
+        <svg viewBox="0 0 72 72" aria-hidden>
+          <circle cx="36" cy="36" r={r} fill="none" stroke="#e6e8d8" strokeWidth="7" />
+          <circle
+            cx="36"
+            cy="36"
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+          />
+        </svg>
+        <div className={styles.ringValue}>{pct}%</div>
+      </div>
+      <div className={styles.ringLabel}>{label}</div>
+    </div>
+  );
+}
 
 export default function TasksPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [view, setView] = useState<TaskView>("board");
-  const [taskFilter, setTaskFilter] = useState<"all" | TaskStatus>("all");
-  const [orderedIds, setOrderedIds] = useState<string[]>([]);
-  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
-  const [taskOverrides, setTaskOverrides] = useState<Record<string, TaskOverride>>({});
-  const pointerDragRef = useRef<{
-    taskId: string;
-    startX: number;
-    startY: number;
-    active: boolean;
-  } | null>(null);
-  const dragTargetRef = useRef<DragTarget | null>(null);
+  const { data: tasks = [], isLoading } = useTasks();
+  const { data: areas = [] } = useAreas();
+  const { data: routines = [] } = useRoutines();
+  const complete = useCompleteTask();
+  const remove = useDeleteTask();
+  const create = useCreateTask();
 
-  const { data: tasks, isLoading } = useTasks();
-  const updateTask = useUpdateTask();
-  const completeTask = useCompleteTask();
+  const [view, setView] = useState<ViewTab>("mine");
+  const [typeId, setTypeId] = useState<TypeId>("all");
+  const [areaFilter, setAreaFilter] = useState<AreaFilter>("all");
+  const [priorities, setPriorities] = useState<PriorityFilter>(new Set([1, 2, 3]));
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
+  const [cursorDate, setCursorDate] = useState(() => todayYMD());
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<TaskDTO | null>(null);
+  const [bulk, setBulk] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [menuId, setMenuId] = useState<string | null>(null);
 
-  const allTasks = useMemo(() => {
-    return (tasks ?? [])
-      .map((task) => applyOverride(task, taskOverrides[task.id]))
-      .sort(sortForAllTasks);
-  }, [taskOverrides, tasks]);
+  const today = todayYMD();
+  const weekStart = startOfWeekYMD(cursorDate);
+  const weekEnd = endOfWeekYMD(cursorDate);
+  const monthPrefix = cursorDate.slice(0, 7);
 
-  const visibleTasks = useMemo(() => {
-    const now = Date.now();
-    return allTasks
-      .filter((task) => task.status !== "CANCELED")
-      .filter((task) => task.status !== "DONE" || isRecentDone(task, now));
-  }, [allTasks]);
+  const activeAreas = useMemo(
+    () => [...areas].filter((a) => !a.archived).sort((a, b) => a.order - b.order),
+    [areas],
+  );
 
-  useEffect(() => {
-    setOrderedIds((current) => {
-      const visibleIds = visibleTasks.map((task) => task.id);
-      return [
-        ...current.filter((id) => visibleIds.includes(id)),
-        ...visibleIds.filter((id) => !current.includes(id)),
-      ];
-    });
-  }, [visibleTasks]);
-
-  useEffect(() => {
-    if (!tasks) return;
-
-    setTaskOverrides((current) => {
-      const next = { ...current };
-      for (const task of tasks) {
-        const override = next[task.id];
-        if (
-          override &&
-          task.status === override.status &&
-          (task.status !== "DONE" || Boolean(task.completedAt))
-        ) {
-          delete next[task.id];
-        }
-      }
-      return next;
-    });
-  }, [tasks]);
-
-  const orderedTasks = useMemo(() => {
-    const order = new Map(orderedIds.map((id, index) => [id, index]));
-    return [...visibleTasks].sort((a, b) => {
-      const aIndex = order.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const bIndex = order.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      if (aIndex !== bIndex) return aIndex - bIndex;
-      return sortByTaskShape(a, b);
-    });
-  }, [orderedIds, visibleTasks]);
-
-  const grouped = useMemo(() => {
-    const buckets: Record<BoardColumn, TaskDTO[]> = {
-      TODO: [],
-      IN_PROGRESS: [],
-      DONE: [],
-    };
-
-    for (const task of orderedTasks) {
-      if (task.status === "TODO" || task.status === "IN_PROGRESS" || task.status === "DONE") {
-        buckets[task.status].push(task);
+  const typeCounts = useMemo(() => {
+    const map = Object.fromEntries(TYPE_CATEGORIES.map((c) => [c.id, 0])) as Record<TypeId, number>;
+    for (const t of tasks) {
+      for (const c of TYPE_CATEGORIES) {
+        if (matchesType(t, c.id)) map[c.id] += 1;
       }
     }
+    return map;
+  }, [tasks]);
 
-    return buckets;
-  }, [orderedTasks]);
+  const areaCounts = useMemo(() => {
+    const map: Record<string, number> = { all: 0, none: 0 };
+    for (const a of activeAreas) map[a.id] = 0;
+    for (const t of tasks) {
+      if (t.status === "CANCELED") continue;
+      map.all += 1;
+      if (!t.areaId) map.none += 1;
+      else if (map[t.areaId] !== undefined) map[t.areaId] += 1;
+    }
+    return map;
+  }, [tasks, activeAreas]);
 
-  const matrixTasks = useMemo(
-    () => orderedTasks.filter((task) => task.status === "TODO" || task.status === "IN_PROGRESS"),
-    [orderedTasks],
-  );
+  const overview = useMemo(() => {
+    const active = tasks.filter((t) => t.status !== "CANCELED");
+    const inProgress = active.filter((t) => t.status === "IN_PROGRESS").length;
+    const todo = active.filter((t) => t.status === "TODO").length;
+    const done = active.filter((t) => t.status === "DONE").length;
+    const overdue = active.filter((t) => isOverdue(t, today)).length;
 
-  useEffect(() => {
-    dragTargetRef.current = dragTarget;
-  }, [dragTarget]);
+    const dueToday = active.filter((t) => dueYmd(t) === today);
+    const todayDone = dueToday.filter((t) => t.status === "DONE").length;
+    const todayRate = dueToday.length ? Math.round((todayDone / dueToday.length) * 100) : 0;
 
-  const moveTask = useCallback(
-    async (taskId: string, targetColumn: BoardColumn, beforeId: string | null) => {
-      const sourceTask = visibleTasks.find((task) => task.id === taskId);
-      if (!sourceTask) return;
+    const dueWeek = active.filter((t) => {
+      const y = dueYmd(t);
+      return y && y >= startOfWeekYMD(today) && y <= endOfWeekYMD(today);
+    });
+    const weekDone = dueWeek.filter((t) => t.status === "DONE").length;
+    const weekRate = dueWeek.length ? Math.round((weekDone / dueWeek.length) * 100) : 0;
 
-      setOrderedIds((current) => placeTaskId(current, taskId, beforeId, grouped[targetColumn]));
-      setTaskOverrides((current) => ({
-        ...current,
-        [taskId]: {
-          status: targetColumn,
-          completedAt: targetColumn === "DONE" ? new Date().toISOString() : null,
-        },
-      }));
-      setDraggedTaskId(null);
-      setDragTarget(null);
+    return { inProgress, todo, done, overdue, todayRate, weekRate };
+  }, [tasks, today]);
 
-      try {
-        if (targetColumn === "DONE" && sourceTask.status !== "DONE") {
-          await completeTask.mutateAsync(taskId);
-        } else if (sourceTask.status !== targetColumn) {
-          await updateTask.mutateAsync({ id: taskId, status: targetColumn });
-        }
-      } catch {
-        setTaskOverrides((current) => {
-          const next = { ...current };
-          delete next[taskId];
-          return next;
-        });
-      }
-    },
-    [completeTask, grouped, updateTask, visibleTasks],
-  );
+  /** 侧栏筛选后的任务（不含顶栏视图时间窗） */
+  const scoped = useMemo(() => {
+    let list = tasks.filter((t) => matchesType(t, typeId) && matchesArea(t, areaFilter));
 
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      const drag = pointerDragRef.current;
-      if (!drag) return;
-
-      const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-      if (!drag.active && distance > 6) {
-        drag.active = true;
-        setDraggedTaskId(drag.taskId);
-      }
-      if (!drag.active) return;
-
-      const dropEl = document
-        .elementFromPoint(event.clientX, event.clientY)
-        ?.closest<HTMLElement>("[data-task-drop-column]");
-      if (!dropEl) return;
-
-      const column = dropEl.dataset.taskDropColumn as BoardColumn | undefined;
-      if (!column) return;
-
-      const target = {
-        column,
-        beforeId: dropEl.dataset.taskBeforeId || null,
-      };
-      dragTargetRef.current = target;
-      setDragTarget(target);
-    };
-
-    const handleMouseUp = () => {
-      const drag = pointerDragRef.current;
-      pointerDragRef.current = null;
-
-      if (drag?.active && dragTargetRef.current) {
-        void moveTask(drag.taskId, dragTargetRef.current.column, dragTargetRef.current.beforeId);
-        return;
-      }
-
-      setDraggedTaskId(null);
-      setDragTarget(null);
-      dragTargetRef.current = null;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [moveTask]);
-
-  const beginPointerDrag = (event: ReactMouseEvent, taskId: string) => {
-    if (event.button !== 0 || isInteractiveElement(event.target)) return;
-    event.preventDefault();
-    pointerDragRef.current = {
-      taskId,
-      startX: event.clientX,
-      startY: event.clientY,
-      active: false,
-    };
-  };
-
-  const handleDrop = (event: DragEvent, target: DragTarget) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!draggedTaskId) return;
-    void moveTask(draggedTaskId, target.column, target.beforeId);
-  };
-
-  const completeFromButton = (task: TaskDTO) => {
-    setTaskOverrides((current) => ({
-      ...current,
-      [task.id]: { status: "DONE", completedAt: new Date().toISOString() },
-    }));
-    void completeTask.mutateAsync(task.id).catch(() => {
-      setTaskOverrides((current) => {
-        const next = { ...current };
-        delete next[task.id];
-        return next;
+    if (priorities.size < 3) {
+      list = list.filter((t) => priorities.has(t.priority));
+    }
+    if (statusFilter !== "all") {
+      list = list.filter((t) => t.status === statusFilter);
+    }
+    if (dueFilter === "today") list = list.filter((t) => dueYmd(t) === today);
+    if (dueFilter === "week") {
+      list = list.filter((t) => {
+        const y = dueYmd(t);
+        return y && y >= startOfWeekYMD(today) && y <= endOfWeekYMD(today);
       });
+    }
+    if (dueFilter === "overdue") list = list.filter((t) => isOverdue(t, today));
+    if (dueFilter === "none") list = list.filter((t) => !t.dueDate);
+
+    return [...list].sort((a, b) => {
+      const aDone = a.status === "DONE" ? 1 : 0;
+      const bDone = b.status === "DONE" ? 1 : 0;
+      if (aDone !== bDone) return aDone - bDone;
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return aDue - bDue;
+    });
+  }, [tasks, typeId, areaFilter, priorities, statusFilter, dueFilter, today]);
+
+  const listTasks = useMemo(() => {
+    if (view === "schedule") {
+      return scoped.filter(
+        (t) => dueYmd(t) === cursorDate || (!t.dueDate && t.status !== "DONE" && cursorDate === today),
+      );
+    }
+    if (view === "week") {
+      return scoped.filter((t) => {
+        const y = dueYmd(t);
+        return y && y >= weekStart && y <= weekEnd;
+      });
+    }
+    if (view === "month") {
+      return scoped.filter((t) => {
+        const y = dueYmd(t);
+        return y && y.startsWith(monthPrefix);
+      });
+    }
+    return scoped;
+  }, [scoped, view, cursorDate, today, weekStart, weekEnd, monthPrefix]);
+
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDaysYMD(weekStart, i)),
+    [weekStart],
+  );
+
+  const monthCells = useMemo(() => {
+    const first = `${monthPrefix}-01`;
+    const start = startOfWeekYMD(first);
+    return Array.from({ length: 42 }, (_, i) => addDaysYMD(start, i));
+  }, [monthPrefix]);
+
+  const tasksByDay = useMemo(() => {
+    const map = new Map<string, TaskDTO[]>();
+    for (const t of scoped) {
+      const y = dueYmd(t);
+      if (!y) continue;
+      const arr = map.get(y) ?? [];
+      arr.push(t);
+      map.set(y, arr);
+    }
+    return map;
+  }, [scoped]);
+
+  const scheduleDayTasks = useMemo(() => {
+    const dated = scoped.filter((t) => dueYmd(t) === cursorDate);
+    const undated =
+      cursorDate === today
+        ? scoped.filter((t) => !t.dueDate && t.status !== "DONE" && t.status !== "CANCELED")
+        : [];
+    return { dated, undated };
+  }, [scoped, cursorDate, today]);
+
+  const viewTitle =
+    view === "mine"
+      ? "任务列表"
+      : view === "schedule"
+        ? "日程视图"
+        : view === "week"
+          ? "周视图"
+          : "月视图";
+
+  const switchView = (next: ViewTab) => {
+    setView(next);
+    if (next !== "mine") setCursorDate(today);
+  };
+
+  const upcoming = useMemo(() => {
+    return tasks
+      .filter((t) => t.status !== "DONE" && t.status !== "CANCELED" && t.dueDate)
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+      .slice(0, 5);
+  }, [tasks]);
+
+  const planItems = useMemo(() => {
+    const dueToday = tasks.filter(
+      (t) => dueYmd(t) === today && t.status !== "DONE" && t.status !== "CANCELED",
+    );
+    const routineItems = routines
+      .filter((r) => !r.completedToday)
+      .slice(0, 3)
+      .map((r) => ({ title: r.title, sub: "日常习惯" }));
+    const taskItems = dueToday.slice(0, 5).map((t) => ({
+      title: t.title,
+      sub: t.project?.title ?? t.area?.name ?? "任务",
+    }));
+    const merged = [...taskItems, ...routineItems].slice(0, 5);
+    return TIME_SLOTS.map((time, i) => ({
+      time,
+      title: merged[i]?.title ?? "空闲时段",
+      sub: merged[i]?.sub ?? "可添加任务",
+      empty: !merged[i],
+    }));
+  }, [tasks, routines, today]);
+
+  const togglePriority = (p: number) => {
+    setPriorities((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p);
+      else next.add(p);
+      if (next.size === 0) return new Set([1, 2, 3]);
+      return next;
+    });
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const bulkComplete = async () => {
+    const ids = [...selected];
+    for (const id of ids) {
+      const t = tasks.find((x) => x.id === id);
+      if (t && t.status !== "DONE") await complete.mutateAsync(id);
+    }
+    setSelected(new Set());
+    setBulk(false);
+  };
+
+  const addRecommendation = async (rec: (typeof RECOMMENDATIONS)[number]) => {
+    await create.mutateAsync({
+      title: rec.title,
+      notes: rec.notes,
+      priority: defaultTaskPriorityNumber(),
+      dueDate: new Date(`${today}T23:59:00`).toISOString(),
+      xpReward: rec.xp,
+      goldReward: rec.gold,
     });
   };
 
   return (
-    <div className="mx-auto max-w-[1540px] space-y-5 px-4 py-6 md:px-8">
-      <header className="panel-cream framed flex flex-col gap-4 rounded-sm p-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="section-label">
-            <span className="cn text-2xl">任务管理</span>
-            <span className="en text-[11px]">Task Command</span>
-          </div>
-          <div className="mt-2 h-px max-w-xl bg-gradient-to-r from-[var(--gold)] via-[var(--gold)]/40 to-transparent" />
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--fg-muted)]">
-            在看板中拖动任务，在四象限中判断优先级，或进入全部任务做细致整理。
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <TaskViewTabs view={view} onChange={setView} />
-          <Button onClick={() => setShowForm((value) => !value)}>
-            <Plus size={16} />
-            {showForm ? "Close" : "New Task"}
-          </Button>
-        </div>
-      </header>
-
-      <AnimatePresence initial={false}>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <TaskForm onDone={() => setShowForm(false)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {isLoading ? (
-        <div className="panel-cream framed rounded-sm py-16 text-center text-sm text-[var(--fg-muted)]">
-          Loading...
-        </div>
-      ) : view === "board" ? (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {BOARD_COLUMNS.map((column) => (
-            <TaskColumn
-              key={column.key}
-              column={column}
-              tasks={grouped[column.key]}
-              dragTarget={dragTarget}
-              draggedTaskId={draggedTaskId}
-              isBusy={updateTask.isPending || completeTask.isPending}
-              onDragStart={(taskId) => setDraggedTaskId(taskId)}
-              onDragEnd={() => {
-                setDraggedTaskId(null);
-                setDragTarget(null);
-              }}
-              onDragOver={(target) => setDragTarget(target)}
-              onDrop={handleDrop}
-              onPointerDragStart={beginPointerDrag}
-              onComplete={completeFromButton}
-            />
+    <div className={styles.page}>
+      <div className={styles.toolbar}>
+        <div className={styles.viewTabs}>
+          {VIEW_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={view === tab.id ? styles.viewTabActive : styles.viewTab}
+              onClick={() => switchView(tab.id)}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
-      ) : view === "matrix" ? (
-        <EisenhowerMatrix
-          tasks={matrixTasks}
-          isBusy={completeTask.isPending}
-          onComplete={completeFromButton}
-        />
-      ) : (
-        <AllTasksView
-          tasks={allTasks}
-          filter={taskFilter}
-          isBusy={completeTask.isPending}
-          onFilterChange={setTaskFilter}
-          onComplete={completeFromButton}
-        />
-      )}
+        <div className={styles.toolbarActions}>
+          <button type="button" className={styles.btnPrimary} onClick={() => setCreating(true)}>
+            <Plus size={14} /> 添加任务
+          </button>
+          <button
+            type="button"
+            className={styles.btnGhost}
+            onClick={() => {
+              setBulk((v) => !v);
+              setSelected(new Set());
+            }}
+          >
+            {bulk ? "退出批量" : "批量管理"}
+          </button>
+          {bulk && selected.size > 0 ? (
+            <button type="button" className={styles.btnPrimary} onClick={bulkComplete}>
+              完成选中 ({selected.size})
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className={styles.layout}>
+        <aside className={`${styles.panel} ${styles.leftPanel}`}>
+          <h2 className={styles.sectionTitle}>任务类型</h2>
+          <ul className={styles.catList}>
+            {TYPE_CATEGORIES.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  className={typeId === c.id ? styles.catBtnActive : styles.catBtn}
+                  onClick={() => setTypeId(c.id)}
+                >
+                  <span className={styles.catIcon}>{c.icon}</span>
+                  <span className={styles.catLabel}>{c.label}</span>
+                  <span className={styles.catCount}>{typeCounts[c.id]}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className={styles.sideHint}>日/周循环请到「日常习惯」</p>
+
+          <div className={styles.divider} />
+
+          <h2 className={styles.sectionTitle}>人生领域</h2>
+          <ul className={styles.catList}>
+            <li>
+              <button
+                type="button"
+                className={areaFilter === "all" ? styles.catBtnActive : styles.catBtn}
+                onClick={() => setAreaFilter("all")}
+              >
+                <span className={styles.catIcon}>◎</span>
+                <span className={styles.catLabel}>全部领域</span>
+                <span className={styles.catCount}>{areaCounts.all ?? 0}</span>
+              </button>
+            </li>
+            {activeAreas.map((area) => (
+              <li key={area.id}>
+                <button
+                  type="button"
+                  className={areaFilter === area.id ? styles.catBtnActive : styles.catBtn}
+                  onClick={() => setAreaFilter(area.id)}
+                >
+                  <span className={styles.catIcon}>{area.icon || "·"}</span>
+                  <span className={styles.catLabel}>{area.name}</span>
+                  <span className={styles.catCount}>{areaCounts[area.id] ?? 0}</span>
+                </button>
+              </li>
+            ))}
+            <li>
+              <button
+                type="button"
+                className={areaFilter === "none" ? styles.catBtnActive : styles.catBtn}
+                onClick={() => setAreaFilter("none")}
+              >
+                <span className={styles.catIcon}>—</span>
+                <span className={styles.catLabel}>未指定领域</span>
+                <span className={styles.catCount}>{areaCounts.none ?? 0}</span>
+              </button>
+            </li>
+          </ul>
+
+          <div className={styles.divider} />
+
+          <h2 className={styles.sectionTitle}>优先级</h2>
+          <div className={styles.priorityList}>
+            <label className={styles.priorityItem}>
+              <input
+                type="checkbox"
+                checked={priorities.size === 3}
+                onChange={() => setPriorities(new Set([1, 2, 3]))}
+              />
+              <span className={styles.prioDot} style={{ background: "#748078" }} />
+              全部
+            </label>
+            {(
+              [
+                { p: 1, label: "高", color: "#c5554a" },
+                { p: 2, label: "中", color: "#c9a227" },
+                { p: 3, label: "低", color: "#249d6d" },
+              ] as const
+            ).map((item) => (
+              <label key={item.p} className={styles.priorityItem}>
+                <input
+                  type="checkbox"
+                  checked={priorities.has(item.p)}
+                  onChange={() => togglePriority(item.p)}
+                />
+                <span className={styles.prioDot} style={{ background: item.color }} />
+                {item.label}
+              </label>
+            ))}
+          </div>
+
+          <div className={styles.divider} />
+
+          <h2 className={styles.sectionTitle}>过滤器</h2>
+          <div className={styles.filterStack}>
+            <label>
+              任务状态
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              >
+                <option value="all">全部状态</option>
+                <option value="TODO">待开始</option>
+                <option value="IN_PROGRESS">进行中</option>
+                <option value="DONE">已完成</option>
+                <option value="CANCELED">已取消</option>
+              </select>
+            </label>
+            <label>
+              截止时间
+              <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value as DueFilter)}>
+                <option value="all">全部时间</option>
+                <option value="today">今天到期</option>
+                <option value="week">本周到期</option>
+                <option value="overdue">已逾期</option>
+                <option value="none">无截止日期</option>
+              </select>
+            </label>
+          </div>
+        </aside>
+
+        <main className={styles.center}>
+          {view === "mine" ? (
+            <section className={`${styles.panel} ${styles.overview}`}>
+              <div className={styles.statRow}>
+                <div className={styles.statCard} data-tone="green">
+                  <div className={styles.statLabel}>进行中</div>
+                  <div className={styles.statValue}>{overview.inProgress}</div>
+                </div>
+                <div className={styles.statCard} data-tone="blue">
+                  <div className={styles.statLabel}>待开始</div>
+                  <div className={styles.statValue}>{overview.todo}</div>
+                </div>
+                <div className={styles.statCard} data-tone="purple">
+                  <div className={styles.statLabel}>已完成</div>
+                  <div className={styles.statValue}>{overview.done}</div>
+                </div>
+                <div className={styles.statCard} data-tone="red">
+                  <div className={styles.statLabel}>已逾期</div>
+                  <div className={styles.statValue}>{overview.overdue}</div>
+                </div>
+              </div>
+              <div className={styles.rings}>
+                <Ring value={overview.todayRate} label="今日完成度" color="#249d6d" />
+                <Ring value={overview.weekRate} label="本周完成度" color="#5b9ec9" />
+              </div>
+            </section>
+          ) : (
+            <section className={`${styles.panel} ${styles.viewBar}`}>
+              <div className={styles.viewBarNav}>
+                <button
+                  type="button"
+                  className={styles.iconBtn}
+                  onClick={() =>
+                    setCursorDate(
+                      view === "month"
+                        ? shiftMonth(cursorDate, -1)
+                        : view === "week"
+                          ? addDaysYMD(cursorDate, -7)
+                          : addDaysYMD(cursorDate, -1),
+                    )
+                  }
+                  aria-label="上一段"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <div className={styles.viewBarLabel}>
+                  {view === "month"
+                    ? `${cursorDate.slice(0, 4)}年${Number(cursorDate.slice(5, 7))}月`
+                    : view === "week"
+                      ? `${weekStart.slice(5)} — ${weekEnd.slice(5)}`
+                      : cursorDate === today
+                        ? `今天 · ${cursorDate}`
+                        : cursorDate}
+                </div>
+                <button
+                  type="button"
+                  className={styles.iconBtn}
+                  onClick={() =>
+                    setCursorDate(
+                      view === "month"
+                        ? shiftMonth(cursorDate, 1)
+                        : view === "week"
+                          ? addDaysYMD(cursorDate, 7)
+                          : addDaysYMD(cursorDate, 1),
+                    )
+                  }
+                  aria-label="下一段"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              <button type="button" className={styles.btnGhost} onClick={() => setCursorDate(today)}>
+                回到今天
+              </button>
+            </section>
+          )}
+
+          {view === "mine" ? (
+            <section className={`${styles.panel} ${styles.listPanel}`}>
+              <div className={styles.listHead}>
+                <h2 className={styles.listTitle}>{viewTitle}</h2>
+                <div className={styles.listMeta}>
+                  {isLoading ? "加载中…" : `共 ${listTasks.length} 项`}
+                </div>
+              </div>
+              <TaskListBody
+                tasks={listTasks}
+                today={today}
+                bulk={bulk}
+                selected={selected}
+                menuId={menuId}
+                onToggleSelect={toggleSelect}
+                onComplete={(id) => complete.mutate(id)}
+                onEdit={setEditing}
+                onMenu={setMenuId}
+                onDelete={(id) => {
+                  remove.mutate(id);
+                  setMenuId(null);
+                }}
+              />
+            </section>
+          ) : null}
+
+          {view === "schedule" ? (
+            <section className={`${styles.panel} ${styles.listPanel}`}>
+              <div className={styles.listHead}>
+                <h2 className={styles.listTitle}>{viewTitle}</h2>
+                <div className={styles.listMeta}>
+                  当日 {scheduleDayTasks.dated.length} 项
+                  {scheduleDayTasks.undated.length
+                    ? ` · 未排期 ${scheduleDayTasks.undated.length}`
+                    : ""}
+                </div>
+              </div>
+              <div className={styles.dayAgenda}>
+                {TIME_SLOTS.map((slot, idx) => {
+                  const task = scheduleDayTasks.dated[idx];
+                  return (
+                    <div key={slot} className={styles.daySlot}>
+                      <div className={styles.daySlotTime}>{slot}</div>
+                      <div className={styles.daySlotBody}>
+                        {task ? (
+                          <div className={styles.daySlotCard}>
+                            <button
+                              type="button"
+                              className={styles.daySlotMain}
+                              onClick={() => setEditing(task)}
+                            >
+                              <span className={styles.daySlotIcon}>{taskIcon(task)}</span>
+                              <span className={styles.daySlotText}>
+                                <strong>{task.title}</strong>
+                                <small>{formatDue(task, today)}</small>
+                              </span>
+                            </button>
+                            {task.status !== "DONE" ? (
+                              <button
+                                type="button"
+                                className={styles.daySlotDone}
+                                onClick={() => complete.mutate(task.id)}
+                                title="完成"
+                              >
+                                <Check size={14} />
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className={styles.daySlotEmpty}>空闲</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {scheduleDayTasks.undated.length > 0 ? (
+                  <div className={styles.undatedBlock}>
+                    <h3 className={styles.undatedTitle}>未排期任务</h3>
+                    <TaskListBody
+                      tasks={scheduleDayTasks.undated}
+                      today={today}
+                      bulk={bulk}
+                      selected={selected}
+                      menuId={menuId}
+                      onToggleSelect={toggleSelect}
+                      onComplete={(id) => complete.mutate(id)}
+                      onEdit={setEditing}
+                      onMenu={setMenuId}
+                      onDelete={(id) => {
+                        remove.mutate(id);
+                        setMenuId(null);
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {scheduleDayTasks.dated.length === 0 && scheduleDayTasks.undated.length === 0 ? (
+                  <div className={styles.empty}>这一天还没有到期任务。</div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {view === "week" ? (
+            <section className={`${styles.panel} ${styles.listPanel}`}>
+              <div className={styles.listHead}>
+                <h2 className={styles.listTitle}>{viewTitle}</h2>
+                <div className={styles.listMeta}>{listTasks.length} 项分布在本周</div>
+              </div>
+              <div className={styles.weekGrid}>
+                {weekDays.map((day) => {
+                  const dayTasks = tasksByDay.get(day) ?? [];
+                  const isToday = day === today;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      className={isToday ? styles.weekColToday : styles.weekCol}
+                      onClick={() => {
+                        setCursorDate(day);
+                        setView("schedule");
+                      }}
+                    >
+                      <div className={styles.weekColHead}>
+                        <span>{WEEKDAY_LABELS[new Date(day + "T12:00:00").getDay()]}</span>
+                        <strong>{day.slice(8)}</strong>
+                      </div>
+                      <div className={styles.weekColBody}>
+                        {dayTasks.length === 0 ? (
+                          <span className={styles.weekEmpty}>—</span>
+                        ) : (
+                          dayTasks.slice(0, 4).map((t) => (
+                            <span key={t.id} className={styles.weekChip} data-done={t.status === "DONE"}>
+                              {t.title}
+                            </span>
+                          ))
+                        )}
+                        {dayTasks.length > 4 ? (
+                          <span className={styles.weekMore}>+{dayTasks.length - 4}</span>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {view === "month" ? (
+            <section className={`${styles.panel} ${styles.listPanel}`}>
+              <div className={styles.listHead}>
+                <h2 className={styles.listTitle}>{viewTitle}</h2>
+                <div className={styles.listMeta}>{listTasks.length} 项分布在本月</div>
+              </div>
+              <div className={styles.monthWeekHead}>
+                {["一", "二", "三", "四", "五", "六", "日"].map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
+              </div>
+              <div className={styles.monthGrid}>
+                {monthCells.map((day) => {
+                  const inMonth = day.startsWith(monthPrefix);
+                  const dayTasks = tasksByDay.get(day) ?? [];
+                  const isToday = day === today;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      className={[
+                        styles.monthCell,
+                        !inMonth ? styles.monthCellMuted : "",
+                        isToday ? styles.monthCellToday : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={() => {
+                        setCursorDate(day);
+                        setView("schedule");
+                      }}
+                    >
+                      <span className={styles.monthDayNum}>{Number(day.slice(8))}</span>
+                      <div className={styles.monthDots}>
+                        {dayTasks.slice(0, 3).map((t) => (
+                          <span
+                            key={t.id}
+                            className={styles.monthDot}
+                            data-prio={t.priority}
+                            title={t.title}
+                          />
+                        ))}
+                      </div>
+                      {dayTasks.length > 0 ? (
+                        <span className={styles.monthCount}>{dayTasks.length}</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+        </main>
+
+        <aside className={styles.rightStack}>
+          <section className={`${styles.panel} ${styles.rightCard}`}>
+            <h2 className={styles.sectionTitle}>今日计划</h2>
+            <ul className={styles.timeline}>
+              {planItems.map((item) => (
+                <li key={item.time} className={styles.timeItem}>
+                  <span className={styles.timeLabel}>{item.time}</span>
+                  <span className={styles.timeRail}>
+                    <span className={styles.timeDot} />
+                  </span>
+                  <div className={styles.timeBody}>
+                    <div className={styles.timeTitle} style={item.empty ? { opacity: 0.45 } : undefined}>
+                      {item.title}
+                    </div>
+                    <div className={styles.timeSub}>{item.sub}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={`${styles.panel} ${styles.rightCard}`}>
+            <h2 className={styles.sectionTitle}>即将到期</h2>
+            <div className={styles.upcomingList}>
+              {upcoming.length === 0 ? (
+                <div className={styles.empty} style={{ padding: 12 }}>
+                  近期没有到期任务
+                </div>
+              ) : (
+                upcoming.map((t) => (
+                  <div key={t.id} className={styles.upcomingItem}>
+                    <div className={styles.upcomingTitle}>{t.title}</div>
+                    <div className={styles.upcomingDue}>{formatDue(t, today)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className={`${styles.panel} ${styles.rightCard}`}>
+            <h2 className={styles.sectionTitle}>任务推荐</h2>
+            <div className={styles.recoList}>
+              {RECOMMENDATIONS.map((rec) => (
+                <div key={rec.title} className={styles.recoItem}>
+                  <div className={styles.recoBody}>
+                    <div className={styles.recoTitle}>{rec.title}</div>
+                    <div className={styles.recoReward}>+ EXP {rec.xp}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.recoAdd}
+                    disabled={create.isPending}
+                    onClick={() => addRecommendation(rec)}
+                  >
+                    添加
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      {creating ? (
+        <TaskModal title="添加任务" desc="创建一个带奖励与截止时间的任务。" onClose={() => setCreating(false)}>
+          <TaskForm onDone={() => setCreating(false)} />
+        </TaskModal>
+      ) : null}
+
+      {editing ? (
+        <TaskModal title="任务详情" desc="查看并编辑任务内容、奖励与截止时间。" onClose={() => setEditing(null)}>
+          <TaskForm task={editing} onDone={() => setEditing(null)} />
+        </TaskModal>
+      ) : null}
     </div>
   );
 }
 
-function TaskViewTabs({
-  view,
-  onChange,
+function TaskListBody({
+  tasks,
+  today,
+  bulk,
+  selected,
+  menuId,
+  onToggleSelect,
+  onComplete,
+  onEdit,
+  onMenu,
+  onDelete,
 }: {
-  view: TaskView;
-  onChange: (view: TaskView) => void;
+  tasks: TaskDTO[];
+  today: string;
+  bulk: boolean;
+  selected: Set<string>;
+  menuId: string | null;
+  onToggleSelect: (id: string) => void;
+  onComplete: (id: string) => void;
+  onEdit: (task: TaskDTO) => void;
+  onMenu: (id: string | null) => void;
+  onDelete: (id: string) => void;
 }) {
+  if (tasks.length === 0) {
+    return <div className={styles.empty}>暂无任务，点击「添加任务」开始冒险。</div>;
+  }
+
   return (
-    <div className="flex overflow-hidden rounded-sm border border-[var(--gold)]/40 bg-[rgba(255,252,242,0.55)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)]">
-      {VIEW_TABS.map((tab) => {
-        const Icon = tab.icon;
-        const active = view === tab.key;
+    <>
+      <div className={styles.tableHead}>
+        <span>任务</span>
+        <span>优先级</span>
+        <span>进度</span>
+        <span>截止时间</span>
+        <span style={{ textAlign: "right" }}>操作</span>
+      </div>
+      {tasks.map((task) => {
+        const tags = taskTags(task);
+        const pct = progressOf(task);
+        const urgent = isOverdue(task, today) || dueYmd(task) === today;
         return (
-          <button
-            key={tab.key}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(tab.key)}
-            className={cn(
-              "flex min-w-[92px] items-center justify-center gap-2 border-r border-[var(--gold)]/25 px-3 py-2 text-left transition last:border-r-0",
-              active
-                ? "bg-[var(--gold-tint)] text-[var(--gold-deep)] shadow-[inset_0_-2px_0_var(--gold)]"
-                : "text-[var(--fg-muted)] hover:bg-white/55 hover:text-[var(--fg-strong)]",
-            )}
-          >
-            <Icon size={15} />
-            <span className="leading-none">
-              <span className="block font-display text-[13px] font-bold">{tab.cn}</span>
-              <span className="mt-1 block font-display-en text-[8px]">{tab.en}</span>
-            </span>
-          </button>
+          <div key={task.id} className={styles.taskRow}>
+            <div className={styles.taskMain}>
+              {bulk ? (
+                <input
+                  type="checkbox"
+                  checked={selected.has(task.id)}
+                  onChange={() => onToggleSelect(task.id)}
+                  style={{ accentColor: "#249d6d" }}
+                />
+              ) : null}
+              <button
+                type="button"
+                className={styles.taskOpen}
+                onClick={() => onEdit(task)}
+                title="打开任务详情"
+              >
+                <div className={styles.taskIcon}>{taskIcon(task)}</div>
+                <div className={styles.taskText}>
+                  <div className={styles.taskTitleRow}>
+                    <h3 className={styles.taskTitle}>{task.title}</h3>
+                    <div className={styles.taskTags}>
+                      {tags.map((tag) => (
+                        <span key={tag.label} className={styles.taskTag} data-tone={tag.tone}>
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {task.notes ? <p className={styles.taskNotes}>{task.notes}</p> : null}
+                </div>
+              </button>
+            </div>
+
+            <div>
+              <span className={styles.prioBadge} data-level={task.priority}>
+                {priorityLabel(task.priority)}
+              </span>
+            </div>
+
+            <div className={styles.progressCell}>
+              <div className={styles.progressTrack}>
+                <div className={styles.progressFill} style={{ width: `${pct}%` }} />
+              </div>
+              <div className={styles.progressText}>{pct}%</div>
+            </div>
+
+            <div className={urgent ? styles.dueTextUrgent : styles.dueText}>
+              {formatDue(task, today)}
+            </div>
+
+            <div className={styles.rowActions}>
+              {task.status !== "DONE" ? (
+                <button
+                  type="button"
+                  className={styles.iconBtn}
+                  title="完成"
+                  onClick={() => onComplete(task.id)}
+                >
+                  <Check size={14} />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className={styles.iconBtn}
+                title="编辑"
+                onClick={() => onEdit(task)}
+              >
+                <Pencil size={14} />
+              </button>
+              <button
+                type="button"
+                className={styles.iconBtn}
+                title="更多"
+                onClick={() => onMenu(menuId === task.id ? null : task.id)}
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              {menuId === task.id ? (
+                <button
+                  type="button"
+                  className={styles.iconBtn}
+                  title="删除"
+                  onClick={() => onDelete(task.id)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              ) : null}
+            </div>
+          </div>
         );
       })}
-    </div>
+    </>
   );
 }
 
-function TaskColumn({
-  column,
-  tasks,
-  dragTarget,
-  draggedTaskId,
-  isBusy,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-  onPointerDragStart,
-  onComplete,
+function TaskModal({
+  title,
+  desc,
+  onClose,
+  children,
 }: {
-  column: (typeof BOARD_COLUMNS)[number];
-  tasks: TaskDTO[];
-  dragTarget: DragTarget | null;
-  draggedTaskId: string | null;
-  isBusy: boolean;
-  onDragStart: (taskId: string) => void;
-  onDragEnd: () => void;
-  onDragOver: (target: DragTarget) => void;
-  onDrop: (event: DragEvent, target: DragTarget) => void;
-  onPointerDragStart: (event: ReactMouseEvent, taskId: string) => void;
-  onComplete: (task: TaskDTO) => void;
+  title: string;
+  desc: string;
+  onClose: () => void;
+  children: ReactNode;
 }) {
-  const Icon = column.icon;
-  const columnTarget = { column: column.key, beforeId: null };
-  const isColumnTarget = dragTarget?.column === column.key && dragTarget.beforeId === null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
 
-  return (
-    <section
-      data-task-drop-column={column.key}
-      className={cn(
-        "panel-cream framed flex min-h-[560px] flex-col rounded-sm border-2 p-3 transition-all",
-        column.tone,
-        isColumnTarget ? "border-[var(--gold)] shadow-[0_0_0_2px_rgba(182,136,56,0.28)]" : "",
-      )}
-      onDragOver={(event) => {
-        event.preventDefault();
-        onDragOver(columnTarget);
-      }}
-      onDrop={(event) => onDrop(event, columnTarget)}
-    >
-      <div className="mb-3 flex items-start justify-between border-b border-[var(--gold)]/30 pb-3">
-        <div className="flex items-start gap-2">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-sm border border-[var(--gold)]/50 bg-[var(--bg-card)] text-[var(--gold-deep)]">
-            <Icon size={17} />
-          </div>
-          <div>
-            <div className="font-display text-[15px] font-bold text-[var(--fg-strong)]">
-              {column.cn}
-            </div>
-            <div className="font-display-en text-[9px] text-[var(--gold-deep)]">{column.en}</div>
-            <p className="mt-1 text-[11px] leading-5 text-[var(--fg-muted)]">{column.hint}</p>
-          </div>
-        </div>
-        <span className="rounded-sm border border-[var(--gold)]/50 bg-[var(--gold-tint)] px-2 py-1 font-mono text-xs font-bold text-[var(--gold-deep)]">
-          {tasks.length}
-        </span>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2">
-        {tasks.length === 0 ? (
-          <div className="grid min-h-[150px] place-items-center rounded-sm border border-dashed border-[var(--border-strong)]/60 bg-white/35 px-4 text-center text-[12px] text-[var(--fg-subtle)]">
-            拖到这里
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <TaskBoardCard
-              key={task.id}
-              task={task}
-              column={column.key}
-              dragging={draggedTaskId === task.id}
-              dropBefore={dragTarget?.beforeId === task.id}
-              isBusy={isBusy}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onDragOver={(event) => {
-                event.preventDefault();
-                onDragOver({ column: column.key, beforeId: task.id });
-              }}
-              onDrop={(event) => onDrop(event, { column: column.key, beforeId: task.id })}
-              onPointerDragStart={onPointerDragStart}
-              onComplete={onComplete}
-            />
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
-function TaskBoardCard({
-  task,
-  column,
-  dragging,
-  dropBefore,
-  isBusy,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-  onPointerDragStart,
-  onComplete,
-}: {
-  task: TaskDTO;
-  column: BoardColumn;
-  dragging: boolean;
-  dropBefore: boolean;
-  isBusy: boolean;
-  onDragStart: (taskId: string) => void;
-  onDragEnd: () => void;
-  onDragOver: (event: DragEvent) => void;
-  onDrop: (event: DragEvent) => void;
-  onPointerDragStart: (event: ReactMouseEvent, taskId: string) => void;
-  onComplete: (task: TaskDTO) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const remove = useDeleteTask();
-
-  if (editing) {
-    return (
-      <div className="rounded-sm border border-[var(--gold)] bg-[var(--bg-card)] p-3">
-        <TaskEditForm task={task} onDone={() => setEditing(false)} />
-      </div>
-    );
-  }
-
-  return (
-    <article
-      data-task-drop-column={column}
-      data-task-before-id={task.id}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", task.id);
-        onDragStart(task.id);
-      }}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onMouseDown={(event) => onPointerDragStart(event, task.id)}
-      className={cn(
-        "group relative rounded-sm border bg-[rgba(255,252,242,0.9)] p-3 text-left shadow-[0_12px_28px_-24px_rgba(7,20,36,0.68)] transition-all hover:-translate-y-0.5 hover:border-[var(--gold)]",
-        column === "IN_PROGRESS" ? "border-[#3a6b8e]/35" : "border-[var(--border)]",
-        column === "DONE" ? "opacity-82" : "",
-        dragging ? "opacity-45" : "",
-        dropBefore ? "shadow-[0_-3px_0_0_var(--gold),0_12px_28px_-24px_rgba(7,20,36,0.68)]" : "",
-      )}
-    >
-      <div className="flex items-start gap-2">
-        <GripVertical
-          size={16}
-          className="mt-0.5 shrink-0 cursor-grab text-[var(--fg-subtle)] active:cursor-grabbing"
-        />
-        <div className="min-w-0 flex-1">
-          <h3 className="font-display text-[14px] font-bold leading-snug text-[var(--fg-strong)]">
-            {task.title}
-          </h3>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--fg-muted)]">
-            {task.area && (
-              <span className="rounded-sm bg-[var(--gold-tint)] px-1.5 py-0.5">
-                {task.area.icon} {task.area.name}
-              </span>
-            )}
-            {task.project && (
-              <span className="rounded-sm bg-white/65 px-1.5 py-0.5 text-[var(--gold-deep)]">
-                {task.project.title}
-              </span>
-            )}
-            <Badge tone={task.priority === 1 ? "danger" : "default"} className="rounded-sm text-[10px]">
-              {PRIORITY_LABEL[task.priority]}
-            </Badge>
-            {task.dueDate && <span className="font-mono">due {formatShortDate(task.dueDate)}</span>}
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {task.status !== "DONE" && (
-            <button
-              type="button"
-              onClick={() => onComplete(task)}
-              disabled={isBusy}
-              className="grid size-7 place-items-center rounded-sm border border-[var(--border-strong)] text-[var(--gold-deep)] transition hover:bg-[var(--gold-tint)] disabled:opacity-50"
-              title="完成"
-            >
-              <Check size={14} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            disabled={task.status === "DONE"}
-            className="grid size-7 place-items-center rounded-sm text-[var(--fg-muted)] transition hover:bg-[var(--gold-tint)] hover:text-[var(--fg-strong)] disabled:opacity-40"
-            title="编辑"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm(`Delete task "${task.title}"?`)) remove.mutate(task.id);
-            }}
-            className="grid size-7 place-items-center rounded-sm text-[var(--fg-muted)] transition hover:bg-[var(--danger)]/10 hover:text-[var(--danger)]"
-            title="删除"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      {task.notes && (
-        <p className="mt-3 line-clamp-3 rounded-sm border-l-2 border-[var(--gold)]/35 bg-white/45 px-3 py-2 text-[12px] leading-5 text-[var(--fg-muted)]">
-          {task.notes}
-        </p>
-      )}
-
-      <div className="mt-3 flex items-center justify-between border-t border-[var(--gold)]/18 pt-2 text-[11px]">
-        <span className="font-mono text-[var(--accent-strong)]">+{task.xpReward} XP</span>
-        <span className="font-mono text-[var(--attr-gold)]">+{task.goldReward} Gold</span>
-        {task.completedAt && (
-          <span className="font-mono text-[var(--fg-subtle)]">{formatShortDate(task.completedAt)}</span>
-        )}
-      </div>
-    </article>
-  );
-}
-
-type Quadrant = "Q1" | "Q2" | "Q3" | "Q4";
-
-const QUADRANT_META: Record<
-  Quadrant,
-  {
-    cn: string;
-    en: string;
-    action: string;
-    hint: string;
-    tone: string;
-    chip: string;
-  }
-> = {
-  Q1: {
-    cn: "立即处理",
-    en: "Do First",
-    action: "重要且紧急",
-    hint: "优先级高，并且截止日期在 3 天内。",
-    tone: "border-[var(--danger)]/55 bg-[rgba(255,244,240,0.82)]",
-    chip: "bg-[var(--danger)]/12 text-[var(--danger)]",
-  },
-  Q2: {
-    cn: "安排时间",
-    en: "Schedule",
-    action: "重要但不紧急",
-    hint: "优先级高，但还有规划空间。",
-    tone: "border-[var(--gold)]/55 bg-[rgba(255,252,242,0.88)]",
-    chip: "bg-[var(--gold-tint)] text-[var(--gold-deep)]",
-  },
-  Q3: {
-    cn: "压缩处理",
-    en: "Delegate",
-    action: "紧急但不重要",
-    hint: "临近截止，但优先级不是最高。",
-    tone: "border-[#3a6b8e]/45 bg-[rgba(238,247,255,0.84)]",
-    chip: "bg-[#3a6b8e]/12 text-[#2f5d7e]",
-  },
-  Q4: {
-    cn: "暂缓或舍弃",
-    en: "Eliminate",
-    action: "不紧急也不重要",
-    hint: "没有明确压力，可以批量处理。",
-    tone: "border-[var(--border-strong)]/55 bg-[rgba(255,255,255,0.62)]",
-    chip: "bg-[var(--bg-elevated)] text-[var(--fg-muted)]",
-  },
-};
-
-function EisenhowerMatrix({
-  tasks,
-  isBusy,
-  onComplete,
-}: {
-  tasks: TaskDTO[];
-  isBusy: boolean;
-  onComplete: (task: TaskDTO) => void;
-}) {
-  const grouped = useMemo(() => {
-    const buckets: Record<Quadrant, TaskDTO[]> = { Q1: [], Q2: [], Q3: [], Q4: [] };
-    for (const task of tasks) buckets[classify(task)].push(task);
-    return buckets;
-  }, [tasks]);
-
-  return (
-    <section className="panel-cream framed rounded-sm p-4">
-      <div className="mb-4 flex flex-col gap-2 border-b border-[var(--gold)]/25 pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="section-label">
-            <span className="cn text-xl">四象限图</span>
-            <span className="en text-[10px]">Eisenhower Matrix</span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-[var(--fg-muted)]">
-            仅纳入准备开始和正在进行中的任务，用优先级和截止时间拆分行动顺序。
-          </p>
-        </div>
-        <div className="flex gap-2 text-[10px] uppercase tracking-[0.18em] text-[var(--gold-deep)]">
-          <span className="rounded-sm border border-[var(--gold)]/40 bg-white/55 px-2 py-1">
-            High = 重要
-          </span>
-          <span className="rounded-sm border border-[var(--gold)]/40 bg-white/55 px-2 py-1">
-            3 Days = 紧急
-          </span>
-        </div>
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        {(["Q1", "Q2", "Q3", "Q4"] as const).map((quadrant) => (
-          <QuadrantCard
-            key={quadrant}
-            q={quadrant}
-            tasks={grouped[quadrant]}
-            isBusy={isBusy}
-            onComplete={onComplete}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function QuadrantCard({
-  q,
-  tasks,
-  isBusy,
-  onComplete,
-}: {
-  q: Quadrant;
-  tasks: TaskDTO[];
-  isBusy: boolean;
-  onComplete: (task: TaskDTO) => void;
-}) {
-  const meta = QUADRANT_META[q];
-
-  return (
-    <div className={cn("min-h-[240px] rounded-sm border-2 p-3", meta.tone)}>
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <div className="font-display text-[16px] font-bold text-[var(--fg-strong)]">
-            {meta.cn}
-            <span className="ml-2 text-[11px] font-normal text-[var(--fg-muted)]">{meta.action}</span>
-          </div>
-          <div className="font-display-en mt-1 text-[9px] text-[var(--gold-deep)]">
-            {q} · {meta.en}
-          </div>
-          <p className="mt-2 text-[12px] leading-5 text-[var(--fg-muted)]">{meta.hint}</p>
-        </div>
-        <span className={cn("rounded-sm px-2 py-1 font-mono text-xs font-bold", meta.chip)}>
-          {tasks.length}
-        </span>
-      </div>
-
-      {tasks.length === 0 ? (
-        <div className="grid min-h-[120px] place-items-center rounded-sm border border-dashed border-[var(--border-strong)]/50 bg-white/35 text-[12px] text-[var(--fg-subtle)]">
-          暂无任务
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {tasks.map((task) => (
-            <MatrixTaskRow key={task.id} task={task} isBusy={isBusy} onComplete={onComplete} />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function MatrixTaskRow({
-  task,
-  isBusy,
-  onComplete,
-}: {
-  task: TaskDTO;
-  isBusy: boolean;
-  onComplete: (task: TaskDTO) => void;
-}) {
-  return (
-    <li className="flex items-center gap-2 rounded-sm border border-[var(--border)] bg-[rgba(255,252,242,0.86)] p-2 text-[12px] shadow-[0_8px_22px_-20px_rgba(7,20,36,0.55)]">
-      <button
-        type="button"
-        onClick={() => onComplete(task)}
-        disabled={isBusy}
-        className="grid h-6 w-6 shrink-0 place-items-center rounded-sm border border-[var(--border-strong)] text-[var(--gold-deep)] transition hover:border-[var(--gold)] hover:bg-[var(--gold-tint)] disabled:opacity-50"
-        title="完成"
+  return createPortal(
+    <div className={styles.modalBackdrop} onClick={onClose} role="presentation">
+      <div
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
       >
-        <Check size={12} />
-      </button>
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-display font-bold text-[var(--fg-strong)]">{task.title}</div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--fg-subtle)]">
-          <Badge tone={STATUS_META[task.status].tone} className="rounded-sm text-[9px]">
-            {STATUS_META[task.status].cn}
-          </Badge>
-          {task.area && <span>{task.area.icon} {task.area.name}</span>}
-          {task.dueDate && <span className="font-mono">due {formatShortDate(task.dueDate)}</span>}
+        <div className={styles.modalHeader}>
+          <h3 className={styles.modalTitle}>{title}</h3>
+          <p className={styles.modalDesc}>{desc}</p>
         </div>
+        {children}
       </div>
-      <span className="font-mono text-[10px] text-[var(--gold-deep)]">
-        {PRIORITY_LABEL[task.priority]}
-      </span>
-    </li>
+    </div>,
+    document.body,
   );
 }
 
-function AllTasksView({
-  tasks,
-  filter,
-  isBusy,
-  onFilterChange,
-  onComplete,
-}: {
-  tasks: TaskDTO[];
-  filter: "all" | TaskStatus;
-  isBusy: boolean;
-  onFilterChange: (filter: "all" | TaskStatus) => void;
-  onComplete: (task: TaskDTO) => void;
-}) {
-  const filteredTasks = useMemo(
-    () => (filter === "all" ? tasks : tasks.filter((task) => task.status === filter)),
-    [filter, tasks],
+function TaskForm({ task, onDone }: { task?: TaskDTO; onDone: () => void }) {
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [notes, setNotes] = useState(task?.notes ?? "");
+  const [areaId, setAreaId] = useState<string | null>(task?.area?.id ?? null);
+  const [projectId, setProjectId] = useState<string | null>(task?.projectId ?? null);
+  const [priority, setPriority] = useState(
+    task?.priority ?? defaultTaskPriorityNumber(),
   );
-
-  return (
-    <section className="panel-cream framed rounded-sm p-4">
-      <div className="mb-4 flex flex-col gap-3 border-b border-[var(--gold)]/25 pb-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="section-label">
-            <span className="cn text-xl">全部任务</span>
-            <span className="en text-[10px]">All Tasks</span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-[var(--fg-muted)]">
-            查看所有状态的任务，并进行编辑、完成或删除。
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((item) => {
-            const active = filter === item;
-            const label = item === "all" ? "全部" : STATUS_META[item].cn;
-            const count = item === "all" ? tasks.length : tasks.filter((task) => task.status === item).length;
-            return (
-              <button
-                key={item}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onFilterChange(item)}
-                className={cn(
-                  "rounded-sm border px-3 py-1.5 text-xs transition",
-                  active
-                    ? "border-[var(--gold)] bg-[var(--gold-tint)] text-[var(--gold-deep)]"
-                    : "border-[var(--border)] bg-white/45 text-[var(--fg-muted)] hover:border-[var(--gold)] hover:text-[var(--fg-strong)]",
-                )}
-              >
-                {label}
-                <span className="ml-2 font-mono">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {filteredTasks.length === 0 ? (
-        <div className="grid min-h-[220px] place-items-center rounded-sm border border-dashed border-[var(--border-strong)]/60 bg-white/35 text-center text-sm text-[var(--fg-subtle)]">
-          当前筛选下没有任务。
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {filteredTasks.map((task) => (
-            <TaskListRow
-              key={task.id}
-              task={task}
-              isBusy={isBusy}
-              onComplete={onComplete}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function TaskListRow({
-  task,
-  isBusy,
-  onComplete,
-}: {
-  task: TaskDTO;
-  isBusy: boolean;
-  onComplete: (task: TaskDTO) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const remove = useDeleteTask();
-  const done = task.status === "DONE";
-  const canceled = task.status === "CANCELED";
-  const status = STATUS_META[task.status];
-
-  if (editing) {
-    return (
-      <li className="rounded-sm border border-[var(--gold)] bg-[var(--bg-card)] p-4">
-        <TaskEditForm task={task} onDone={() => setEditing(false)} />
-      </li>
-    );
-  }
-
-  return (
-    <li
-      className={cn(
-        "rounded-sm border border-[var(--border)] bg-[rgba(255,252,242,0.88)] px-4 py-3 transition hover:border-[var(--gold)]",
-        done || canceled ? "opacity-70" : "",
-      )}
-    >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <button
-            type="button"
-            disabled={done || canceled || isBusy}
-            onClick={() => onComplete(task)}
-            className={cn(
-              "mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-sm border transition disabled:opacity-50",
-              done
-                ? "border-[var(--success)] bg-[var(--success)]/12 text-[var(--success)]"
-                : "border-[var(--border-strong)] text-[var(--gold-deep)] hover:border-[var(--gold)] hover:bg-[var(--gold-tint)]",
-            )}
-            title="完成"
-          >
-            <Check size={14} />
-          </button>
-          <div className="min-w-0 flex-1">
-            <div className={cn("font-display text-sm font-bold text-[var(--fg-strong)]", done ? "line-through" : "")}>
-              {task.title}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--fg-muted)]">
-              <Badge tone={status.tone} className="rounded-sm text-[10px]">
-                {status.cn}
-              </Badge>
-              {task.area && <span>{task.area.icon} {task.area.name}</span>}
-              {task.project && (
-                <span className="rounded-sm bg-[var(--gold-tint)] px-1.5 py-0.5 text-[10px] text-[var(--gold-deep)]">
-                  {task.project.title}
-                </span>
-              )}
-              <span>{PRIORITY_LABEL[task.priority]}</span>
-              {task.dueDate && <span className="font-mono">due {formatShortDate(task.dueDate)}</span>}
-              {task.completedAt && <span className="font-mono">done {formatShortDate(task.completedAt)}</span>}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center justify-between gap-3 lg:justify-end">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-mono text-[var(--accent-strong)]">+{task.xpReward} XP</span>
-            <span className="font-mono text-[var(--attr-gold)]">+{task.goldReward} Gold</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              disabled={done}
-              className="grid size-8 place-items-center rounded-sm text-[var(--fg-muted)] transition hover:bg-[var(--gold-tint)] hover:text-[var(--fg-strong)] disabled:opacity-40"
-              title="编辑"
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm(`Delete task "${task.title}"?`)) remove.mutate(task.id);
-              }}
-              className="grid size-8 place-items-center rounded-sm text-[var(--fg-muted)] transition hover:bg-[var(--danger)]/10 hover:text-[var(--danger)]"
-              title="删除"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {task.notes && (
-        <div className="mt-3 whitespace-pre-wrap rounded-sm border-l-2 border-[var(--gold)]/30 bg-white/45 px-3 py-2 text-xs leading-5 text-[var(--fg-muted)]">
-          {task.notes}
-        </div>
-      )}
-    </li>
-  );
-}
-
-function TaskForm({ onDone }: { onDone: () => void }) {
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [areaId, setAreaId] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [priority, setPriority] = useState(2);
-  const [dueDate, setDueDate] = useState("");
-  const [xpReward, setXpReward] = useState(10);
-  const [goldReward, setGoldReward] = useState(5);
+  const [dueDate, setDueDate] = useState(task?.dueDate ? task.dueDate.slice(0, 10) : "");
+  const [xpReward, setXpReward] = useState(task?.xpReward ?? 10);
+  const [goldReward, setGoldReward] = useState(task?.goldReward ?? 5);
 
   const create = useCreateTask();
+  const update = useUpdateTask();
+  const pending = create.isPending || update.isPending;
 
   const submit = async () => {
     if (!title.trim()) return;
-    await create.mutateAsync({
+    const body = {
       title: title.trim(),
       notes: notes.trim() || null,
       areaId,
       projectId,
       priority,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      dueDate: dueDate ? new Date(`${dueDate}T23:59:00`).toISOString() : null,
       xpReward,
       goldReward,
-    });
+    };
+    if (task) await update.mutateAsync({ id: task.id, ...body });
+    else await create.mutateAsync(body);
     onDone();
   };
 
   return (
-    <Card variant="cream-framed">
-      <CardHeader>
-        <CardTitle>New Task</CardTitle>
-        <CardDescription>A one-shot action with a deadline.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid gap-1.5">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Book annual health checkup"
-            autoFocus
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Notes (optional)</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Project (optional) · 挂载到项目</Label>
-          <ProjectSelect value={projectId} onChange={setProjectId} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-1.5">
-            <Label>Life Area</Label>
-            <AreaSelect value={areaId} onChange={setAreaId} />
+    <>
+      <div className={styles.modalBody}>
+        <div className={styles.formGrid}>
+          <label>
+            标题
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="例如：完成周报"
+              autoFocus
+            />
+          </label>
+          <label>
+            备注
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="可选说明" />
+          </label>
+          <label>
+            挂载项目（主线）
+            <ProjectSelect value={projectId} onChange={setProjectId} />
+          </label>
+          <div className={styles.formRow}>
+            <label>
+              人生领域
+              <AreaSelect value={areaId} onChange={setAreaId} />
+            </label>
+            <label>
+              优先级
+              <select value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
+                <option value={1}>高</option>
+                <option value={2}>中</option>
+                <option value={3}>低</option>
+              </select>
+            </label>
           </div>
-          <div className="grid gap-1.5">
-            <Label>Priority</Label>
-            <Select value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
-              <option value={1}>1 — High</option>
-              <option value={2}>2 — Normal</option>
-              <option value={3}>3 — Low</option>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Due date (optional)</Label>
-            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="grid gap-1.5">
-              <Label>XP</Label>
-              <Input
+          <div className={styles.formRow3}>
+            <label>
+              截止日期
+              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </label>
+            <label>
+              XP
+              <input
                 type="number"
                 min={0}
                 value={xpReward}
                 onChange={(e) => setXpReward(Number(e.target.value))}
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Gold</Label>
-              <Input
+            </label>
+            <label>
+              Gold
+              <input
                 type="number"
                 min={0}
                 value={goldReward}
                 onChange={(e) => setGoldReward(Number(e.target.value))}
               />
-            </div>
+            </label>
           </div>
         </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onDone}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={create.isPending || !title.trim()}>
-            {create.isPending ? "Saving..." : "Create"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className={styles.modalFooter}>
+        <button type="button" className={styles.btnGhost} onClick={onDone}>
+          取消
+        </button>
+        <button
+          type="button"
+          className={styles.btnPrimary}
+          disabled={pending || !title.trim()}
+          onClick={submit}
+        >
+          {pending ? "保存中…" : task ? "保存" : "创建"}
+        </button>
+      </div>
+    </>
   );
-}
-
-function TaskEditForm({ task, onDone }: { task: TaskDTO; onDone: () => void }) {
-  const [title, setTitle] = useState(task.title);
-  const [notes, setNotes] = useState(task.notes ?? "");
-  const [areaId, setAreaId] = useState<string | null>(task.area?.id ?? null);
-  const [projectId, setProjectId] = useState<string | null>(task.projectId ?? null);
-  const [priority, setPriority] = useState(task.priority);
-  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : "");
-  const [xpReward, setXpReward] = useState(task.xpReward);
-  const [goldReward, setGoldReward] = useState(task.goldReward);
-
-  const update = useUpdateTask();
-
-  const submit = async () => {
-    if (!title.trim()) return;
-    await update.mutateAsync({
-      id: task.id,
-      title: title.trim(),
-      notes: notes.trim() || null,
-      areaId,
-      projectId,
-      priority,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-      xpReward,
-      goldReward,
-    });
-    onDone();
-  };
-
-  return (
-    <div className="grid gap-3">
-      <div className="flex items-center justify-between">
-        <div className="font-display-en text-[10px] text-[var(--gold-deep)]">Edit Task</div>
-        <Button size="icon" variant="ghost" onClick={onDone} title="Cancel">
-          <X size={14} />
-        </Button>
-      </div>
-      <div className="grid gap-1.5">
-        <Label>Title</Label>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-      </div>
-      <div className="grid gap-1.5">
-        <Label>Notes</Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-      </div>
-      <div className="grid gap-1.5">
-        <Label>Project · 挂载到项目</Label>
-        <ProjectSelect value={projectId} onChange={setProjectId} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
-          <Label>Life Area</Label>
-          <AreaSelect value={areaId} onChange={setAreaId} />
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Priority</Label>
-          <Select value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
-            <option value={1}>1 — High</option>
-            <option value={2}>2 — Normal</option>
-            <option value={3}>3 — Low</option>
-          </Select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Due date (optional)</Label>
-          <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="grid gap-1.5">
-            <Label>XP</Label>
-            <Input
-              type="number"
-              min={0}
-              value={xpReward}
-              onChange={(e) => setXpReward(Number(e.target.value))}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>Gold</Label>
-            <Input
-              type="number"
-              min={0}
-              value={goldReward}
-              onChange={(e) => setGoldReward(Number(e.target.value))}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button onClick={submit} disabled={update.isPending || !title.trim()}>
-          {update.isPending ? "Saving..." : "Save"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function applyOverride(task: TaskDTO, override?: TaskOverride): TaskDTO {
-  if (!override) return task;
-  return {
-    ...task,
-    status: override.status,
-    completedAt: override.completedAt,
-  };
-}
-
-function isRecentDone(task: TaskDTO, now = Date.now()) {
-  if (task.status !== "DONE" || !task.completedAt) return false;
-  const completed = new Date(task.completedAt).getTime();
-  return Number.isFinite(completed) && now - completed <= DONE_WINDOW_MS;
-}
-
-function classify(task: TaskDTO): Quadrant {
-  const important = task.priority === 1;
-  const urgent = isUrgent(task.dueDate);
-  if (important && urgent) return "Q1";
-  if (important && !urgent) return "Q2";
-  if (!important && urgent) return "Q3";
-  return "Q4";
-}
-
-function isUrgent(dueDate: string | null): boolean {
-  if (!dueDate) return false;
-  const due = new Date(dueDate).getTime();
-  if (!Number.isFinite(due)) return false;
-  const threeDays = 3 * 24 * 60 * 60 * 1000;
-  return due - Date.now() <= threeDays;
-}
-
-function sortForAllTasks(a: TaskDTO, b: TaskDTO) {
-  if (STATUS_ORDER[a.status] !== STATUS_ORDER[b.status]) {
-    return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-  }
-
-  if (a.status === "DONE" && b.status === "DONE") {
-    const aCompleted = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-    const bCompleted = b.completedAt ? new Date(b.completedAt).getTime() : 0;
-    if (aCompleted !== bCompleted) return bCompleted - aCompleted;
-  }
-
-  return sortByTaskShape(a, b);
-}
-
-function sortByTaskShape(a: TaskDTO, b: TaskDTO) {
-  const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-  const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-  if (aDue !== bDue) return aDue - bDue;
-  if (a.priority !== b.priority) return a.priority - b.priority;
-  return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-}
-
-function placeTaskId(
-  currentOrder: string[],
-  taskId: string,
-  beforeId: string | null,
-  targetColumnTasks: TaskDTO[],
-) {
-  const withoutTask = currentOrder.filter((id) => id !== taskId);
-  if (beforeId && beforeId !== taskId) {
-    const beforeIndex = withoutTask.indexOf(beforeId);
-    if (beforeIndex >= 0) {
-      return [
-        ...withoutTask.slice(0, beforeIndex),
-        taskId,
-        ...withoutTask.slice(beforeIndex),
-      ];
-    }
-  }
-
-  const lastTargetId = targetColumnTasks
-    .map((task) => task.id)
-    .filter((id) => id !== taskId)
-    .at(-1);
-  if (!lastTargetId) return [...withoutTask, taskId];
-
-  const afterIndex = withoutTask.indexOf(lastTargetId);
-  if (afterIndex < 0) return [...withoutTask, taskId];
-  return [
-    ...withoutTask.slice(0, afterIndex + 1),
-    taskId,
-    ...withoutTask.slice(afterIndex + 1),
-  ];
-}
-
-function isInteractiveElement(target: EventTarget) {
-  return target instanceof Element
-    ? Boolean(target.closest("button, a, input, textarea, select, option"))
-    : false;
-}
-
-function formatShortDate(value: string) {
-  return new Date(value).toLocaleDateString("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-  });
 }

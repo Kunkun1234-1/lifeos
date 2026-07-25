@@ -3,7 +3,9 @@ import type { CommissionItem } from "./commissions";
 export type UserSnapshot = {
   id: string;
   name: string;
+  email: string | null;
   class: string;
+  timezone: string;
   visionStatement: string | null;
   coreValues: string[];
   identityStatements: string[];
@@ -13,6 +15,7 @@ export type UserSnapshot = {
   region: string | null;
   motto: string | null;
   onboardedAt: string | null;
+  createdAt: string;
   totalXp: number;
   xpByArea: Record<string, number>;
   level: number;
@@ -65,6 +68,13 @@ export type TaskDTO = {
   createdAt: string;
 };
 
+export type HabitTickDTO = {
+  id: string;
+  direction: "+" | "-";
+  date: string; // YYYY-MM-DD in user timezone
+  createdAt: string;
+};
+
 export type HabitDTO = {
   id: string;
   title: string;
@@ -76,6 +86,8 @@ export type HabitDTO = {
   goldPerTick: number;
   areaId: string | null;
   area: AreaDTO | null;
+  /** Recent ticks (default ~42 days) for check-in grids. */
+  ticks?: HabitTickDTO[];
 };
 
 export type RoutineDTO = {
@@ -133,9 +145,11 @@ export type KeyResultDTO = {
   order: number;
 };
 
+export type GoalType = "okr" | "milestone" | "main";
+
 export type GoalDTO = {
   id: string;
-  type: string;
+  type: GoalType | string;
   objective: string;
   notes: string | null;
   timeframe: string;
@@ -525,10 +539,20 @@ export type InventorySnapshotDTO = {
   };
 };
 
-export type NoteKind = "note" | "highlight" | "quote" | "link" | "inspiration";
+export type NoteKind =
+  | "note"
+  | "folder"
+  | "highlight"
+  | "quote"
+  | "link"
+  | "inspiration";
 
 export type NoteDTO = {
   id: string;
+  parentId: string | null;
+  position: number;
+  icon: string | null;
+  coverUrl: string | null;
   kind: NoteKind;
   title: string;
   body: string;
@@ -546,6 +570,21 @@ export type NoteDTO = {
   goal: { id: string; objective: string } | null;
   createdAt: string;
   updatedAt: string;
+};
+
+/** Lightweight node for the knowledge-base page tree (no body). */
+export type NoteTreeNodeDTO = {
+  id: string;
+  parentId: string | null;
+  position: number;
+  icon: string | null;
+  kind: NoteKind;
+  title: string;
+  pinned: boolean;
+  archived: boolean;
+  childCount: number;
+  updatedAt: string;
+  children?: NoteTreeNodeDTO[];
 };
 
 export type DecisionDTO = {

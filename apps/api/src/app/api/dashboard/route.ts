@@ -174,7 +174,9 @@ export async function GET() {
     user: {
       id: user.id,
       name: user.name,
+      email: user.email ?? null,
       class: user.class,
+      timezone: user.timezone ?? "Asia/Shanghai",
       visionStatement: user.visionStatement,
       coreValues: parseList(user.coreValues),
       identityStatements: parseList(user.identityStatements),
@@ -184,6 +186,7 @@ export async function GET() {
       region: user.region ?? null,
       motto: user.motto ?? null,
       onboardedAt: user.onboardedAt ? user.onboardedAt.toISOString() : null,
+      createdAt: user.createdAt.toISOString(),
       totalXp: xpSnapshot.totalXp,
       xpByArea: xpSnapshot.byArea,
       level: leveling.level,

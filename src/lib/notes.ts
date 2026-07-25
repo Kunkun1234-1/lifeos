@@ -1,10 +1,16 @@
-import type { NoteDTO, NoteKind } from "./types";
+import type { NoteDTO, NoteKind, NoteTreeNodeDTO } from "./types";
 
 export const NOTE_TITLE_MAX_LENGTH = 200;
 export const NOTE_BODY_MAX_LENGTH = 100_000;
+export const NOTE_MAX_DEPTH = 8;
+export const NOTE_ICON_MAX_LENGTH = 16;
 
 type DBNote = {
   id: string;
+  parentId?: string | null;
+  position?: number;
+  icon?: string | null;
+  coverUrl?: string | null;
   kind: string;
   title: string;
   body: string;
@@ -60,7 +66,7 @@ export function normalizeNoteTitle(input: NoteTitleInput): string {
     input.sourceTitle?.trim() ||
     firstBodyLine(input.body) ||
     input.sourceUrl?.trim() ||
-    "未命名笔记";
+    "未命名页面";
 
   return truncateTitle(candidate);
 }
@@ -99,6 +105,10 @@ export function tagFilterPattern(tag: string): string {
 export function serializeNote(n: DBNote): NoteDTO {
   return {
     id: n.id,
+    parentId: n.parentId ?? null,
+    position: n.position ?? 0,
+    icon: n.icon ?? null,
+    coverUrl: n.coverUrl ?? null,
     kind: (n.kind as NoteKind) ?? "note",
     title: n.title,
     body: n.body,
@@ -117,4 +127,120 @@ export function serializeNote(n: DBNote): NoteDTO {
     createdAt: n.createdAt.toISOString(),
     updatedAt: n.updatedAt.toISOString(),
   };
+}
+
+export function serializeNoteTreeNode(
+  n: {
+    id: string;
+    parentId: string | null;
+    position: number;
+    icon: string | null;
+    kind: string;
+    title: string;
+    pinned: boolean;
+    archived: boolean;
+    updatedAt: Date;
+    _count?: { children: number };
+  }
+): NoteTreeNodeDTO {
+  return {
+    id: n.id,
+    parentId: n.parentId,
+    position: n.position,
+    icon: n.icon,
+    kind: (n.kind as NoteKind) ?? "note",
+    title: n.title,
+    pinned: n.pinned,
+    archived: n.archived,
+    childCount: n._count?.children ?? 0,
+    updatedAt: n.updatedAt.toISOString(),
+  };
+}
+
+/** Walk ancestors to compute 0-based depth of a node (roots = 0). */
+export async function getNoteDepth(
+  getParentId: (id: string) => Promise<string | null | undefined>,
+  noteId: string | null | undefined
+): Promise<number> {
+  if (!noteId) return -1;
+  let depth = 0;
+  let current: string | null | undefined = noteId;
+  const seen = new Set<string>();
+  while (current) {
+    if (seen.has(current)) throw new Error("CYCLE");
+    seen.add(current);
+    depth += 1;
+    if (depth > NOTE_MAX_DEPTH + 2) throw new Error("CYCLE");
+    current = await getParentId(current);
+  }
+  return depth - 1;
+}
+
+/**
+ * Returns true if `candidateParentId` is the same as `noteId` or a descendant
+ * of it (would create a cycle if used as the new parent).
+ */
+export async function wouldCreateNoteCycle(
+  getParentId: (id: string) => Promise<string | null | undefined>,
+  noteId: string,
+  candidateParentId: string | null
+): Promise<boolean> {
+  if (!candidateParentId) return false;
+  if (candidateParentId === noteId) return true;
+  let current: string | null | undefined = candidateParentId;
+  const seen = new Set<string>([noteId]);
+  while (current) {
+    if (seen.has(current)) return true;
+    seen.add(current);
+    if (seen.size > NOTE_MAX_DEPTH + 4) return true;
+    current = await getParentId(current);
+  }
+  return false;
+}
+
+/** Build nested tree from a flat node list (sorted by position). */
+export function buildNoteForest(nodes: NoteTreeNodeDTO[]): NoteTreeNodeDTO[] {
+  const byParent = new Map<string | null, NoteTreeNodeDTO[]>();
+  for (const node of nodes) {
+    const key = node.parentId;
+    const list = byParent.get(key) ?? [];
+    list.push({ ...node, children: [] });
+    byParent.set(key, list);
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => a.position - b.position || a.title.localeCompare(b.title));
+  }
+
+  const attach = (parentId: string | null): NoteTreeNodeDTO[] => {
+    const list = byParent.get(parentId) ?? [];
+    return list.map((node) => ({
+      ...node,
+      children: attach(node.id),
+    }));
+  };
+
+  return attach(null);
+}
+
+/** Count descendants of a node in a flat list (excluding itself). */
+export function countNoteDescendants(
+  nodes: Pick<NoteTreeNodeDTO, "id" | "parentId">[],
+  rootId: string
+): number {
+  const childrenOf = new Map<string, string[]>();
+  for (const n of nodes) {
+    if (!n.parentId) continue;
+    const list = childrenOf.get(n.parentId) ?? [];
+    list.push(n.id);
+    childrenOf.set(n.parentId, list);
+  }
+  let count = 0;
+  const stack = [...(childrenOf.get(rootId) ?? [])];
+  while (stack.length) {
+    const id = stack.pop()!;
+    count += 1;
+    const kids = childrenOf.get(id);
+    if (kids) stack.push(...kids);
+  }
+  return count;
 }

@@ -48,3 +48,47 @@ export function ymdToDate(ymd: string, endOfDay = false): Date {
     ? new Date(y, m - 1, d, 23, 59, 59, 999)
     : new Date(y, m - 1, d, 0, 0, 0, 0);
 }
+
+/** Format an instant as YYYY-MM-DD in a given IANA timezone. */
+export function formatYMDInTz(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+/**
+ * Pick a UTC instant that falls on `ymd` around midday in `timeZone`.
+ * Used so HabitTick.createdAt lands on the intended civil day.
+ */
+export function middayInTz(ymd: string, timeZone: string): Date {
+  let guess = new Date(`${ymd}T12:00:00.000Z`);
+  for (let i = 0; i < 36; i++) {
+    const got = formatYMDInTz(guess, timeZone);
+    if (got === ymd) return guess;
+    guess = new Date(guess.getTime() + (got < ymd ? 1 : -1) * 60 * 60 * 1000);
+  }
+  return guess;
+}
+
+/** Inclusive UTC search window covering a civil day in `timeZone` (±1 day padding). */
+export function daySearchWindow(ymd: string, timeZone: string): { start: Date; end: Date } {
+  const mid = middayInTz(ymd, timeZone);
+  return {
+    start: new Date(mid.getTime() - 36 * 60 * 60 * 1000),
+    end: new Date(mid.getTime() + 36 * 60 * 60 * 1000),
+  };
+}
+
+export function daysInRange(startYmd: string, endYmd: string): string[] {
+  const out: string[] = [];
+  let cursor = startYmd;
+  while (cursor <= endYmd) {
+    out.push(cursor);
+    cursor = addDaysYMD(cursor, 1);
+    if (out.length > 62) break;
+  }
+  return out;
+}

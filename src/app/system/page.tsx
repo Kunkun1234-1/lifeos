@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
-import Image from "next/image";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -21,15 +20,11 @@ import {
   GitBranch,
   Hammer,
   Library,
-  PenLine,
   ScrollText,
-  ShieldCheck,
   Sparkles,
   Target,
   Trophy,
 } from "lucide-react";
-import { AvatarFrame } from "@/components/avatar-frame";
-import { useUser } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 
 type SystemModule = {
@@ -40,7 +35,6 @@ type SystemModule = {
   group: string;
   icon: LucideIcon;
   tone: string;
-  signal?: boolean;
 };
 
 const MAIN_MODULES: SystemModule[] = [
@@ -52,7 +46,6 @@ const MAIN_MODULES: SystemModule[] = [
     group: "执行",
     icon: CheckSquare,
     tone: "#d9b963",
-    signal: true,
   },
   {
     href: "/habits",
@@ -71,7 +64,6 @@ const MAIN_MODULES: SystemModule[] = [
     group: "执行",
     icon: CalendarDays,
     tone: "#76b6d3",
-    signal: true,
   },
   {
     href: "/review",
@@ -108,7 +100,6 @@ const MAIN_MODULES: SystemModule[] = [
     group: "战略",
     icon: GitBranch,
     tone: "#8ac6b1",
-    signal: true,
   },
   {
     href: "/notes",
@@ -145,7 +136,6 @@ const MAIN_MODULES: SystemModule[] = [
     group: "奖励",
     icon: Sparkles,
     tone: "#d9a3e8",
-    signal: true,
   },
   {
     href: "/inventory",
@@ -224,161 +214,35 @@ const QUICK_MODULES: SystemModule[] = [
   },
 ];
 
-const PROFILE_ROWS = [
-  { label: "职业", key: "class" },
-  { label: "生日", key: "birthday" },
-  { label: "地区", key: "region" },
-] as const;
-
 export default function SystemPage() {
-  const { data: user } = useUser();
   const [activeModule, setActiveModule] = useState<SystemModule>(MAIN_MODULES[0]);
-
-  const xpProgress = Math.max(
-    0,
-    Math.min(100, Math.round((user?.levelProgress ?? 0) * 100)),
-  );
-
-  const profileValues = useMemo(
-    () => ({
-      class: user?.class || "Scholar",
-      birthday: formatBirthday(user?.birthday),
-      region: user?.region || "未设置",
-    }),
-    [user?.birthday, user?.class, user?.region],
-  );
-
-  const motto =
-    user?.motto ||
-    "旅行的意义不在于终点，而在于沿途的选择与风景。";
 
   return (
     <div className="relative mx-auto min-h-[calc(100vh-82px)] max-w-[1800px] px-4 py-3 md:px-8">
-      <section className="system-terminal-shell grid min-h-[calc(100vh-106px)] grid-cols-1 gap-4 p-3 lg:grid-cols-[350px_minmax(0,1fr)] xl:grid-cols-[390px_minmax(0,1fr)]">
-        <aside className="system-profile-card min-h-0 p-5">
-          <div className="flex items-center justify-between border-b border-[#d8c593]/30 pb-4">
-            <div>
-              <div className="font-display text-[22px] font-bold tracking-[0.12em] text-[#fff5cb]">
-                个人终端
-              </div>
-              <div className="font-display-en text-[10px] tracking-[0.32em] text-[#d8c593]/70">
-                Personal Terminal
-              </div>
-            </div>
-            <div className="grid h-10 w-10 place-items-center border border-[#d8c593]/45 bg-[#d8c593]/10 text-[#e8d9a8]">
-              <ShieldCheck size={20} />
-            </div>
-          </div>
-
-          <div className="mt-5 flex flex-col items-center text-center">
-            <div className="system-avatar-ring">
-              <AvatarFrame
-                size={96}
-                src={user?.avatarUrl || "/lifeos/profile_avatar.png"}
-                style={user?.equippedFrame?.style ?? null}
-                alt={user?.name ?? "Dev Player"}
-              />
-              <div className="absolute bottom-2 right-1 rounded-sm border border-[#d8c593]/70 bg-[#172437] px-2 py-1 font-display text-[14px] font-bold text-[#ffe7a0] shadow-[0_10px_24px_-16px_rgba(0,0,0,0.9)]">
-                Lv.{user?.level ?? 1}
-              </div>
-            </div>
-
-            <div className="mt-3 font-display text-[25px] font-bold text-[#fff1c3]">
-              {user?.name ?? "Dev Player"}
-            </div>
-            <div className="mt-1 flex items-center gap-2 font-display text-[13px] text-[#d8c593]/80">
-              <Sparkles size={14} />
-              <span>{user?.equippedTitle?.name ?? "星海守望者"}</span>
-              <Sparkles size={14} />
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            <div>
-              <div className="mb-2 flex items-end justify-between">
-                <span className="font-display text-[13px] text-[#d8c593]/80">等级经验</span>
-                <span className="font-mono text-[12px] text-[#efe2b6]">
-                  {(user?.xpIntoLevel ?? 0).toLocaleString()} / {(user?.xpForNext ?? 100).toLocaleString()}
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden bg-white/12 shadow-[inset_0_0_0_1px_rgba(216,197,147,0.24)]">
-                <div
-                  className="h-full bg-gradient-to-r from-[#d4a94d] via-[#fff1a8] to-[#76b6d3] shadow-[0_0_18px_rgba(212,169,77,0.45)]"
-                  style={{ width: `${xpProgress}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {PROFILE_ROWS.map(({ label, key }) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between border-b border-[#d8c593]/14 pb-2 font-display text-[13px]"
-                >
-                  <span className="text-[#d8c593]/72">{label}</span>
-                  <span className="max-w-[190px] truncate text-[#f7ebc3]">
-                    {profileValues[key]}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <blockquote className="relative border-l border-[#d8c593]/55 pl-4 font-display text-[13px] leading-7 text-[#f3e8c4]">
-              <span className="absolute -left-1.5 top-2 h-2.5 w-2.5 rotate-45 bg-[#d8c593]" />
-              “{motto}”
-            </blockquote>
-
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <CurrencyChip
-                label="Gold"
-                value={user?.currency.gold ?? 0}
-                imageSrc="/lifeos/inventory/resource-gold.png"
-              />
-              <CurrencyChip
-                label="Fate"
-                value={user?.currency.fate ?? 0}
-                imageSrc="/lifeos/inventory/resource-fate.png"
-              />
-              <CurrencyChip
-                label="Gems"
-                value={user?.currency.gems ?? 0}
-                imageSrc="/lifeos/inventory/resource-gems.png"
-              />
-            </div>
-          </div>
-
-          <Link
-            href="/settings"
-            className="mt-6 flex items-center justify-between border border-[#d8c593]/35 bg-white/8 px-3 py-3 font-display text-[13px] text-[#f7ebc3] transition hover:border-[#e8c977]/75 hover:bg-[#e8c977]/10"
-          >
-            <span>编辑个人终端</span>
-            <PenLine size={15} className="text-[#e8c977]" />
-          </Link>
-        </aside>
-
+      <section className="system-terminal-shell grid min-h-[calc(100vh-106px)] grid-cols-1 gap-4 p-3">
         <div className="flex min-w-0 flex-col gap-4">
           <header className="flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center text-[#e8d9a8]">
+                <span className="grid h-9 w-9 place-items-center text-[#249d6d]">
                   <CompassMark />
                 </span>
                 <div>
-                  <h1 className="font-display text-[26px] font-bold tracking-[0.16em] text-[#fff5cb] md:text-[30px]">
+                  <h1 className="font-display text-[26px] font-bold tracking-[0.16em] text-[#15231c] md:text-[30px]">
                     系统模块
                   </h1>
-                  <div className="font-display-en text-[10px] tracking-[0.35em] text-[#d8c593]/68">
+                  <div className="font-display-en text-[10px] tracking-[0.35em] text-[#748078]">
                     System Modules
                   </div>
                 </div>
               </div>
-              <p className="mt-2 max-w-2xl font-display text-[12px] leading-6 text-[#f4e8c8]/74">
+              <p className="mt-2 max-w-2xl font-display text-[12px] leading-6 text-[#65736c]">
                 将任务、日程、战略、知识、奖励和数据收束到同一个终端视图。选择任意模块进入对应系统。
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-start border border-[#d8c593]/30 bg-[#081727]/35 px-3 py-2 font-display-en text-[10px] tracking-[0.22em] text-[#d8c593]/80 md:self-auto">
-              <span className="h-2 w-2 rounded-full bg-[#8ac6b1] shadow-[0_0_12px_rgba(138,198,177,0.7)]" />
+            <div className="flex items-center gap-2 self-start border border-[#9db887] bg-[#d7e5c2]/85 px-3 py-2 font-display-en text-[10px] tracking-[0.22em] text-[#2f4a3b] md:self-auto">
+              <span className="h-2 w-2 rounded-full bg-[#249d6d] shadow-[0_0_10px_rgba(36,157,109,0.45)]" />
               System Online
             </div>
           </header>
@@ -395,11 +259,11 @@ export default function SystemPage() {
           </div>
 
           <footer className="system-quickdock">
-            <div className="hidden min-w-[150px] border-r border-[#d8c593]/20 pr-5 md:block">
-              <div className="font-display text-[16px] font-bold tracking-[0.14em] text-[#fff1c3]">
+            <div className="hidden min-w-[150px] border-r border-[#b7c9a0] pr-5 md:block">
+              <div className="font-display text-[16px] font-bold tracking-[0.14em] text-[#15231c]">
                 快捷入口
               </div>
-              <div className="font-display-en text-[9px] tracking-[0.24em] text-[#d8c593]/60">
+              <div className="font-display-en text-[9px] tracking-[0.24em] text-[#5f7166]">
                 Quick Access
               </div>
             </div>
@@ -413,14 +277,14 @@ export default function SystemPage() {
                     href={item.href}
                     onMouseEnter={() => setActiveModule(item)}
                     onFocus={() => setActiveModule(item)}
-                    className="group flex min-w-0 flex-col items-center gap-2 border border-transparent px-2 py-2 text-center transition hover:border-[#d8c593]/36 hover:bg-white/8 focus:outline-none focus-visible:border-[#e8c977]"
+                    className="group flex min-w-0 flex-col items-center gap-2 border border-transparent px-2 py-2 text-center transition hover:border-[#8faf6a] hover:bg-[#cfe3b8] focus:outline-none focus-visible:border-[#249d6d]"
                   >
                     <Icon
                       size={24}
-                      className="text-[#f1e4bb] transition group-hover:-translate-y-0.5 group-hover:text-[#fff1a8]"
+                      className="text-[#31433a] transition group-hover:-translate-y-0.5 group-hover:text-[#096149]"
                       strokeWidth={1.7}
                     />
-                    <span className="w-full truncate font-display text-[12px] text-[#f4e8c8]/82">
+                    <span className="w-full truncate font-display text-[12px] text-[#3d5246]">
                       {item.cn}
                     </span>
                   </Link>
@@ -428,19 +292,19 @@ export default function SystemPage() {
               })}
             </div>
 
-            <div className="hidden w-[260px] border-l border-[#d8c593]/20 pl-5 xl:block">
+            <div className="hidden w-[260px] border-l border-[#b7c9a0] pl-5 xl:block">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate font-display text-[14px] font-bold text-[#fff1c3]">
+                  <div className="truncate font-display text-[14px] font-bold text-[#15231c]">
                     {activeModule.cn}
                   </div>
-                  <div className="truncate text-[12px] text-[#d8c593]/68">
+                  <div className="truncate text-[12px] text-[#4f6357]">
                     {activeModule.desc}
                   </div>
                 </div>
                 <Link
                   href={activeModule.href}
-                  className="grid h-9 w-9 shrink-0 place-items-center border border-[#d8c593]/36 bg-white/8 text-[#e8c977] transition hover:border-[#e8c977] hover:bg-[#e8c977]/10"
+                  className="grid h-9 w-9 shrink-0 place-items-center border border-[#8faf6a] bg-[#cfe3b8] text-[#096149] transition hover:border-[#249d6d] hover:bg-[#b9d6a4]"
                   title={`进入${activeModule.cn}`}
                 >
                   <ChevronRight size={17} />
@@ -470,66 +334,27 @@ function ModuleCard({
       onMouseEnter={onActivate}
       onFocus={onActivate}
       className={cn(
-        "system-module-card group min-h-[128px] p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e8c977]/70 md:min-h-[138px] xl:min-h-[150px]",
+        "system-module-card group min-h-[128px] p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#249d6d]/50 md:min-h-[138px] xl:min-h-[150px]",
         active && "is-active",
       )}
       style={{ "--module-tone": item.tone } as CSSProperties}
     >
-      {item.signal && <span className="system-signal" />}
       <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
         <div className="system-module-orbit">
           <Icon size={36} strokeWidth={1.45} />
         </div>
-        <div className="mt-3 font-display text-[17px] font-bold tracking-[0.1em] text-[#fff1c3] md:text-[19px]">
+        <div className="mt-3 font-display text-[17px] font-bold tracking-[0.1em] text-[#15231c] md:text-[19px]">
           {item.cn}
         </div>
-        <div className="mt-1 font-display-en text-[9px] tracking-[0.24em] text-[#d8c593]/58">
+        <div className="mt-1 font-display-en text-[9px] tracking-[0.24em] text-[#748078]">
           {item.en}
         </div>
-        <p className="mt-1.5 line-clamp-2 text-[11px] leading-5 text-[#f4e8c8]/68">
+        <p className="mt-1.5 line-clamp-2 text-[11px] leading-5 text-[#65736c]">
           {item.desc}
         </p>
       </div>
     </Link>
   );
-}
-
-function CurrencyChip({
-  label,
-  value,
-  imageSrc,
-}: {
-  label: string;
-  value: number;
-  imageSrc: string;
-}) {
-  return (
-    <Link
-      href="/inventory"
-      className="group flex min-w-0 flex-col items-center justify-center gap-1 border border-[#d8c593]/24 bg-white/7 px-2 py-2 text-center transition hover:border-[#e8c977]/70 hover:bg-[#e8c977]/10"
-    >
-      <Image
-        src={imageSrc}
-        alt={label}
-        width={34}
-        height={34}
-        className="h-8 w-8 object-contain transition group-hover:scale-105"
-      />
-      <span className="font-display-en text-[8px] tracking-[0.24em] text-[#d8c593]/70">
-        {label}
-      </span>
-      <span className="font-mono text-[17px] font-bold text-[#fff1a8]">
-        {value.toLocaleString()}
-      </span>
-    </Link>
-  );
-}
-
-function formatBirthday(value?: string | null) {
-  if (!value) return "未设置";
-  const [, month, day] = value.slice(0, 10).split("-");
-  if (!month || !day) return value;
-  return `${Number(month)}月${Number(day)}日`;
 }
 
 function CompassMark() {

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { RewardToasts } from "@/components/reward-toasts";
-import { TopNav } from "@/components/top-nav";
+import { LifeGameShell } from "@/components/life-game-shell";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -14,9 +14,9 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "人生管理系统 · LifeOS",
+  title: "Game Life",
   description:
-    "Personal life management system — PARA + GTD + OKR + gamified.",
+    "Game Life — personal life management system (PARA + GTD + OKR + gamified).",
 };
 
 export default function RootLayout({
@@ -28,10 +28,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased`}
       >
         <Providers>
-          <div className="relative min-h-screen">
-            <TopNav />
-            <main className="relative z-10">{children}</main>
-          </div>
+          <LifeGameShell>{children}</LifeGameShell>
           <RewardToasts />
         </Providers>
       </body>

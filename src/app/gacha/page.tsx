@@ -23,7 +23,8 @@ import { useGacha, usePullGacha } from "@/hooks/queries";
 import type { GachaPullResult, GachaState, RewardItemDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const WISH_AUDIO_SRC = "/gacha/audio/gilded-ascent.mp3";
+/** Page ambience (ethereal pad). Videos keep their own embedded audio during pulls. */
+const WISH_AUDIO_SRC = "/gacha/audio/wish-ambience.mp3";
 
 const TIER_META: Record<
   RewardItemDTO["tier"],
@@ -74,15 +75,9 @@ export default function GachaPage() {
   const revealTimerRef = useRef<number | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [overlay, setOverlay] = useState<Overlay>(null);
-  const [phase, setPhase] = useState<"idle" | "rolling" | "reveal">("idle");
+  const [phase, setPhase] = useState<"idle" | "rolling" | "revealing" | "summary">("idle");
   const [result, setResult] = useState<GachaPullResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const gold = state?.gold ?? 0;
-  const goldPerPull = state?.goldPerPull ?? 160;
-  const fourStarLeft = Math.max(0, (state?.fourStarPityAt ?? 10) - (state?.pullsSinceRare ?? 0));
-  const fiveStarLeft = Math.max(0, (state?.hardPityAt ?? 90) - (state?.pullsSinceEpic ?? 0));
-  const poolReady = state?.ready ?? false;
 
   const clearRevealTimer = () => {
     if (revealTimerRef.current !== null) {
@@ -91,14 +86,45 @@ export default function GachaPage() {
     }
   };
 
-  const revealResults = () => {
+  const startItemReveal = () => {
     clearRevealTimer();
-    setPhase("reveal");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setPhase(reduceMotion ? "summary" : "revealing");
+  };
+
+  const showSummary = () => {
+    clearRevealTimer();
+    setPhase("summary");
   };
 
   useEffect(() => () => {
     if (revealTimerRef.current !== null) window.clearTimeout(revealTimerRef.current);
   }, []);
+
+  // Enter page: loop ethereal ambience. Pause during pull video so MP4 original audio can play.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.loop = true;
+    audio.volume = 0.42;
+    const shouldPlayAmbience = soundOn && phase !== "rolling";
+    if (shouldPlayAmbience) {
+      void audio.play().catch(() => undefined);
+    } else {
+      audio.pause();
+    }
+  }, [soundOn, phase]);
+
+  // Browser autoplay policy: unlock ambience on first user gesture anywhere on the page.
+  useEffect(() => {
+    const unlock = () => {
+      const audio = audioRef.current;
+      if (!audio || !soundOn || phase === "rolling") return;
+      void audio.play().catch(() => undefined);
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, [soundOn, phase]);
 
   const doPull = async (count: 1 | 10) => {
     setError(null);
@@ -106,16 +132,11 @@ export default function GachaPage() {
       const response = await pull.mutateAsync({ count });
       setResult(response);
       setPhase("rolling");
-      if (soundOn && audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.volume = 0.72;
-        void audioRef.current.play().catch(() => undefined);
-      }
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       clearRevealTimer();
       revealTimerRef.current = window.setTimeout(() => {
         revealTimerRef.current = null;
-        setPhase("reveal");
+        setPhase(reduceMotion ? "summary" : "revealing");
       }, reduceMotion ? 250 : 6500);
     } catch (reason) {
       setError((reason as Error).message);
@@ -125,13 +146,18 @@ export default function GachaPage() {
 
   const dismissResults = () => {
     clearRevealTimer();
-    audioRef.current?.pause();
     setPhase("idle");
     setResult(null);
   };
 
+  const gold = state?.gold ?? 0;
+  const goldPerPull = state?.goldPerPull ?? 160;
+  const fourStarLeft = Math.max(0, (state?.fourStarPityAt ?? 10) - (state?.pullsSinceRare ?? 0));
+  const fiveStarLeft = Math.max(0, (state?.hardPityAt ?? 90) - (state?.pullsSinceEpic ?? 0));
+  const poolReady = state?.ready ?? false;
+
   return (
-    <div className="relative min-h-[calc(100vh-82px)] overflow-hidden bg-[#07111d] text-white">
+    <div className="relative min-h-[calc(100vh-82px)] overflow-hidden bg-[#052a22] text-white">
       <Image
         src="/gacha/backgrounds/wish-banner-v2.png"
         alt="雪境星海中的祈愿角色"
@@ -141,11 +167,11 @@ export default function GachaPage() {
         className="object-cover object-[64%_center]"
       />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,13,23,.97)_0%,rgba(5,13,23,.82)_24%,rgba(5,13,23,.24)_56%,rgba(5,13,23,.08)_78%,rgba(5,13,23,.42)_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#06101c]/92 via-[#06101c]/30 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#052a22]/94 via-[#052a22]/34 to-transparent" />
 
-      <audio ref={audioRef} src={WISH_AUDIO_SRC} preload="auto" />
+      <audio ref={audioRef} src={WISH_AUDIO_SRC} preload="auto" loop />
 
-      <header className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#07111d]/34 px-4 py-3 backdrop-blur-sm sm:px-7">
+      <header className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#052a22]/42 px-4 py-3 backdrop-blur-sm sm:px-7">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 place-items-center border border-[#e8c977]/45 text-[#ffe7a4]">
             <Sparkles size={18} />
@@ -234,11 +260,15 @@ export default function GachaPage() {
         <RollingOverlay
           count={result.results.length === 10 ? 10 : 1}
           highestTier={highestTier(result.results)}
-          onSkip={revealResults}
-          onComplete={revealResults}
+          soundOn={soundOn}
+          onSkip={startItemReveal}
+          onComplete={startItemReveal}
         />
       ) : null}
-      {phase === "reveal" && result ? <ResultOverlay result={result} onClose={dismissResults} /> : null}
+      {phase === "revealing" && result ? (
+        <SequentialRevealOverlay result={result} onSkip={showSummary} onDone={showSummary} />
+      ) : null}
+      {phase === "summary" && result ? <ResultOverlay result={result} onClose={dismissResults} /> : null}
     </div>
   );
 }
@@ -410,8 +440,8 @@ function OverlayShell({ title, icon, onClose, children }: { title: string; icon:
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="h-full w-full max-w-[620px] overflow-y-auto border-l border-white/14 bg-[#0c1826]/98 px-5 pb-5 shadow-[-30px_0_80px_-50px_black] sm:px-7 sm:pb-7">
-        <div className="sticky top-0 z-20 -mx-5 flex items-center justify-between gap-3 border-b border-white/12 bg-[#0c1826]/98 px-5 py-4 shadow-[0_16px_28px_-24px_black] backdrop-blur-xl sm:-mx-7 sm:px-7">
+      <div className="h-full w-full max-w-[620px] overflow-y-auto border-l border-white/14 bg-[#07382d]/98 px-5 pb-5 shadow-[-30px_0_80px_-50px_black] sm:px-7 sm:pb-7">
+        <div className="sticky top-0 z-20 -mx-5 flex items-center justify-between gap-3 border-b border-white/12 bg-[#07382d]/98 px-5 py-4 shadow-[0_16px_28px_-24px_black] backdrop-blur-xl sm:-mx-7 sm:px-7">
           <div className="flex items-center gap-2 text-[#ffe5a0]">
             {icon}
             <h2 className="font-display text-xl text-white">{title}</h2>
@@ -446,23 +476,37 @@ function RateBox({ label, rate, detail }: { label: string; rate: string; detail:
 function RollingOverlay({
   count,
   highestTier,
+  soundOn,
   onSkip,
   onComplete,
 }: {
   count: 1 | 10;
   highestTier: RewardItemDTO["tier"];
+  soundOn: boolean;
   onSkip: () => void;
   onComplete: () => void;
 }) {
   const meta = TIER_META[highestTier];
   const videoSrc = getWishVideoSrc(highestTier, count);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !soundOn;
+    video.volume = 0.9;
+    if (soundOn) {
+      void video.play().catch(() => undefined);
+    }
+  }, [soundOn, videoSrc]);
+
   return createPortal(
     <div className="fixed inset-0 z-[90] overflow-hidden bg-[#040a13] text-white" aria-label="祈愿进行中">
       <video
         key={videoSrc}
+        ref={videoRef}
         src={videoSrc}
         autoPlay
-        muted
         playsInline
         preload="auto"
         onEnded={onComplete}
@@ -491,15 +535,133 @@ function getWishVideoSrc(tier: RewardItemDTO["tier"], count: 1 | 10) {
   return "/gacha/videos/single-blue.mp4";
 }
 
+function SequentialRevealOverlay({
+  result,
+  onSkip,
+  onDone,
+}: {
+  result: GachaPullResult;
+  onSkip: () => void;
+  onDone: () => void;
+}) {
+  const items = result.results;
+  const [index, setIndex] = useState(0);
+  const [entered, setEntered] = useState(false);
+  const current = items[index];
+  const meta = TIER_META[current.tier];
+  const reward = current.reward;
+  const isLast = index >= items.length - 1;
+
+  useEffect(() => {
+    setEntered(false);
+    const frame = window.requestAnimationFrame(() => setEntered(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [index]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  const advance = () => {
+    if (isLast) {
+      onDone();
+      return;
+    }
+    setIndex((value) => value + 1);
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[90] flex cursor-pointer flex-col bg-[#040a13] text-white"
+      role="dialog"
+      aria-modal="true"
+      aria-label="逐个揭示祈愿结果"
+      onClick={advance}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          advance();
+        }
+        if (event.key === "Escape") onSkip();
+      }}
+      tabIndex={0}
+    >
+      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-b via-transparent to-[#040a13]", meta.glow)} />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,.08),transparent_42%)]" />
+
+      <div className="relative z-10 flex items-center justify-between px-5 py-4 sm:px-7">
+        <div className="text-xs text-white/55">
+          {index + 1} / {items.length}
+        </div>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSkip();
+          }}
+          className="flex h-9 items-center gap-2 border border-white/25 bg-black/30 px-3 text-xs text-white/80 backdrop-blur-sm hover:border-white/55 hover:text-white"
+        >
+          <SkipForward size={14} /> 跳过动画
+        </button>
+      </div>
+
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-16">
+        <div
+          className={cn(
+            "relative w-full max-w-sm overflow-hidden border bg-[#0d1824]/92 shadow-[0_30px_80px_-40px_rgba(0,0,0,.95)] transition duration-500",
+            meta.border,
+            entered ? "translate-y-0 scale-100 opacity-100" : "translate-y-8 scale-95 opacity-0",
+          )}
+        >
+          <div className={cn("absolute inset-x-0 top-0 h-48 bg-gradient-to-b to-transparent", meta.glow)} />
+          <div className="relative grid aspect-[4/5] place-items-center p-8">
+            {reward?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={reward.imageUrl}
+                alt={reward.name}
+                className="h-[58%] w-[58%] object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,.55)]"
+              />
+            ) : (
+              <div className="grid place-items-center text-7xl">{reward?.emoji ?? "✦"}</div>
+            )}
+          </div>
+          <div className="relative border-t border-white/10 px-5 py-5 text-center">
+            <div className="flex justify-center gap-1 text-[#ffe28a]" aria-label={`${meta.stars} 星`}>
+              {Array.from({ length: meta.stars }).map((_, starIndex) => (
+                <Star key={starIndex} size={16} fill="currentColor" />
+              ))}
+            </div>
+            <div className={cn("mt-2 text-xs uppercase tracking-[0.18em]", meta.color)}>{meta.label}</div>
+            <h3 className="mt-2 font-display text-2xl text-white">{reward?.name ?? "未命名奖励"}</h3>
+            <div className="mt-2 text-xs text-white/45">
+              {reward ? CATEGORY_LABEL[reward.category] : "奖励"}
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-8 text-sm text-white/55">
+          {isLast ? "点击查看全部结果" : "点击继续下一项"}
+        </p>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function ResultOverlay({ result, onClose }: { result: GachaPullResult; onClose: () => void }) {
   useDialogDismiss(onClose);
   const topTier = highestTier(result.results);
   return createPortal(
-    <div className="fixed inset-0 z-[90] overflow-y-auto bg-[#07111d]/98 p-4 pt-20 text-white sm:p-7 sm:pt-20" role="dialog" aria-modal="true" aria-label="祈愿结果">
+    <div className="fixed inset-0 z-[90] overflow-y-auto bg-[#052a22]/98 p-4 pt-20 text-white sm:p-7 sm:pt-20" role="dialog" aria-modal="true" aria-label="祈愿结果">
       <button
         type="button"
         onClick={onClose}
-        className="fixed right-4 top-4 z-[95] grid h-11 w-11 place-items-center border border-white/30 bg-[#07111d]/90 text-white shadow-lg backdrop-blur-md transition hover:border-[#e8c977]/75 sm:right-7 sm:top-7"
+        className="fixed right-4 top-4 z-[95] grid h-11 w-11 place-items-center border border-white/30 bg-[#052a22]/90 text-white shadow-lg backdrop-blur-md transition hover:border-[#e8c977]/75 sm:right-7 sm:top-7"
         title="关闭祈愿结果"
         aria-label="关闭祈愿结果"
       >

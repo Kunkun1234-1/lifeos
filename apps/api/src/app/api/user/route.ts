@@ -54,7 +54,9 @@ export async function GET() {
   return NextResponse.json({
     id: user.id,
     name: user.name,
+    email: user.email ?? null,
     class: user.class,
+    timezone: user.timezone ?? "Asia/Shanghai",
     visionStatement: user.visionStatement,
     coreValues: parseList(user.coreValues),
     identityStatements: parseList(user.identityStatements),
@@ -65,6 +67,7 @@ export async function GET() {
     region: user.region ?? null,
     motto: user.motto ?? null,
     onboardedAt: user.onboardedAt,
+    createdAt: user.createdAt.toISOString(),
     totalXp,
     xpByArea: byArea,
     level: leveling.level,

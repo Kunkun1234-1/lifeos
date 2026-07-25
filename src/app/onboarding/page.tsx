@@ -53,7 +53,7 @@ export default function OnboardingPage() {
       >
         <div className="text-xs tracking-[0.3em] text-[var(--fg-subtle)]">ONBOARDING</div>
         <h1 className="mt-1 bg-gradient-to-r from-[var(--accent-glow)] to-[var(--accent)] bg-clip-text text-3xl font-bold text-transparent">
-          Welcome to LifeOS
+          Welcome to Game Life
         </h1>
         <p className="mt-2 text-sm text-[var(--fg-muted)]">
           {STEPS[step].hint}

@@ -5,6 +5,8 @@ import { NoteCreateSchema } from "@/lib/validators";
 import { grantReward } from "@/lib/rewards";
 import { safeCheck } from "@/lib/achievements";
 import {
+  NOTE_MAX_DEPTH,
+  getNoteDepth,
   hasNoteWritableContent,
   normalizeNoteTitle,
   serializeNote,
@@ -26,6 +28,29 @@ function firstValidationMessage(error: ZodError) {
     if (messages?.[0]) return `${field}: ${messages[0]}`;
   }
   return "Invalid body";
+}
+
+async function resolveParentDepth(userId: string, parentId: string | null | undefined) {
+  if (!parentId) return -1;
+  const parent = await prisma.note.findFirst({
+    where: { id: parentId, userId },
+    select: { id: true, parentId: true },
+  });
+  if (!parent) return null;
+
+  const getParentId = async (id: string) => {
+    const row = await prisma.note.findFirst({
+      where: { id, userId },
+      select: { parentId: true },
+    });
+    return row?.parentId;
+  };
+
+  try {
+    return await getNoteDepth(getParentId, parentId);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(req: Request) {
@@ -75,11 +100,25 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
-  if (!hasNoteWritableContent(data)) {
-    return NextResponse.json(
-      { error: "请填写标题、正文或来源信息后再保存" },
-      { status: 400 }
-    );
+  // Preserve body-only notes so normalizeNoteTitle can derive their title from
+  // the first non-empty body line. Truly empty workspace pages get a stable
+  // placeholder instead.
+  const createPayload = hasNoteWritableContent(data)
+    ? data
+    : { ...data, title: "未命名页面" };
+
+  const parentId = data.parentId ?? null;
+  if (parentId) {
+    const parentDepth = await resolveParentDepth(userId, parentId);
+    if (parentDepth === null) {
+      return NextResponse.json({ error: "父页面不存在或不属于你" }, { status: 400 });
+    }
+    if (parentDepth + 1 >= NOTE_MAX_DEPTH) {
+      return NextResponse.json(
+        { error: `页面嵌套最多 ${NOTE_MAX_DEPTH} 层` },
+        { status: 400 }
+      );
+    }
   }
 
   // Verify ownership of any cross-link IDs
@@ -107,11 +146,25 @@ export async function POST(req: Request) {
     );
   }
 
+  const siblingWhere = { userId, parentId, archived: false };
+  let position = data.position;
+  if (position === undefined) {
+    const agg = await prisma.note.aggregate({
+      where: siblingWhere,
+      _max: { position: true },
+    });
+    position = (agg._max.position ?? -1) + 1;
+  }
+
   const note = await prisma.note.create({
     data: {
       userId,
+      parentId,
+      position,
+      icon: data.icon ?? null,
+      coverUrl: data.coverUrl ?? null,
       kind: data.kind,
-      title: normalizeNoteTitle(data),
+      title: normalizeNoteTitle(createPayload),
       body: data.body,
       sourceUrl: data.sourceUrl ?? null,
       sourceTitle: data.sourceTitle ?? null,

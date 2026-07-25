@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CalendarRange,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Heading1,
   ImagePlus,
@@ -21,6 +22,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import {
+  ReflectionEditor,
+  appendImagesAsMarkdown,
+  extractReflectionImages,
+  type ReflectionEditorHandle,
+} from "@/components/reflection-editor";
 import { useCreateReview, useReviews } from "@/hooks/queries";
 import type { ReviewDTO } from "@/lib/types";
 import { api } from "@/lib/fetcher";
@@ -115,6 +122,7 @@ const DEFAULT_TEMPLATES: Record<Tab, ReflectionTemplate> = {
 };
 
 const TEMPLATE_STORAGE_KEY = "lifeos.review.templates.v1";
+const SIDEBAR_COLLAPSED_KEY = "life-game-review-sidebar-collapsed";
 
 export default function ReviewPage() {
   const [tab, setTab] = useState<Tab>("daily");
@@ -128,7 +136,9 @@ export default function ReviewPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<ReflectionEditorHandle>(null);
 
   const create = useCreateReview();
   const { data: reviews = [] } = useReviews();
@@ -160,6 +170,11 @@ export default function ReviewPage() {
     } finally {
       setTemplatesLoaded(true);
     }
+    try {
+      setSidebarCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    } catch {
+      setSidebarCollapsed(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -167,18 +182,17 @@ export default function ReviewPage() {
     window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
   }, [templates, templatesLoaded]);
 
-  useEffect(() => {
-    const normalized = normalizeMarkdownImageDraft(draft.body, draft.images);
-    if (!normalized.changed) return;
-    setDrafts((prev) => ({
-      ...prev,
-      [tab]: {
-        ...prev[tab],
-        body: normalized.body,
-        images: normalized.images,
-      },
-    }));
-  }, [draft.body, draft.images, tab]);
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   const updateDraft = (patch: Partial<ReflectionDraft>) => {
     setSaveMessage(null);
@@ -207,6 +221,10 @@ export default function ReviewPage() {
   const selectReview = (review: ReviewDTO) => {
     const nextTab = toTab(review.kind);
     const content = parseContent(review.content);
+    const hydratedBody = appendImagesAsMarkdown(
+      content.body || legacyBody(content),
+      normalizeImages(content.images),
+    );
     setTab(nextTab);
     setSelectedReviewId(review.id);
     setSaveMessage("正在查看历史反思；再次保存会创建一条新的记录。");
@@ -214,8 +232,12 @@ export default function ReviewPage() {
       ...prev,
       [nextTab]: {
         title: content.title || fallbackTitle(nextTab, review.createdAt, content),
-        body: content.body || legacyBody(content),
-        images: normalizeImages(content.images),
+        body: hydratedBody,
+        images: extractReflectionImages(hydratedBody).map((image) => ({
+          id: image.id,
+          url: image.url,
+          name: image.name,
+        })),
       },
     }));
   };
@@ -260,10 +282,8 @@ export default function ReviewPage() {
         url: data.url,
         name: file.name,
       };
-      updateDraft({
-        images: [...draft.images, image],
-      });
-      setSaveMessage("图片已插入到纸面。");
+      editorRef.current?.insertImage(image);
+      setSaveMessage("图片已插入正文，可拖动右下角调整大小。");
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "图片上传失败");
     } finally {
@@ -271,19 +291,20 @@ export default function ReviewPage() {
     }
   };
 
-  const removeImage = (id: string) => {
-    updateDraft({ images: draft.images.filter((image) => image.id !== id) });
-  };
-
   const saveReflection = async () => {
     const templateQuestions = currentTemplate.questions.filter(Boolean);
+    const inlineImages = extractReflectionImages(draft.body).map((image) => ({
+      id: image.id,
+      url: image.url,
+      name: image.name,
+    }));
     await create.mutateAsync({
       kind: tab,
       content: {
         mode: "essay",
         title: draft.title,
         body: draft.body,
-        images: draft.images,
+        images: inlineImages,
         templateName: currentTemplate.name,
         templateQuestions,
         oneLiner: firstLine(draft.body),
@@ -299,7 +320,12 @@ export default function ReviewPage() {
 
   return (
     <div className="mx-auto max-w-[1500px] px-3 py-4 md:px-5 lg:px-6">
-      <div className="grid min-h-[calc(100vh-112px)] gap-3 md:grid-cols-[280px_1fr]">
+      <div
+        className={`grid min-h-[calc(100vh-112px)] gap-3 transition-[grid-template-columns] duration-200 ${
+          sidebarCollapsed ? "md:grid-cols-1" : "md:grid-cols-[280px_1fr]"
+        }`}
+      >
+        {!sidebarCollapsed ? (
         <aside className="panel-ink ornate flex min-h-[360px] flex-col overflow-hidden rounded-sm">
           <div className="border-b border-[var(--gold)]/25 p-4">
             <div className="flex items-start justify-between gap-3">
@@ -311,17 +337,29 @@ export default function ReviewPage() {
                   </span>
                 </div>
                 <p className="mt-1.5 text-[12px] text-[var(--fg-on-ink)]/68">
-                  最近 7 周记录热力
+                  最近 7 周写作热力
                 </p>
               </div>
-              <button
-                type="button"
-                title="新建反思"
-                onClick={newDraft}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-sm border border-[var(--gold)]/70 bg-white/5 text-[var(--gold-pale)] transition hover:bg-[var(--gold)]/15"
-              >
-                <Plus size={15} />
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  title="收起目录"
+                  aria-label="收起反思目录"
+                  aria-expanded={true}
+                  onClick={toggleSidebar}
+                  className="grid h-9 w-9 place-items-center rounded-sm border border-[var(--gold)]/50 bg-white/5 text-[var(--gold-pale)] transition hover:bg-[var(--gold)]/15"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  title="新建反思"
+                  onClick={newDraft}
+                  className="grid h-9 w-9 place-items-center rounded-sm border border-[var(--gold)]/70 bg-white/5 text-[var(--gold-pale)] transition hover:bg-[var(--gold)]/15"
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
             </div>
 
             <div
@@ -443,12 +481,23 @@ export default function ReviewPage() {
             </div>
           </div>
         </aside>
+        ) : null}
 
         <article className="panel-cream framed flex min-w-0 flex-col overflow-hidden rounded-sm">
           <header className="border-b border-[var(--border)] px-4 py-4 md:px-6">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    title={sidebarCollapsed ? "展开目录" : "收起目录"}
+                    aria-label={sidebarCollapsed ? "展开反思目录" : "收起反思目录"}
+                    aria-expanded={!sidebarCollapsed}
+                    onClick={toggleSidebar}
+                    className="grid h-9 w-9 place-items-center rounded-sm border border-[var(--border)] bg-white/70 text-[var(--fg-muted)] transition hover:border-[var(--gold-deep)]/40 hover:text-[var(--fg-strong)]"
+                  >
+                    {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                  </button>
                   <h1 className="font-display text-3xl tracking-[0.12em] text-[var(--fg-strong)] md:text-4xl">
                     反思
                   </h1>
@@ -577,44 +626,18 @@ export default function ReviewPage() {
               </div>
 
               <div className="flex-1 bg-[linear-gradient(180deg,rgba(255,252,242,0.98),rgba(247,239,218,0.96))] p-4 md:p-6">
-                {draft.images.length > 0 && (
-                  <div className={draft.images.length === 1 ? "mb-5 grid gap-3" : "mb-5 grid gap-3 lg:grid-cols-2"}>
-                    {draft.images.map((image) => (
-                      <figure
-                        key={image.id}
-                        className="group overflow-hidden rounded-sm border border-[var(--border)] bg-white/75 shadow-sm"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className="mx-auto block max-h-[420px] max-w-full bg-[rgba(255,252,242,0.82)] object-contain"
-                        />
-                        <figcaption className="flex items-center justify-between gap-2 border-t border-[var(--border)] px-3 py-2 text-[11px] text-[var(--fg-muted)]">
-                          <span className="truncate">{image.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeImage(image.id)}
-                            className="text-[var(--danger)] opacity-75 hover:opacity-100"
-                          >
-                            移除
-                          </button>
-                        </figcaption>
-                      </figure>
-                    ))}
-                  </div>
-                )}
-
-                <Textarea
+                <ReflectionEditor
+                  ref={editorRef}
                   value={draft.body}
-                  onChange={(event) => updateDraft({ body: event.target.value })}
-                  rows={18}
-                  placeholder="今天我观察到..."
-                  className={`resize-y border-0 bg-transparent p-0 text-[17px] leading-9 shadow-none focus:shadow-none ${
-                    draft.images.length > 0
-                      ? "min-h-[300px] md:min-h-[360px]"
-                      : "min-h-[500px] md:min-h-[calc(100vh-500px)]"
-                  }`}
+                  uploading={uploading}
+                  onChange={(body) => {
+                    const images = extractReflectionImages(body).map((image) => ({
+                      id: image.id,
+                      url: image.url,
+                      name: image.name,
+                    }));
+                    updateDraft({ body, images });
+                  }}
                 />
 
                 {uploadError && (
@@ -694,55 +717,6 @@ function makeDraft(tab: Tab): ReflectionDraft {
   };
 }
 
-function normalizeMarkdownImageDraft(body: string, images: ReflectionImage[]) {
-  const markdownImagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
-  const extracted: ReflectionImage[] = [];
-  const cleanedBody = body
-    .replace(markdownImagePattern, (_match, alt: string, url: string) => {
-      const imageUrl = url.trim();
-      if (!imageUrl) return "";
-      extracted.push({
-        id: `markdown-${imageUrl}-${extracted.length}`,
-        url: imageUrl,
-        name: alt.trim() || imageNameFromUrl(imageUrl),
-      });
-      return "";
-    })
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trimStart();
-
-  if (extracted.length === 0) {
-    return { body, images, changed: false };
-  }
-
-  const existingUrls = new Set(images.map((image) => image.url));
-  const mergedImages = [...images];
-  for (const image of extracted) {
-    if (!existingUrls.has(image.url)) {
-      mergedImages.push(image);
-      existingUrls.add(image.url);
-    }
-  }
-
-  return {
-    body: cleanedBody,
-    images: mergedImages,
-    changed: cleanedBody !== body || mergedImages.length !== images.length,
-  };
-}
-
-function imageNameFromUrl(url: string): string {
-  const fallback = "插入图片";
-  try {
-    const pathname = url.startsWith("http") ? new URL(url).pathname : url;
-    const filename = pathname.split("/").filter(Boolean).pop();
-    return filename ? decodeURIComponent(filename) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function tabLabel(tab: Tab): string {
   return TABS.find((item) => item.value === tab)?.cn ?? "每日";
 }
@@ -800,6 +774,7 @@ function fallbackTitle(tab: Tab, date: string, content: ParsedContent): string {
 
 function firstLine(body: string): string {
   return body
+    .replace(/!\[[^\]]*\]\([^)]+\)(?:\{width=\d+\})?/g, " ")
     .split("\n")
     .map((line) => line.replace(/^#+\s*/, "").trim())
     .find(Boolean)
