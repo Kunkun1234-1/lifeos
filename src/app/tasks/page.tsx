@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -35,6 +37,9 @@ type AreaFilter = "all" | "none" | string; // area id
 type PriorityFilter = Set<number>; // 1 high, 2 mid, 3 low; empty = all
 type StatusFilter = "all" | "TODO" | "IN_PROGRESS" | "DONE" | "CANCELED";
 type DueFilter = "all" | "today" | "week" | "overdue" | "none";
+type CompletedGroupKey = "today" | "week" | "month" | "earlier";
+
+const COMPLETED_PAGE_SIZE = 20;
 
 const VIEW_TABS: Array<{ id: ViewTab; label: string }> = [
   { id: "mine", label: "我的任务" },
@@ -96,7 +101,7 @@ function progressOf(task: TaskDTO) {
 function matchesType(task: TaskDTO, type: TypeId) {
   switch (type) {
     case "all":
-      return task.status !== "CANCELED";
+      return task.status === "TODO" || task.status === "IN_PROGRESS";
     case "main":
       return Boolean(task.projectId) && task.status !== "DONE" && task.status !== "CANCELED";
     case "side":
@@ -106,6 +111,21 @@ function matchesType(task: TaskDTO, type: TypeId) {
     default:
       return true;
   }
+}
+
+function completedTime(task: TaskDTO) {
+  return task.completedAt ? new Date(task.completedAt).getTime() : 0;
+}
+
+function completedGroup(task: TaskDTO, today: string): CompletedGroupKey {
+  if (!task.completedAt) return "earlier";
+  const completedYmd = toYMD(new Date(task.completedAt));
+  if (completedYmd === today) return "today";
+  if (completedYmd >= startOfWeekYMD(today) && completedYmd <= endOfWeekYMD(today)) {
+    return "week";
+  }
+  if (completedYmd.startsWith(today.slice(0, 7))) return "month";
+  return "earlier";
 }
 
 function matchesArea(task: TaskDTO, areaFilter: AreaFilter) {
@@ -150,6 +170,15 @@ function formatDue(task: TaskDTO, today = todayYMD()) {
   if (diff > 0 && diff <= 7) return `${Math.round(diff)} 天后`;
   if (diff < 0) return `逾期 ${Math.abs(Math.round(diff))} 天`;
   return ymd.slice(5);
+}
+
+function formatCompletedAt(task: TaskDTO, today = todayYMD()) {
+  if (!task.completedAt) return "完成时间未记录";
+  const date = new Date(task.completedAt);
+  const ymd = toYMD(date);
+  const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  if (ymd === today) return `今天 ${time}`;
+  return `${ymd.slice(5)} ${time}`;
 }
 
 function priorityLabel(p: number) {
@@ -207,6 +236,8 @@ export default function TasksPage() {
   const [bulk, setBulk] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [todayDoneOpen, setTodayDoneOpen] = useState(false);
+  const [completedVisibleCount, setCompletedVisibleCount] = useState(COMPLETED_PAGE_SIZE);
 
   const today = todayYMD();
   const weekStart = startOfWeekYMD(cursorDate);
@@ -232,19 +263,22 @@ export default function TasksPage() {
     const map: Record<string, number> = { all: 0, none: 0 };
     for (const a of activeAreas) map[a.id] = 0;
     for (const t of tasks) {
-      if (t.status === "CANCELED") continue;
+      const belongsToCurrentCollection =
+        typeId === "done"
+          ? t.status === "DONE"
+          : t.status === "TODO" || t.status === "IN_PROGRESS";
+      if (!belongsToCurrentCollection) continue;
       map.all += 1;
       if (!t.areaId) map.none += 1;
       else if (map[t.areaId] !== undefined) map[t.areaId] += 1;
     }
     return map;
-  }, [tasks, activeAreas]);
+  }, [tasks, activeAreas, typeId]);
 
   const overview = useMemo(() => {
     const active = tasks.filter((t) => t.status !== "CANCELED");
     const inProgress = active.filter((t) => t.status === "IN_PROGRESS").length;
     const todo = active.filter((t) => t.status === "TODO").length;
-    const done = active.filter((t) => t.status === "DONE").length;
     const overdue = active.filter((t) => isOverdue(t, today)).length;
 
     const dueToday = active.filter((t) => dueYmd(t) === today);
@@ -255,15 +289,23 @@ export default function TasksPage() {
       const y = dueYmd(t);
       return y && y >= startOfWeekYMD(today) && y <= endOfWeekYMD(today);
     });
-    const weekDone = dueWeek.filter((t) => t.status === "DONE").length;
-    const weekRate = dueWeek.length ? Math.round((weekDone / dueWeek.length) * 100) : 0;
+    const dueWeekDone = dueWeek.filter((t) => t.status === "DONE").length;
+    const weekRate = dueWeek.length ? Math.round((dueWeekDone / dueWeek.length) * 100) : 0;
+    const weekDone = active.filter((t) => {
+      if (t.status !== "DONE" || !t.completedAt) return false;
+      const ymd = toYMD(new Date(t.completedAt));
+      return ymd >= startOfWeekYMD(today) && ymd <= endOfWeekYMD(today);
+    }).length;
 
-    return { inProgress, todo, done, overdue, todayRate, weekRate };
+    return { inProgress, todo, weekDone, overdue, todayRate, weekRate };
   }, [tasks, today]);
 
   /** 侧栏筛选后的任务（不含顶栏视图时间窗） */
   const scoped = useMemo(() => {
-    let list = tasks.filter((t) => matchesType(t, typeId) && matchesArea(t, areaFilter));
+    let list = tasks.filter(
+      (t) =>
+        (statusFilter === "CANCELED" || matchesType(t, typeId)) && matchesArea(t, areaFilter),
+    );
 
     if (priorities.size < 3) {
       list = list.filter((t) => priorities.has(t.priority));
@@ -313,6 +355,49 @@ export default function TasksPage() {
     return scoped;
   }, [scoped, view, cursorDate, today, weekStart, weekEnd, monthPrefix]);
 
+  const todayCompleted = useMemo(
+    () =>
+      tasks
+        .filter(
+          (task) =>
+            task.status === "DONE" &&
+            task.completedAt &&
+            toYMD(new Date(task.completedAt)) === today &&
+            matchesArea(task, areaFilter) &&
+            priorities.has(task.priority) &&
+            (typeId === "all" ||
+              (typeId === "main" && Boolean(task.projectId)) ||
+              (typeId === "side" && !task.projectId)),
+        )
+        .sort((a, b) => completedTime(b) - completedTime(a)),
+    [tasks, today, areaFilter, priorities, typeId],
+  );
+
+  const completedHistory = useMemo(
+    () => [...listTasks].sort((a, b) => completedTime(b) - completedTime(a)),
+    [listTasks],
+  );
+
+  const visibleCompleted = useMemo(
+    () => completedHistory.slice(0, completedVisibleCount),
+    [completedHistory, completedVisibleCount],
+  );
+
+  const completedGroups = useMemo(() => {
+    const groups: Record<CompletedGroupKey, TaskDTO[]> = {
+      today: [],
+      week: [],
+      month: [],
+      earlier: [],
+    };
+    for (const task of visibleCompleted) groups[completedGroup(task, today)].push(task);
+    return groups;
+  }, [visibleCompleted, today]);
+
+  useEffect(() => {
+    setCompletedVisibleCount(COMPLETED_PAGE_SIZE);
+  }, [areaFilter, dueFilter, priorities, statusFilter, typeId]);
+
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDaysYMD(weekStart, i)),
     [weekStart],
@@ -357,6 +442,12 @@ export default function TasksPage() {
   const switchView = (next: ViewTab) => {
     setView(next);
     if (next !== "mine") setCursorDate(today);
+  };
+
+  const selectType = (next: TypeId) => {
+    setTypeId(next);
+    setStatusFilter("all");
+    if (next === "done") setCompletedVisibleCount(COMPLETED_PAGE_SIZE);
   };
 
   const upcoming = useMemo(() => {
@@ -473,7 +564,7 @@ export default function TasksPage() {
                 <button
                   type="button"
                   className={typeId === c.id ? styles.catBtnActive : styles.catBtn}
-                  onClick={() => setTypeId(c.id)}
+                  onClick={() => selectType(c.id)}
                 >
                   <span className={styles.catIcon}>{c.icon}</span>
                   <span className={styles.catLabel}>{c.label}</span>
@@ -565,7 +656,13 @@ export default function TasksPage() {
               任务状态
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                onChange={(e) => {
+                  const next = e.target.value as StatusFilter;
+                  setStatusFilter(next);
+                  if (next === "DONE") setTypeId("done");
+                  else if (next === "CANCELED") setTypeId("all");
+                  else if (typeId === "done") setTypeId("all");
+                }}
               >
                 <option value="all">全部状态</option>
                 <option value="TODO">待开始</option>
@@ -600,8 +697,8 @@ export default function TasksPage() {
                   <div className={styles.statValue}>{overview.todo}</div>
                 </div>
                 <div className={styles.statCard} data-tone="purple">
-                  <div className={styles.statLabel}>已完成</div>
-                  <div className={styles.statValue}>{overview.done}</div>
+                  <div className={styles.statLabel}>本周完成</div>
+                  <div className={styles.statValue}>{overview.weekDone}</div>
                 </div>
                 <div className={styles.statCard} data-tone="red">
                   <div className={styles.statLabel}>已逾期</div>
@@ -667,26 +764,94 @@ export default function TasksPage() {
           {view === "mine" ? (
             <section className={`${styles.panel} ${styles.listPanel}`}>
               <div className={styles.listHead}>
-                <h2 className={styles.listTitle}>{viewTitle}</h2>
+                <h2 className={styles.listTitle}>
+                  {typeId === "done" ? "已完成任务" : "进行中的任务"}
+                </h2>
                 <div className={styles.listMeta}>
-                  {isLoading ? "加载中…" : `共 ${listTasks.length} 项`}
+                  {isLoading
+                    ? "加载中…"
+                    : typeId === "done"
+                      ? `已显示 ${visibleCompleted.length} / ${completedHistory.length} 项`
+                      : `共 ${listTasks.length} 项`}
                 </div>
               </div>
-              <TaskListBody
-                tasks={listTasks}
-                today={today}
-                bulk={bulk}
-                selected={selected}
-                menuId={menuId}
-                onToggleSelect={toggleSelect}
-                onComplete={(id) => complete.mutate(id)}
-                onEdit={setEditing}
-                onMenu={setMenuId}
-                onDelete={(id) => {
-                  remove.mutate(id);
-                  setMenuId(null);
-                }}
-              />
+              {typeId === "done" ? (
+                <CompletedHistory
+                  groups={completedGroups}
+                  total={completedHistory.length}
+                  visible={visibleCompleted.length}
+                  today={today}
+                  menuId={menuId}
+                  onEdit={setEditing}
+                  onMenu={setMenuId}
+                  onDelete={(id) => {
+                    remove.mutate(id);
+                    setMenuId(null);
+                  }}
+                  onLoadMore={() =>
+                    setCompletedVisibleCount((count) => count + COMPLETED_PAGE_SIZE)
+                  }
+                />
+              ) : (
+                <>
+                  <TaskListBody
+                    tasks={listTasks}
+                    today={today}
+                    bulk={bulk}
+                    selected={selected}
+                    menuId={menuId}
+                    onToggleSelect={toggleSelect}
+                    onComplete={(id) => complete.mutate(id)}
+                    onEdit={setEditing}
+                    onMenu={setMenuId}
+                    onDelete={(id) => {
+                      remove.mutate(id);
+                      setMenuId(null);
+                    }}
+                  />
+                  {todayCompleted.length > 0 ? (
+                    <div className={styles.todayCompleted}>
+                      <button
+                        type="button"
+                        className={styles.todayCompletedToggle}
+                        aria-expanded={todayDoneOpen}
+                        onClick={() => setTodayDoneOpen((open) => !open)}
+                      >
+                        <span className={styles.todayCompletedTitle}>
+                          <span className={styles.todayCompletedCheck}>✓</span>
+                          今天已完成 {todayCompleted.length} 项
+                        </span>
+                        <span className={styles.todayCompletedHint}>
+                          {todayDoneOpen ? "收起" : "展开查看"}
+                          {todayDoneOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </span>
+                      </button>
+                      {todayDoneOpen ? (
+                        <div className={styles.todayCompletedBody}>
+                          <TaskListBody
+                            tasks={todayCompleted}
+                            today={today}
+                            bulk={false}
+                            selected={selected}
+                            menuId={menuId}
+                            showHeader={false}
+                            emptyMessage="今天还没有完成任务。"
+                            dateMode="completed"
+                            onToggleSelect={toggleSelect}
+                            onComplete={(id) => complete.mutate(id)}
+                            onEdit={setEditing}
+                            onMenu={setMenuId}
+                            onDelete={(id) => {
+                              remove.mutate(id);
+                              setMenuId(null);
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              )}
             </section>
           ) : null}
 
@@ -949,6 +1114,9 @@ function TaskListBody({
   bulk,
   selected,
   menuId,
+  showHeader = true,
+  emptyMessage = "暂无任务，点击「添加任务」开始冒险。",
+  dateMode = "due",
   onToggleSelect,
   onComplete,
   onEdit,
@@ -960,6 +1128,9 @@ function TaskListBody({
   bulk: boolean;
   selected: Set<string>;
   menuId: string | null;
+  showHeader?: boolean;
+  emptyMessage?: string;
+  dateMode?: "due" | "completed";
   onToggleSelect: (id: string) => void;
   onComplete: (id: string) => void;
   onEdit: (task: TaskDTO) => void;
@@ -967,18 +1138,12 @@ function TaskListBody({
   onDelete: (id: string) => void;
 }) {
   if (tasks.length === 0) {
-    return <div className={styles.empty}>暂无任务，点击「添加任务」开始冒险。</div>;
+    return <div className={styles.empty}>{emptyMessage}</div>;
   }
 
   return (
     <>
-      <div className={styles.tableHead}>
-        <span>任务</span>
-        <span>优先级</span>
-        <span>进度</span>
-        <span>截止时间</span>
-        <span style={{ textAlign: "right" }}>操作</span>
-      </div>
+      {showHeader ? <TaskTableHead dateLabel={dateMode === "completed" ? "完成时间" : "截止时间"} /> : null}
       {tasks.map((task) => {
         const tags = taskTags(task);
         const pct = progressOf(task);
@@ -1030,8 +1195,14 @@ function TaskListBody({
               <div className={styles.progressText}>{pct}%</div>
             </div>
 
-            <div className={urgent ? styles.dueTextUrgent : styles.dueText}>
-              {formatDue(task, today)}
+            <div
+              className={
+                dateMode === "due" && urgent ? styles.dueTextUrgent : styles.dueText
+              }
+            >
+              {dateMode === "completed"
+                ? formatCompletedAt(task, today)
+                : formatDue(task, today)}
             </div>
 
             <div className={styles.rowActions}>
@@ -1076,6 +1247,93 @@ function TaskListBody({
         );
       })}
     </>
+  );
+}
+
+function TaskTableHead({ dateLabel = "截止时间" }: { dateLabel?: string }) {
+  return (
+    <div className={styles.tableHead}>
+      <span>任务</span>
+      <span>优先级</span>
+      <span>进度</span>
+      <span>{dateLabel}</span>
+      <span style={{ textAlign: "right" }}>操作</span>
+    </div>
+  );
+}
+
+function CompletedHistory({
+  groups,
+  total,
+  visible,
+  today,
+  menuId,
+  onEdit,
+  onMenu,
+  onDelete,
+  onLoadMore,
+}: {
+  groups: Record<CompletedGroupKey, TaskDTO[]>;
+  total: number;
+  visible: number;
+  today: string;
+  menuId: string | null;
+  onEdit: (task: TaskDTO) => void;
+  onMenu: (id: string | null) => void;
+  onDelete: (id: string) => void;
+  onLoadMore: () => void;
+}) {
+  if (total === 0) {
+    return <div className={styles.empty}>还没有完成记录，完成任务后会自动保存在这里。</div>;
+  }
+
+  const sections: Array<{ key: CompletedGroupKey; label: string }> = [
+    { key: "today", label: "今天" },
+    { key: "week", label: "本周" },
+    { key: "month", label: "本月" },
+    { key: "earlier", label: "更早" },
+  ];
+
+  return (
+    <div className={styles.completedHistory}>
+      <TaskTableHead dateLabel="完成时间" />
+      {sections.map((section) => {
+        const sectionTasks = groups[section.key];
+        if (sectionTasks.length === 0) return null;
+        return (
+          <section key={section.key} className={styles.completedGroup}>
+            <div className={styles.completedGroupHead}>
+              <h3>{section.label}</h3>
+              <span>{sectionTasks.length} 项</span>
+            </div>
+            <TaskListBody
+              tasks={sectionTasks}
+              today={today}
+              bulk={false}
+              selected={new Set<string>()}
+              menuId={menuId}
+              showHeader={false}
+              dateMode="completed"
+              onToggleSelect={() => undefined}
+              onComplete={() => undefined}
+              onEdit={onEdit}
+              onMenu={onMenu}
+              onDelete={onDelete}
+            />
+          </section>
+        );
+      })}
+      {visible < total ? (
+        <div className={styles.loadMoreWrap}>
+          <button type="button" className={styles.loadMore} onClick={onLoadMore}>
+            再加载 {Math.min(COMPLETED_PAGE_SIZE, total - visible)} 项
+          </button>
+          <span>每次仅展示 20 项，避免列表过长</span>
+        </div>
+      ) : (
+        <div className={styles.historyEnd}>已显示全部 {total} 项完成记录</div>
+      )}
+    </div>
   );
 }
 

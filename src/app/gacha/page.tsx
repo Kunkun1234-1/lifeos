@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
+  Archive,
   Check,
   Clock3,
   Coins,
@@ -11,6 +12,9 @@ import {
   Info,
   ListTree,
   PackageCheck,
+  Pencil,
+  Plus,
+  Save,
   SkipForward,
   Sparkles,
   Star,
@@ -19,8 +23,19 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGacha, usePullGacha } from "@/hooks/queries";
-import type { GachaPullResult, GachaState, RewardItemDTO } from "@/lib/types";
+import {
+  useCreateReward,
+  useDeleteReward,
+  useGacha,
+  usePullGacha,
+  useUpdateReward,
+} from "@/hooks/queries";
+import type {
+  GachaPullResult,
+  GachaState,
+  RewardCategory,
+  RewardItemDTO,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** Page ambience (ethereal pad). Videos keep their own embedded audio during pulls. */
@@ -333,6 +348,9 @@ function WishButton({
 }
 
 function PoolOverlay({ state, onClose }: { state: GachaState; onClose: () => void }) {
+  const [managing, setManaging] = useState(false);
+  const [editing, setEditing] = useState<RewardItemDTO | "new" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const grouped = useMemo(
     () => ({
       legendary: state.pool.filter((item) => item.tier === "legendary"),
@@ -344,20 +362,51 @@ function PoolOverlay({ state, onClose }: { state: GachaState; onClose: () => voi
   );
 
   return (
-    <OverlayShell title="概率与奖池" icon={<ListTree size={18} />} onClose={onClose}>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <RateBox label="五星" rate="0.6%" detail="74 抽起提升，90 抽必得" />
-        <RateBox label="四星及以上" rate="5.1%" detail="10 抽内至少一次" />
-        <RateBox label="三星" rate="94.3%" detail="其余结果" />
-      </div>
-      <p className="mt-4 border-l-2 border-[#e8c977]/55 pl-3 text-xs leading-5 text-white/52">
-        四星结果中，稀有占 82%，精选占 18%。同层级商品按权重分配。实物奖励抽中后仍需在背包中支付 money 兑现。
-      </p>
-      <div className="mt-5 space-y-5">
-        {(["legendary", "epic", "rare", "common"] as const).map((tier) => (
-          <PoolTier key={tier} tier={tier} items={grouped[tier]} />
-        ))}
-      </div>
+    <OverlayShell
+      title={managing ? "DIY 奖励池" : "概率与奖池"}
+      icon={<ListTree size={18} />}
+      onClose={onClose}
+      wide
+      actions={
+        <button
+          type="button"
+          onClick={() => {
+            setManaging((value) => !value);
+            setEditing(null);
+            setMessage(null);
+          }}
+          className="flex h-9 items-center gap-2 border border-[#e8c977]/65 bg-[#e8c977]/12 px-3 text-xs font-bold text-[#ffe7a4] transition hover:bg-[#e8c977]/22"
+        >
+          {managing ? <Check size={14} /> : <Pencil size={14} />}
+          {managing ? "完成编辑" : "编辑奖池"}
+        </button>
+      }
+    >
+      {managing ? (
+        <PoolManager
+          rewards={state.rewards}
+          editing={editing}
+          message={message}
+          onEdit={setEditing}
+          onMessage={setMessage}
+        />
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <RateBox label="五星" rate="0.6%" detail="74 抽起提升，90 抽必得" />
+            <RateBox label="四星及以上" rate="5.1%" detail="10 抽内至少一次" />
+            <RateBox label="三星" rate="94.3%" detail="其余结果" />
+          </div>
+          <p className="mt-4 border-l-2 border-[#e8c977] bg-[#0b2b38] px-3 py-2.5 text-xs leading-5 text-white/78">
+            四星结果中，稀有占 82%，精选占 18%。同层级商品按权重分配。实物奖励抽中后仍需在背包中支付 money 兑现。
+          </p>
+          <div className="mt-6 space-y-6">
+            {(["legendary", "epic", "rare", "common"] as const).map((tier) => (
+              <PoolTier key={tier} tier={tier} items={grouped[tier]} />
+            ))}
+          </div>
+        </>
+      )}
     </OverlayShell>
   );
 }
@@ -369,30 +418,326 @@ function PoolTier({ tier, items }: { tier: RewardItemDTO["tier"]; items: RewardI
     <section>
       <div className="mb-2 flex items-center gap-2">
         <span className={cn("font-display text-sm", meta.color)}>{meta.label}</span>
-        <span className="text-[10px] text-white/35">{items.length} 件</span>
-        <span className="h-px flex-1 bg-white/10" />
+        <span className="text-[10px] text-white/62">{items.length} 件</span>
+        <span className="h-px flex-1 bg-white/18" />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-3 border border-white/10 bg-white/5 p-2.5">
-            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden bg-black/20 text-xl">
+          <div key={item.id} className="flex items-center gap-3 border border-white/18 bg-[#0c2b38] p-3 shadow-[0_10px_28px_-24px_black]">
+            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden border border-white/12 bg-[#061923] text-xl">
               {item.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.imageUrl} alt="" className="h-full w-full object-contain" />
               ) : item.emoji}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm text-white/82">{item.name}</div>
-              <div className="mt-0.5 flex items-center gap-2 text-[10px] text-white/38">
+              <div className="truncate text-sm font-semibold text-white">{item.name}</div>
+              <div className="mt-1 flex items-center gap-2 text-[10px] text-white/65">
                 <span>{CATEGORY_LABEL[item.category]}</span>
                 <span>权重 {item.weight}/{totalWeight}</span>
               </div>
             </div>
-            <span className="font-mono text-[10px] text-white/42">{baseItemProbability(tier, item.weight, totalWeight)}</span>
+            <span className="font-mono text-[10px] font-bold text-[#ffe7a4]">{baseItemProbability(tier, item.weight, totalWeight)}</span>
           </div>
         ))}
+        {items.length === 0 ? (
+          <div className="border border-dashed border-white/20 bg-[#0a2632] px-4 py-5 text-center text-xs text-white/58 sm:col-span-2">
+            这个星级还没有奖励，可在“编辑奖池”中添加。
+          </div>
+        ) : null}
       </div>
     </section>
+  );
+}
+
+function PoolManager({
+  rewards,
+  editing,
+  message,
+  onEdit,
+  onMessage,
+}: {
+  rewards: RewardItemDTO[];
+  editing: RewardItemDTO | "new" | null;
+  message: string | null;
+  onEdit: (reward: RewardItemDTO | "new" | null) => void;
+  onMessage: (message: string | null) => void;
+}) {
+  const update = useUpdateReward();
+  const archive = useDeleteReward();
+  const [error, setError] = useState<string | null>(null);
+
+  const togglePool = async (reward: RewardItemDTO) => {
+    setError(null);
+    try {
+      await update.mutateAsync({
+        id: reward.id,
+        body: { inGachaPool: !reward.inGachaPool },
+      });
+      onMessage(reward.inGachaPool ? `「${reward.name}」已移出奖池` : `「${reward.name}」已加入奖池`);
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  };
+
+  const archiveReward = async (reward: RewardItemDTO) => {
+    if (!window.confirm(`归档「${reward.name}」？历史抽取记录和背包物品不会被删除。`)) return;
+    setError(null);
+    try {
+      await archive.mutateAsync(reward.id);
+      onMessage(`「${reward.name}」已归档`);
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  };
+
+  if (editing) {
+    return (
+      <PoolRewardForm
+        key={editing === "new" ? "new" : editing.id}
+        reward={editing === "new" ? null : editing}
+        onCancel={() => onEdit(null)}
+        onSaved={(savedMessage) => {
+          onMessage(savedMessage);
+          onEdit(null);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex flex-col gap-3 border border-[#e8c977]/28 bg-[#0b2b38] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="font-display text-lg text-white">配置你的奖励</h3>
+          <p className="mt-1 max-w-lg text-xs leading-5 text-white/68">
+            自定义名称、图标、星级、类别和权重。关闭“加入奖池”只会暂停抽取，不会删除奖励。
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            onMessage(null);
+            onEdit("new");
+          }}
+          className="flex h-10 shrink-0 items-center justify-center gap-2 bg-[#e8c977] px-4 text-xs font-black text-[#10212a] transition hover:bg-[#f6dda0]"
+        >
+          <Plus size={15} /> 新增奖励
+        </button>
+      </div>
+
+      {message ? (
+        <div className="mt-3 border border-[#59c98f]/40 bg-[#0d3a31] px-3 py-2 text-xs text-[#b9f4d4]" role="status">
+          {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="mt-3 border border-[#ef8d86]/45 bg-[#3a171b] px-3 py-2 text-xs text-[#ffd3ce]" role="alert">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-4 space-y-2">
+        {rewards.map((reward) => {
+          const meta = TIER_META[reward.tier];
+          const busy = (update.isPending && update.variables?.id === reward.id) || archive.isPending;
+          return (
+            <div
+              key={reward.id}
+              className={cn(
+                "grid gap-3 border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
+                reward.inGachaPool
+                  ? "border-white/20 bg-[#0c2b38]"
+                  : "border-white/10 bg-[#091f2a] opacity-70",
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <div className={cn("grid h-11 w-11 shrink-0 place-items-center overflow-hidden border bg-[#061923] text-xl", meta.border)}>
+                  {reward.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={reward.imageUrl} alt="" className="h-full w-full object-contain" />
+                  ) : reward.emoji}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="truncate text-sm text-white">{reward.name}</strong>
+                    <span className={cn("text-[10px] font-bold", meta.color)}>{meta.label}</span>
+                  </div>
+                  <div className="mt-1 text-[10px] text-white/62">
+                    {CATEGORY_LABEL[reward.category]} · 权重 {reward.weight} · {reward.inGachaPool ? "抽取中" : "已停用"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void togglePool(reward)}
+                  className={cn(
+                    "h-8 border px-3 text-[11px] font-bold transition disabled:opacity-45",
+                    reward.inGachaPool
+                      ? "border-[#59c98f]/50 bg-[#123b31] text-[#b9f4d4]"
+                      : "border-white/20 bg-[#102833] text-white/68 hover:text-white",
+                  )}
+                >
+                  {reward.inGachaPool ? "已加入奖池" : "加入奖池"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEdit(reward)}
+                  className="grid h-8 w-8 place-items-center border border-white/20 bg-[#102833] text-white/75 hover:border-[#e8c977]/55 hover:text-[#ffe7a4]"
+                  title={`编辑${reward.name}`}
+                  aria-label={`编辑${reward.name}`}
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void archiveReward(reward)}
+                  className="grid h-8 w-8 place-items-center border border-[#ef8d86]/25 bg-[#31171a] text-[#ffb7b0] hover:border-[#ef8d86]/55"
+                  title={`归档${reward.name}`}
+                  aria-label={`归档${reward.name}`}
+                >
+                  <Archive size={13} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PoolRewardForm({
+  reward,
+  onCancel,
+  onSaved,
+}: {
+  reward: RewardItemDTO | null;
+  onCancel: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const create = useCreateReward();
+  const update = useUpdateReward();
+  const [name, setName] = useState(reward?.name ?? "");
+  const [description, setDescription] = useState(reward?.description ?? "");
+  const [emoji, setEmoji] = useState(reward?.emoji ?? "🎁");
+  const [imageUrl, setImageUrl] = useState(reward?.imageUrl ?? "");
+  const [tier, setTier] = useState<RewardItemDTO["tier"]>(reward?.tier ?? "common");
+  const [category, setCategory] = useState<RewardCategory>(reward?.category ?? "virtual");
+  const [weight, setWeight] = useState(reward?.weight ?? 1);
+  const [inGachaPool, setInGachaPool] = useState(reward?.inGachaPool ?? true);
+  const [moneyYuan, setMoneyYuan] = useState(((reward?.costMoneyCents ?? 0) / 100).toString());
+  const [costGold, setCostGold] = useState(reward?.costGold ?? 80);
+  const [error, setError] = useState<string | null>(null);
+  const pending = create.isPending || update.isPending;
+
+  const submit = async () => {
+    const costMoneyCents = Math.round(Number(moneyYuan) * 100);
+    setError(null);
+    if (!name.trim()) return setError("请填写奖励名称");
+    if (!Number.isFinite(costMoneyCents) || costMoneyCents < 0) return setError("请输入有效的人民币金额");
+    if (costMoneyCents === 0 && costGold === 0) return setError("人民币金额和 Gold 不能同时为 0");
+    if (category === "physical_small" && costMoneyCents >= 50_000) return setError("小额实物必须低于 500 元");
+    if (category === "physical_large" && costMoneyCents < 50_000) return setError("大额实物必须不低于 500 元");
+
+    const body = {
+      name: name.trim(),
+      description: description.trim() || null,
+      emoji: emoji.trim() || "🎁",
+      imageUrl: imageUrl.trim() || null,
+      tier,
+      category,
+      weight: Math.max(1, Math.min(10, Math.round(weight))),
+      inGachaPool,
+      costMoneyCents,
+      costGold: Math.max(0, Math.round(costGold)),
+    };
+
+    try {
+      if (reward) await update.mutateAsync({ id: reward.id, body });
+      else await create.mutateAsync(body);
+      onSaved(reward ? `「${body.name}」已更新` : `「${body.name}」已加入奖励库`);
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
+  };
+
+  const fieldClass = "grid gap-1.5 text-[11px] font-bold text-white/72";
+  const controlClass = "h-10 w-full border border-white/22 bg-[#061923] px-3 text-sm font-medium text-white outline-none transition placeholder:text-white/28 focus:border-[#e8c977]/70";
+
+  return (
+    <div>
+      <div className="border border-[#e8c977]/28 bg-[#0b2b38] p-4">
+        <h3 className="font-display text-xl text-white">{reward ? "编辑奖励" : "新增奖励"}</h3>
+        <p className="mt-1 text-xs leading-5 text-white/65">设置奖励内容、兑换成本与抽取权重。图片地址留空时使用 Emoji。</p>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label className={fieldClass}>
+          奖励名称
+          <input className={controlClass} value={name} onChange={(event) => setName(event.target.value)} autoFocus />
+        </label>
+        <label className={fieldClass}>
+          Emoji
+          <input className={controlClass} value={emoji} maxLength={8} onChange={(event) => setEmoji(event.target.value)} />
+        </label>
+        <label className={cn(fieldClass, "sm:col-span-2")}>
+          说明
+          <textarea className="min-h-20 w-full resize-y border border-white/22 bg-[#061923] px-3 py-2 text-sm font-medium text-white outline-none placeholder:text-white/28 focus:border-[#e8c977]/70" value={description ?? ""} onChange={(event) => setDescription(event.target.value)} />
+        </label>
+        <label className={cn(fieldClass, "sm:col-span-2")}>
+          图片地址（可选）
+          <input className={controlClass} value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="https://… 或 /images/reward.png" />
+        </label>
+        <label className={fieldClass}>
+          星级
+          <select className={controlClass} value={tier} onChange={(event) => setTier(event.target.value as RewardItemDTO["tier"])}>
+            <option value="common">三星 · 通常</option>
+            <option value="rare">四星 · 稀有</option>
+            <option value="epic">四星 · 精选</option>
+            <option value="legendary">五星 · 传说</option>
+          </select>
+        </label>
+        <label className={fieldClass}>
+          类型
+          <select className={controlClass} value={category} onChange={(event) => setCategory(event.target.value as RewardCategory)}>
+            <option value="virtual">虚拟奖励</option>
+            <option value="physical_small">小额实物 · 低于 500 元</option>
+            <option value="physical_large">大额实物 · 不低于 500 元</option>
+          </select>
+        </label>
+        <label className={fieldClass}>
+          池内权重（1–10）
+          <input className={controlClass} type="number" min={1} max={10} value={weight} onChange={(event) => setWeight(Number(event.target.value))} />
+        </label>
+        <label className={fieldClass}>
+          Gold 价值
+          <input className={controlClass} type="number" min={0} value={costGold} onChange={(event) => setCostGold(Number(event.target.value))} />
+        </label>
+        <label className={fieldClass}>
+          人民币价值（元）
+          <input className={controlClass} type="number" min={0} step="0.01" value={moneyYuan} onChange={(event) => setMoneyYuan(event.target.value)} />
+        </label>
+        <label className="flex h-10 items-center gap-3 self-end border border-white/22 bg-[#061923] px-3 text-xs font-bold text-white/78">
+          <input type="checkbox" checked={inGachaPool} onChange={(event) => setInGachaPool(event.target.checked)} className="h-4 w-4 accent-[#e8c977]" />
+          保存后加入当前奖池
+        </label>
+      </div>
+
+      {error ? <div className="mt-4 border border-[#ef8d86]/45 bg-[#3a171b] px-3 py-2 text-xs text-[#ffd3ce]" role="alert">{error}</div> : null}
+
+      <div className="mt-5 flex justify-end gap-2 border-t border-white/14 pt-4">
+        <button type="button" onClick={onCancel} disabled={pending} className="h-10 border border-white/24 bg-[#102833] px-4 text-xs font-bold text-white/78 hover:text-white disabled:opacity-45">
+          取消
+        </button>
+        <button type="button" onClick={() => void submit()} disabled={pending} className="flex h-10 items-center gap-2 bg-[#e8c977] px-5 text-xs font-black text-[#10212a] hover:bg-[#f6dda0] disabled:opacity-45">
+          <Save size={14} /> {pending ? "保存中…" : "保存奖励"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -400,19 +745,19 @@ function HistoryOverlay({ state, onClose }: { state: GachaState; onClose: () => 
   return (
     <OverlayShell title="最近祈愿" icon={<History size={18} />} onClose={onClose}>
       {state.recent.length === 0 ? (
-        <div className="grid min-h-64 place-items-center text-center text-sm text-white/42">还没有祈愿记录。</div>
+        <div className="grid min-h-64 place-items-center text-center text-sm text-white/65">还没有祈愿记录。</div>
       ) : (
-        <div className="divide-y divide-white/10">
+        <div className="divide-y divide-white/14">
           {state.recent.map((pull) => {
             const meta = TIER_META[pull.tier];
             return (
-              <div key={pull.id} className="flex items-center gap-3 py-3">
-                <div className={cn("grid h-10 w-10 place-items-center border bg-white/5 text-xl", meta.border)}>
+              <div key={pull.id} className="flex items-center gap-3 bg-[#0c2b38] px-3 py-3">
+                <div className={cn("grid h-10 w-10 place-items-center border bg-[#061923] text-xl", meta.border)}>
                   {pull.reward?.emoji ?? <Star size={16} />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-white/82">{pull.reward?.name ?? "未命名奖励"}</div>
-                  <div className="mt-0.5 text-[10px] text-white/38">{formatDate(pull.pulledAt)}</div>
+                  <div className="truncate text-sm font-semibold text-white">{pull.reward?.name ?? "未命名奖励"}</div>
+                  <div className="mt-0.5 text-[10px] text-white/62">{formatDate(pull.pulledAt)}</div>
                 </div>
                 <div className="text-right">
                   <div className={cn("text-xs", meta.color)}>{meta.label}</div>
@@ -427,12 +772,26 @@ function HistoryOverlay({ state, onClose }: { state: GachaState; onClose: () => 
   );
 }
 
-function OverlayShell({ title, icon, onClose, children }: { title: string; icon: ReactNode; onClose: () => void; children: ReactNode }) {
+function OverlayShell({
+  title,
+  icon,
+  onClose,
+  children,
+  actions,
+  wide = false,
+}: {
+  title: string;
+  icon: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  actions?: ReactNode;
+  wide?: boolean;
+}) {
   useDialogDismiss(onClose);
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex justify-end bg-[#030914]/72 text-white backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex justify-end bg-[#02070d]/84 text-white backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -440,21 +799,24 @@ function OverlayShell({ title, icon, onClose, children }: { title: string; icon:
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="h-full w-full max-w-[620px] overflow-y-auto border-l border-white/14 bg-[#07382d]/98 px-5 pb-5 shadow-[-30px_0_80px_-50px_black] sm:px-7 sm:pb-7">
-        <div className="sticky top-0 z-20 -mx-5 flex items-center justify-between gap-3 border-b border-white/12 bg-[#07382d]/98 px-5 py-4 shadow-[0_16px_28px_-24px_black] backdrop-blur-xl sm:-mx-7 sm:px-7">
+      <div className={cn("h-full w-full overflow-y-auto border-l border-white/20 bg-[#071f2c] px-5 pb-5 shadow-[-32px_0_90px_-40px_#000] sm:px-7 sm:pb-7", wide ? "max-w-[780px]" : "max-w-[620px]")}>
+        <div className="sticky top-0 z-20 -mx-5 flex items-center justify-between gap-3 border-b border-white/18 bg-[#071f2c] px-5 py-4 shadow-[0_16px_30px_-22px_#000] sm:-mx-7 sm:px-7">
           <div className="flex items-center gap-2 text-[#ffe5a0]">
             {icon}
             <h2 className="font-display text-xl text-white">{title}</h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-10 w-10 shrink-0 place-items-center border border-white/30 bg-black/35 text-white transition hover:border-[#e8c977]/70 hover:bg-[#e8c977]/20"
-            title={`关闭${title}`}
-            aria-label={`关闭${title}`}
-          >
-            <X size={20} strokeWidth={2.4} className="text-white" />
-          </button>
+          <div className="flex items-center gap-2">
+            {actions}
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid h-10 w-10 shrink-0 place-items-center border border-white/35 bg-[#020b11] text-white transition hover:border-[#e8c977]/70 hover:bg-[#3b3421]"
+              title={`关闭${title}`}
+              aria-label={`关闭${title}`}
+            >
+              <X size={20} strokeWidth={2.4} className="text-white" />
+            </button>
+          </div>
         </div>
         <div className="py-5">{children}</div>
       </div>
@@ -465,10 +827,10 @@ function OverlayShell({ title, icon, onClose, children }: { title: string; icon:
 
 function RateBox({ label, rate, detail }: { label: string; rate: string; detail: string }) {
   return (
-    <div className="border border-white/12 bg-white/5 p-3">
-      <div className="text-[10px] text-white/42">{label}</div>
+    <div className="border border-white/20 bg-[#0c2b38] p-3 shadow-[0_10px_28px_-24px_black]">
+      <div className="text-[10px] font-bold text-white/68">{label}</div>
       <div className="mt-1 font-display text-2xl text-[#ffe5a0]">{rate}</div>
-      <div className="mt-1 text-[9px] leading-4 text-white/35">{detail}</div>
+      <div className="mt-1 text-[10px] leading-4 text-white/62">{detail}</div>
     </div>
   );
 }

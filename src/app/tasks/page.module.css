@@ -401,6 +401,147 @@
   border-radius: 10px;
 }
 
+.todayCompleted {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #dfe5c9;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(241, 248, 229, 0.9), rgba(255, 254, 248, 0.96));
+}
+
+.todayCompletedToggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 0;
+  background: transparent;
+  color: #284137;
+  cursor: pointer;
+}
+
+.todayCompletedToggle:hover {
+  background: rgba(36, 157, 109, 0.06);
+}
+
+.todayCompletedTitle,
+.todayCompletedHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.todayCompletedTitle {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.todayCompletedCheck {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border-radius: 50%;
+  background: #249d6d;
+  color: #fff;
+  font-size: 12px;
+}
+
+.todayCompletedHint {
+  color: #748078;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.todayCompletedBody {
+  padding: 0 8px 8px;
+  border-top: 1px solid rgba(207, 216, 179, 0.7);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.completedHistory {
+  display: grid;
+}
+
+.completedGroup {
+  content-visibility: auto;
+  contain-intrinsic-size: 280px;
+}
+
+.completedGroup + .completedGroup {
+  margin-top: 12px;
+}
+
+.completedGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 8px 5px;
+  border-bottom: 1px dashed #dfe3cf;
+}
+
+.completedGroupHead h3 {
+  margin: 0;
+  color: #31433a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.completedGroupHead span {
+  color: #89938c;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.completedGroup .taskTitle {
+  color: #536159;
+}
+
+.completedGroup .taskIcon,
+.todayCompletedBody .taskIcon {
+  filter: saturate(0.75);
+  opacity: 0.82;
+}
+
+.loadMoreWrap {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 18px 8px 6px;
+}
+
+.loadMore {
+  min-height: 34px;
+  padding: 0 18px;
+  border: 1px solid #bfc99b;
+  border-radius: 10px;
+  background: #f7faef;
+  color: #286f51;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.loadMore:hover {
+  border-color: #249d6d;
+  background: #eef8f1;
+}
+
+.loadMoreWrap span,
+.historyEnd {
+  color: #8a948d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.historyEnd {
+  padding: 16px 8px 4px;
+  text-align: center;
+}
+
 .taskMain {
   display: flex;
   min-width: 0;
