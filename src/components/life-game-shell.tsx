@@ -51,7 +51,7 @@ const NAV_ITEMS = [
 
 const ROUTE_META = [
   { prefix: "/tasks", title: "任务计划", description: "整理今日任务，把每一步转化为成长进度。" },
-  { prefix: "/routines", title: "日程规划", description: "安排节奏，让习惯和行动自然衔接。" },
+  { prefix: "/routines", title: "日程规划", description: "集中安排课程、会议、考试与重要事项。" },
   { prefix: "/goals", title: "人生目标", description: "确认前进方向，追踪每个阶段的里程碑。" },
   { prefix: "/review", title: "成长反思", description: "写下今日所得，沉淀成长与下一步。" },
   { prefix: "/inventory", title: "物品背包", description: "管理旅途中获得的物品与资源。" },

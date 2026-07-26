@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { CalendarDays, Repeat, X } from "lucide-react";
+import { CalendarDays, Repeat, Trash2, X } from "lucide-react";
 import { AreaSelect } from "@/components/area-select";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
@@ -27,9 +27,11 @@ type Props = {
   initial: RoutineDTO | null;
   selectedDate: string;
   onOpenChange: (open: boolean) => void;
+  onDelete: (routine: RoutineDTO) => Promise<void>;
+  deletePending: boolean;
 };
 
-export function ScheduleFormPanel({ open, initial, selectedDate, onOpenChange }: Props) {
+export function ScheduleFormPanel({ open, initial, selectedDate, onOpenChange, onDelete, deletePending }: Props) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -40,6 +42,8 @@ export function ScheduleFormPanel({ open, initial, selectedDate, onOpenChange }:
             initial={initial}
             selectedDate={selectedDate}
             onDone={() => onOpenChange(false)}
+            onDelete={onDelete}
+            deletePending={deletePending}
           />
         </Dialog.Content>
       </Dialog.Portal>
@@ -47,10 +51,16 @@ export function ScheduleFormPanel({ open, initial, selectedDate, onOpenChange }:
   );
 }
 
-function ScheduleForm({ initial, selectedDate, onDone }: Omit<Props, "open" | "onOpenChange"> & { onDone: () => void }) {
+function ScheduleForm({
+  initial,
+  selectedDate,
+  onDone,
+  onDelete,
+  deletePending,
+}: Omit<Props, "open" | "onOpenChange"> & { onDone: () => void }) {
   const decoded = decodeNotes(initial?.notes ?? null);
   const initialMeta = decoded.meta;
-  const [kind, setKind] = useState<ScheduleKind>(initialMeta?.kind ?? "recurring");
+  const [kind, setKind] = useState<ScheduleKind>(initialMeta?.kind ?? "single");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [note, setNote] = useState(decoded.note);
   const [date, setDate] = useState(initialMeta?.date ?? selectedDate);
@@ -100,6 +110,11 @@ function ScheduleForm({ initial, selectedDate, onDone }: Omit<Props, "open" | "o
 
   const pending = create.isPending || update.isPending;
 
+  const remove = async () => {
+    if (!initial) return;
+    await onDelete(initial);
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4 border-b border-[var(--border)] pb-4">
@@ -108,7 +123,7 @@ function ScheduleForm({ initial, selectedDate, onDone }: Omit<Props, "open" | "o
             {editing ? "编辑日程" : "添加日程"}
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-xs leading-5 text-[var(--fg-muted)]">
-            安排会同步到时间轴，并保留现有 XP 与 Gold 奖励规则。
+            用于课表、会议、考试、截止日期等重要事项；每日习惯请在“习惯”功能中管理。
           </Dialog.Description>
         </div>
         <Dialog.Close asChild>
@@ -120,7 +135,7 @@ function ScheduleForm({ initial, selectedDate, onDone }: Omit<Props, "open" | "o
 
       <div className="grid gap-5">
         <Field label="标题">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：高数课 / 晚间跑步" autoFocus />
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：高数课 / 项目答辩 / 论文截止" autoFocus />
         </Field>
         <Field label="备注">
           <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="地点、准备材料、提醒事项..." className="min-h-24" />
@@ -184,8 +199,13 @@ function ScheduleForm({ initial, selectedDate, onDone }: Omit<Props, "open" | "o
           <Field label="Gold"><Input type="number" min={0} value={goldReward} onChange={(event) => setGoldReward(Number(event.target.value))} /></Field>
         </div>
 
-        <div className="sticky bottom-0 mt-2 flex gap-2 border-t border-[var(--border)] bg-[rgba(250,243,226,0.96)] pt-4">
-          <Button variant="outline" className="flex-1" onClick={onDone}>取消</Button>
+        <div className="sticky bottom-0 mt-2 flex flex-wrap gap-2 border-t border-[var(--border)] bg-[rgba(250,243,226,0.96)] pt-4">
+          {initial ? (
+            <Button variant="danger" onClick={() => void remove()} disabled={pending || deletePending}>
+              <Trash2 size={15} /> {deletePending ? "删除中..." : "删除日程"}
+            </Button>
+          ) : null}
+          <Button variant="outline" className="ml-auto" onClick={onDone}>取消</Button>
           <Button className="flex-[1.4]" onClick={submit} disabled={pending || !title.trim() || !validTime || !validDays}>
             {pending ? "保存中..." : editing ? "保存修改" : "创建日程"}
           </Button>

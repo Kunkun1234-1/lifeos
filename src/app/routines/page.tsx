@@ -7,8 +7,9 @@ import {
   Plus,
   SlidersHorizontal,
   Star,
+  Trash2,
 } from "lucide-react";
-import { useRoutines, useTasks } from "@/hooks/queries";
+import { useDeleteRoutine, useRoutines, useTasks } from "@/hooks/queries";
 import { addDaysYMD, dayOfWeek, todayYMD, toYMD } from "@/lib/date";
 import type { RoutineDTO, TaskDTO } from "@/lib/types";
 import { ScheduleFormPanel } from "./components/schedule-form-panel";
@@ -18,6 +19,7 @@ import {
   calendarDatesMonday,
   decodeNotes,
   formatFullDate,
+  isCalendarSchedule,
   shiftMonth,
 } from "./schedule-model";
 import styles from "./page.module.css";
@@ -135,7 +137,7 @@ function buildCalEvents(routines: RoutineDTO[], tasks: TaskDTO[], rangeDates: st
   const dateSet = new Set(rangeDates);
 
   for (const date of rangeDates) {
-    const entries = buildEntries(routines, date);
+    const entries = buildEntries(routines, date).filter(isCalendarSchedule);
     for (const entry of entries) {
       const tone = toneFromArea(entry.routine.area?.attributeKey, entry.routine.area?.name);
       const completed = date === today && entry.routine.completedToday;
@@ -203,6 +205,7 @@ export default function RoutinesPage() {
 
   const { data: routines = [] } = useRoutines();
   const { data: tasks = [] } = useTasks();
+  const deleteRoutine = useDeleteRoutine();
 
   const monthDates = useMemo(() => calendarDatesMonday(cursor), [cursor]);
   const weekStart = mondayWeekStart(view === "week" ? cursor : selectedDate);
@@ -282,6 +285,17 @@ export default function RoutinesPage() {
       setSelectedDate(event.date);
       setEditing(event.routine);
       setFormOpen(true);
+    }
+  };
+
+  const removeRoutine = async (routine: RoutineDTO) => {
+    const decoded = decodeNotes(routine.notes);
+    const target = decoded.meta?.kind === "recurring" ? "整条重复日程（所有日期）" : "这条日程";
+    if (!window.confirm(`确定删除${target}“${routine.title}”吗？`)) return;
+    await deleteRoutine.mutateAsync(routine.id);
+    if (editing?.id === routine.id) {
+      setFormOpen(false);
+      setEditing(null);
     }
   };
 
@@ -575,7 +589,7 @@ export default function RoutinesPage() {
             </div>
 
             {selectedEvents.length === 0 ? (
-              <div className={styles.empty}>这一天还没有安排</div>
+              <div className={styles.empty}>这一天还没有课表或重要事项</div>
             ) : (
               <ul className={styles.timeline}>
                 {selectedEvents.map((ev) => {
@@ -604,6 +618,18 @@ export default function RoutinesPage() {
                         {ev.note ? <p className={styles.tlDesc}>{stripMetaNote(ev.note)}</p> : null}
                         <div className={styles.tlDur}>{durationLabel(ev.startTime, ev.endTime)}</div>
                       </button>
+                      {ev.kind === "routine" ? (
+                        <button
+                          type="button"
+                          className={styles.tlDelete}
+                          aria-label={`删除日程：${ev.title}`}
+                          title="删除日程"
+                          disabled={deleteRoutine.isPending}
+                          onClick={() => ev.routine && void removeRoutine(ev.routine)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      ) : null}
                     </li>
                   );
                 })}
@@ -724,6 +750,8 @@ export default function RoutinesPage() {
         initial={editing}
         selectedDate={selectedDate}
         onOpenChange={setFormOpen}
+        onDelete={removeRoutine}
+        deletePending={deleteRoutine.isPending}
       />
     </div>
   );

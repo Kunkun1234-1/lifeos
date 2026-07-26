@@ -120,6 +120,10 @@ export function buildEntries(routines: RoutineDTO[], selectedDate: string): Sche
     .sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999));
 }
 
+export function isCalendarSchedule(entry: Pick<ScheduleEntry, "meta">) {
+  return entry.meta !== null;
+}
+
 export function tasksForDate(tasks: TaskDTO[], selectedDate: string) {
   return tasks
     .filter((task) => datePart(task.dueDate) === selectedDate || datePart(task.completedAt) === selectedDate)
