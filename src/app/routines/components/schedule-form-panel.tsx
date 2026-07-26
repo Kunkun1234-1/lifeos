@@ -88,6 +88,7 @@ function ScheduleForm({
     if (!title.trim() || !validTime || !validDays) return;
     const meta: ScheduleMeta = {
       [SCHEDULE_META_KEY]: true,
+      purpose: "calendar",
       kind,
       startTime,
       endTime,

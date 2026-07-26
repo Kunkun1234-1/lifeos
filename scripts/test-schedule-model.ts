@@ -17,6 +17,7 @@ const baseRoutine: RoutineDTO = {
   title: "专注工作",
   notes: JSON.stringify({
     [SCHEDULE_META_KEY]: true,
+    purpose: "calendar",
     kind: "single",
     date: "2026-07-11",
     startTime: "09:00",
@@ -42,6 +43,7 @@ const entries = buildEntries([
     title: "评审",
     notes: JSON.stringify({
       [SCHEDULE_META_KEY]: true,
+      purpose: "calendar",
       kind: "single",
       date: "2026-07-11",
       startTime: "10:00",
@@ -57,6 +59,14 @@ assert.equal(rangesOverlap(9 * 60, 10 * 60, 8 * 60 + 30, 9 * 60 + 30), true);
 assert.equal(rangesOverlap(9 * 60, 10 * 60, 10 * 60, 11 * 60), false);
 assert.equal(decodeNotes("普通备注").note, "普通备注");
 assert.equal(isCalendarSchedule({ meta: decodeNotes("每日散步").meta }), false);
+assert.equal(isCalendarSchedule({
+  meta: decodeNotes(JSON.stringify({
+    [SCHEDULE_META_KEY]: true,
+    kind: "recurring",
+    startTime: "09:00",
+    endTime: "10:00",
+  })).meta,
+}), false);
 assert.equal(isCalendarSchedule(entries[0]), true);
 assert.equal(calendarDates("2026-07-11").length, 42);
 assert.deepEqual(completionSummary(entries, "2026-07-11", "2026-07-11", new Date(2026, 6, 11, 9, 30)), {

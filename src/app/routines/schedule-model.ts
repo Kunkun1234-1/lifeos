@@ -16,6 +16,7 @@ export type ScheduleView = "timeline" | "ideal" | "actual";
 
 export type ScheduleMeta = {
   [SCHEDULE_META_KEY]: true;
+  purpose?: "calendar";
   kind: ScheduleKind;
   startTime: string;
   endTime: string;
@@ -71,6 +72,7 @@ export function decodeNotes(raw: string | null | undefined): DecodedNotes {
       return {
         meta: {
           [SCHEDULE_META_KEY]: true,
+          ...(parsed.purpose === "calendar" ? { purpose: "calendar" as const } : {}),
           kind: parsed.kind,
           startTime: parsed.startTime,
           endTime: parsed.endTime,
@@ -121,7 +123,7 @@ export function buildEntries(routines: RoutineDTO[], selectedDate: string): Sche
 }
 
 export function isCalendarSchedule(entry: Pick<ScheduleEntry, "meta">) {
-  return entry.meta !== null;
+  return entry.meta?.purpose === "calendar";
 }
 
 export function tasksForDate(tasks: TaskDTO[], selectedDate: string) {
