@@ -621,7 +621,10 @@ export const useAssets = (options: QueryOptions = {}) =>
     enabled: options.enabled,
   });
 
-export const useWalletTransactions = (filters: WalletTransactionFilters) => {
+export const useWalletTransactions = (
+  filters: WalletTransactionFilters,
+  options: QueryOptions = {},
+) => {
   const query = new URLSearchParams(
     Object.entries(filters).filter((entry): entry is [string, string] => Boolean(entry[1])),
   ).toString();
@@ -629,6 +632,7 @@ export const useWalletTransactions = (filters: WalletTransactionFilters) => {
     queryKey: qk.walletTransactions(filters),
     queryFn: () =>
       api<WalletTransactionDTO[]>(`/api/assets/transactions${query ? `?${query}` : ""}`),
+    enabled: options.enabled,
   });
 };
 
@@ -636,7 +640,6 @@ export const useInventory = () =>
   useQuery({
     queryKey: qk.inventory,
     queryFn: () => api<InventorySnapshotDTO>("/api/inventory"),
-    staleTime: 10_000,
   });
 
 export function useUpdateInventoryReward() {

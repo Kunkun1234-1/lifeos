@@ -1,6 +1,5 @@
 import { prisma } from "./prisma";
 import { auth } from "@/auth";
-import { provisionUserDefaults } from "./provision";
 import { headers } from "next/headers";
 import { jwtVerify } from "jose";
 
@@ -10,6 +9,7 @@ async function provisionUserDefaultsOnce(userId: string) {
   let pending = provisionCache.get(userId);
   if (!pending) {
     pending = (async () => {
+      const { provisionUserDefaults } = await import("./provision");
       // JWT sessions can outlive a local database reset. Recreate the signed-in
       // identity before provisioning records that reference User via foreign keys.
       await prisma.user.upsert({
@@ -30,8 +30,8 @@ async function provisionUserDefaultsOnce(userId: string) {
 /**
  * Resolve the current authenticated user from the session.
  *
- * - If session exists: return that user, ensuring per-user defaults
- *   (Currency + 6 Areas) are provisioned.
+ * - If session exists: return that user. Production defaults are provisioned
+ *   during sign-in, rather than on every serverless function cold start.
  * - If no session: throw — middleware redirects to /login before page handlers
  *   reach here, but API routes that bypass the page chain still need a guard.
  */
@@ -55,8 +55,12 @@ export async function getCurrentUserId(): Promise<string> {
     throw new Response("Unauthenticated", { status: 401 });
   }
 
-  // Idempotent — also repairs a stale development session after a DB reset.
-  await provisionUserDefaultsOnce(userId);
+  // Local databases are reset frequently, so keep the self-repair path in
+  // development. Production sign-in already provisions defaults in auth.ts;
+  // repeating those reads here made every cold serverless route pay for them.
+  if (process.env.NODE_ENV !== "production") {
+    await provisionUserDefaultsOnce(userId);
+  }
 
   return userId;
 }

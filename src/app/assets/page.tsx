@@ -45,7 +45,6 @@ import type {
   WalletPoolDTO,
   WalletPoolType,
   WalletTransactionDTO,
-  WalletTransactionType,
 } from "@/lib/types";
 import { calculateIncomeAllocation } from "@/lib/wallet-calculations";
 import styles from "./page.module.css";
@@ -147,12 +146,16 @@ export default function AssetsPage() {
       ? action
       : null;
   const showWalletModal = Boolean(modalAction || editingTransaction);
+  const hasTransactionFilter = Boolean(typeFilter || poolFilter);
 
-  const transactionQuery = useWalletTransactions({
-    type: typeFilter,
-    pool: poolFilter,
-    month: data?.plan.month ?? "",
-  });
+  const transactionQuery = useWalletTransactions(
+    {
+      type: typeFilter,
+      pool: poolFilter,
+      month: data?.plan.month ?? "",
+    },
+    { enabled: Boolean(data?.plan.month && hasTransactionFilter) },
+  );
 
   if (isLoading) {
     return <PageMessage title="正在整理钱包" detail="正在读取三个资金池..." />;
@@ -168,7 +171,16 @@ export default function AssetsPage() {
     );
   }
 
-  const transactions = transactionQuery.data ?? data.transactions;
+  const localTransactions = data.transactions.filter(
+    (transaction) =>
+      dateToYMD(transaction.occurredAt).startsWith(data.plan.month) &&
+      (!typeFilter || transaction.type === typeFilter) &&
+      (!poolFilter ||
+        transaction.sourcePoolType === poolFilter ||
+        transaction.targetPoolType === poolFilter ||
+        transaction.allocations.some((allocation) => allocation.pool.type === poolFilter)),
+  );
+  const transactions = transactionQuery.data ?? localTransactions;
   const total = data.summary.totalBalanceCents;
   const income = data.summary.monthIncomeCents;
   const expense = data.summary.monthExpenseCents;

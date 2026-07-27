@@ -38,14 +38,9 @@ async function getDashboardAssets(
   userId: string,
   currency: { gold: number; gems: number; fate: number },
 ) {
-  await ensureWalletDefaults(userId);
-
   const { start, end } = monthWindow();
-  const [pools, monthTransactions] = await Promise.all([
-    prisma.walletPool.findMany({
-      where: { userId },
-      select: { balanceCents: true },
-    }),
+  const [walletDefaults, monthTransactions] = await Promise.all([
+    ensureWalletDefaults(userId),
     prisma.walletTransaction.findMany({
       where: {
         userId,
@@ -54,6 +49,7 @@ async function getDashboardAssets(
       select: { type: true, amountCents: true, necessity: true },
     }),
   ]);
+  const { pools } = walletDefaults;
 
   const monthIncomeCents = monthTransactions
     .filter((item) => item.type === "income")

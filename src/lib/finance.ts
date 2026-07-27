@@ -16,12 +16,37 @@ export function monthWindow(now = new Date()) {
 }
 
 export async function ensureWalletDefaults(userId: string, now = new Date()) {
-  await prisma.walletPool.createMany({
-    data: WALLET_POOL_TYPES.map((type) => ({ userId, type })),
-    skipDuplicates: true,
+  const month = monthKey(now);
+  const poolsPromise = getOrCreateWalletPools(userId);
+  const planPromise = getOrCreateWalletPlan(userId, month);
+  const [pools, plan] = await Promise.all([poolsPromise, planPromise]);
+
+  return { plan, pools };
+}
+
+async function getOrCreateWalletPools(userId: string) {
+  let pools = await prisma.walletPool.findMany({
+    where: { userId },
+    orderBy: { type: "asc" },
   });
 
-  const month = monthKey(now);
+  const existingTypes = new Set(pools.map((pool) => pool.type));
+  const missingTypes = WALLET_POOL_TYPES.filter((type) => !existingTypes.has(type));
+  if (missingTypes.length > 0) {
+    await prisma.walletPool.createMany({
+      data: missingTypes.map((type) => ({ userId, type })),
+      skipDuplicates: true,
+    });
+    pools = await prisma.walletPool.findMany({
+      where: { userId },
+      orderBy: { type: "asc" },
+    });
+  }
+
+  return pools;
+}
+
+async function getOrCreateWalletPlan(userId: string, month: string) {
   let plan = await prisma.walletMonthlyPlan.findUnique({
     where: { userId_month: { userId, month } },
   });
@@ -48,10 +73,5 @@ export async function ensureWalletDefaults(userId: string, now = new Date()) {
     });
   }
 
-  const pools = await prisma.walletPool.findMany({
-    where: { userId },
-    orderBy: { type: "asc" },
-  });
-
-  return { plan, pools };
+  return plan;
 }

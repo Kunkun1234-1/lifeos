@@ -6,14 +6,10 @@ import { walletTransactionInclude } from "@/lib/wallet-ledger";
 
 export async function GET() {
   const user = await getCurrentUser();
-  const { plan } = await ensureWalletDefaults(user.id);
   const { start, end } = monthWindow();
 
-  const [pools, transactions, monthTransactions] = await Promise.all([
-    prisma.walletPool.findMany({
-      where: { userId: user.id },
-      orderBy: { type: "asc" },
-    }),
+  const [walletDefaults, transactions, monthTransactions] = await Promise.all([
+    ensureWalletDefaults(user.id),
     prisma.walletTransaction.findMany({
       where: { userId: user.id },
       include: walletTransactionInclude,
@@ -25,6 +21,7 @@ export async function GET() {
       select: { type: true, amountCents: true, necessity: true },
     }),
   ]);
+  const { plan, pools } = walletDefaults;
 
   const livingBalanceCents =
     pools.find((pool) => pool.type === "living")?.balanceCents ?? 0;
