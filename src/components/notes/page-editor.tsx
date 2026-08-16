@@ -20,6 +20,7 @@ import {
   Minus,
   ImagePlus,
   Link2,
+  MoreHorizontal,
 } from "lucide-react";
 import { api } from "@/lib/fetcher";
 import styles from "./notes-workspace.module.css";
@@ -28,10 +29,9 @@ type PageEditorProps = {
   noteId: string;
   title: string;
   body: string;
-  icon: string | null;
+  reading?: boolean;
   onTitleChange: (title: string) => void;
   onBodyChange: (body: string) => void;
-  onIconChange: (icon: string | null) => void;
   disabled?: boolean;
 };
 
@@ -62,13 +62,13 @@ export function PageEditor({
   noteId,
   title,
   body,
-  icon,
+  reading = false,
   onTitleChange,
   onBodyChange,
-  onIconChange,
   disabled,
 }: PageEditorProps) {
   const [uploading, setUploading] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const lastNoteId = useRef(noteId);
   const skipNextUpdate = useRef(false);
@@ -78,6 +78,7 @@ export function PageEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        link: false,
       }),
       Placeholder.configure({
         placeholder: "输入内容，或用 # / ## 做标题…",
@@ -98,7 +99,7 @@ export function PageEditor({
       }),
     ],
     content: body || "",
-    editable: !disabled,
+    editable: !disabled && !reading,
     onUpdate: ({ editor: ed }) => {
       if (skipNextUpdate.current) {
         skipNextUpdate.current = false;
@@ -116,14 +117,15 @@ export function PageEditor({
     if (lastNoteId.current !== noteId) {
       lastNoteId.current = noteId;
       skipNextUpdate.current = true;
+      setToolsOpen(false);
       editor.commands.setContent(body || "");
     }
   }, [editor, noteId, body]);
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!disabled);
-  }, [editor, disabled]);
+    editor.setEditable(!disabled && !reading);
+  }, [editor, disabled, reading]);
 
   const uploadImage = async (file: File) => {
     if (!editor) return;
@@ -158,31 +160,29 @@ export function PageEditor({
   };
 
   return (
-    <div className={styles.editor}>
+    <div className={`${styles.editor} ${reading ? styles.editorReading : ""}`}>
       <div className={styles.titleRow}>
-        <button
-          type="button"
-          className={styles.iconBtn}
-          title="更换图标"
-          disabled={disabled}
-          onClick={() => {
-            const next = window.prompt("页面图标（emoji）", icon ?? "📄");
-            if (next === null) return;
-            onIconChange(next.trim() || null);
-          }}
-        >
-          {icon || "📄"}
-        </button>
         <input
           className={styles.titleInput}
           value={title}
-          disabled={disabled}
+          disabled={disabled || reading}
           placeholder="未命名页面"
           onChange={(e) => onTitleChange(e.target.value)}
         />
+        {!reading ? (
+          <button
+            type="button"
+            className={styles.editorToolsToggle}
+            title={toolsOpen ? "收起编辑工具" : "更多编辑工具"}
+            aria-expanded={toolsOpen}
+            onClick={() => setToolsOpen((value) => !value)}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+        ) : null}
       </div>
 
-      {editor && (
+      {editor && !reading && toolsOpen ? (
         <div className={styles.toolbar}>
           <ToolbarButton
             title="一级标题"
@@ -277,7 +277,7 @@ export function PageEditor({
             }}
           />
         </div>
-      )}
+      ) : null}
 
       <EditorContent editor={editor} className={styles.prose} />
     </div>

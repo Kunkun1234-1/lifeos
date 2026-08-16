@@ -173,7 +173,9 @@ function splitMottoLines(motto: string): { first: string; rest: string | null } 
 export function LifeGameShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  if (STANDALONE_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (
+    STANDALONE_ROUTES.some((route) => pathname.startsWith(route))
+  ) {
     return <>{children}</>;
   }
 

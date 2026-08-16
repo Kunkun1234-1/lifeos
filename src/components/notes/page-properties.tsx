@@ -44,6 +44,15 @@ export function PageProperties({
       </div>
 
       <div className={styles.propsField}>
+        <Label>页面图标</Label>
+        <Input
+          value={note.icon ?? ""}
+          placeholder="可选 Emoji"
+          onChange={(e) => onChange({ icon: e.target.value || null })}
+        />
+      </div>
+
+      <div className={styles.propsField}>
         <Label>类型</Label>
         <Select
           value={note.kind}

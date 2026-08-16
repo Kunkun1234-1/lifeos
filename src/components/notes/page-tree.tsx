@@ -1,13 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Archive,
   ChevronRight,
   ChevronDown,
   FilePlus,
+  FileText,
+  Files,
+  Folder,
   FolderPlus,
+  PanelLeftClose,
   Search,
-  Archive,
+  ChevronsUp,
 } from "lucide-react";
 import type { NoteTreeNodeDTO } from "@/lib/types";
 import { countNoteDescendants } from "@/lib/notes";
@@ -18,6 +23,9 @@ type PageTreeProps = {
   flatNodes: NoteTreeNodeDTO[];
   selectedId: string | null;
   showArchived: boolean;
+  mode: "files" | "search";
+  onModeChange: (mode: "files" | "search") => void;
+  onCollapse: () => void;
   onSelect: (id: string) => void;
   onCreateRoot: () => void;
   onCreateFolderRoot: () => void;
@@ -75,8 +83,8 @@ function TreeNode({
   const isOpen = expanded.has(node.id);
   const active = selectedId === node.id;
   const isFolder = node.kind === "folder";
-  const defaultIcon = isFolder ? "📁" : "📄";
   const defaultTitle = isFolder ? "未命名文件夹" : "未命名页面";
+  const hasCustomIcon = Boolean(node.icon && node.icon !== "📁" && node.icon !== "📄");
 
   return (
     <div className={styles.treeNode}>
@@ -128,7 +136,15 @@ function TreeNode({
           className={styles.treeLabel}
           onClick={() => onSelect(node.id)}
         >
-          <span className={styles.treeIcon}>{node.icon || defaultIcon}</span>
+          <span className={styles.treeIcon}>
+            {hasCustomIcon ? (
+              node.icon
+            ) : isFolder ? (
+              <Folder size={15} />
+            ) : (
+              <FileText size={14} />
+            )}
+          </span>
           <span className={styles.treeTitle}>
             {node.title || defaultTitle}
             {node.pinned ? <em className={styles.pinMark}>★</em> : null}
@@ -183,6 +199,9 @@ export function PageTree({
   flatNodes,
   selectedId,
   showArchived,
+  mode,
+  onModeChange,
+  onCollapse,
   onSelect,
   onCreateRoot,
   onCreateFolderRoot,
@@ -194,7 +213,17 @@ export function PageTree({
   onQueryChange,
 }: PageTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const visible = useMemo(() => filterForest(forest, query), [forest, query]);
+  const visible = useMemo(
+    () => (mode === "search" ? filterForest(forest, query) : forest),
+    [forest, mode, query],
+  );
+
+  useEffect(() => {
+    setExpanded((previous) => {
+      if (previous.size > 0) return previous;
+      return new Set(flatNodes.filter((node) => node.childCount > 0).map((node) => node.id));
+    });
+  }, [flatNodes]);
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -236,21 +265,37 @@ export function PageTree({
   return (
     <aside className={styles.tree}>
       <div className={styles.treeHead}>
-        <div className={styles.searchWrap}>
-          <Search size={14} />
-          <input
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="搜索页面…"
-            className={styles.searchInput}
-          />
+        <div className={styles.explorerTitle}>
+          <strong>知识库</strong>
+          <button type="button" title="折叠左侧栏" onClick={onCollapse}>
+            <PanelLeftClose size={17} />
+          </button>
         </div>
         <div className={styles.treeActions}>
-          <button type="button" title="新建文件夹" onClick={onCreateFolderRoot}>
-            <FolderPlus size={15} />
+          <button
+            type="button"
+            title="文件"
+            className={mode === "files" ? styles.treeActionOn : undefined}
+            onClick={() => onModeChange("files")}
+          >
+            <Files size={16} />
+          </button>
+          <button
+            type="button"
+            title="搜索"
+            className={mode === "search" ? styles.treeActionOn : undefined}
+            onClick={() => onModeChange("search")}
+          >
+            <Search size={16} />
           </button>
           <button type="button" title="新建页面" onClick={onCreateRoot}>
-            <FilePlus size={15} />
+            <FilePlus size={16} />
+          </button>
+          <button type="button" title="新建文件夹" onClick={onCreateFolderRoot}>
+            <FolderPlus size={16} />
+          </button>
+          <button type="button" title="全部折叠" onClick={() => setExpanded(new Set())}>
+            <ChevronsUp size={16} />
           </button>
           <button
             type="button"
@@ -258,9 +303,26 @@ export function PageTree({
             className={showArchived ? styles.treeActionOn : undefined}
             onClick={onToggleArchived}
           >
-            <Archive size={15} />
+            <Archive size={16} />
           </button>
         </div>
+        {mode === "search" ? (
+          <div className={styles.searchWrap}>
+            <Search size={14} />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder="搜索页面…"
+              className={styles.searchInput}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className={styles.treeSectionTitle}>
+        <span>{mode === "search" ? "搜索结果" : showArchived ? "归档" : "文件"}</span>
+        {mode === "search" && query ? <small>{visible.length}</small> : null}
       </div>
 
       <div
