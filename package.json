@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "description": "LifeOS — personal life operating system (PARA + GTD + OKR + gamified)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kunkun1234-1/lifeos.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kunkun1234-1/lifeos/issues"
+  },
+  "homepage": "https://lifeos-topaz-chi.vercel.app",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -53,7 +62,7 @@
     "@tiptap/pm": "^3.29.0",
     "@tiptap/react": "^3.29.0",
     "@tiptap/starter-kit": "^3.29.0",
-    "@vercel/blob": "^1.1.1",
+    "@vercel/blob": "2.8.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -61,7 +70,7 @@
     "jose": "^5.9.6",
     "lucide-react": "^0.454.0",
     "nanoid": "^5.0.7",
-    "next": "15.5.15",
+    "next": "15.5.23",
     "next-auth": "^5.0.0-beta.31",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -78,7 +87,7 @@
     "@types/react-dom": "^19",
     "autoprefixer": "^10.5.0",
     "eslint": "^9",
-    "eslint-config-next": "15.5.15",
+    "eslint-config-next": "15.5.23",
     "postcss": "^8.5.10",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.19",

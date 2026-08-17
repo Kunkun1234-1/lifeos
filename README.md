@@ -1,6 +1,10 @@
 # LifeOS
 
+[在线体验](https://lifeos-topaz-chi.vercel.app) · [贡献指南](CONTRIBUTING.md) · [安全策略](SECURITY.md) · [MIT License](LICENSE)
+
 LifeOS 是一个把 PARA、GTD、OKR、复盘、个人资产与游戏化成长结合起来的个人操作系统。仓库包含两个独立部署的 Next.js 应用，以及一个供 ChatGPT/Agent 使用的 OAuth MCP 服务。
+
+本项目采用 [MIT License](LICENSE) 开源，欢迎提交 Issue 和 Pull Request。`package.json` 中保留 `"private": true` 仅用于防止误发布到 npm，不代表 GitHub 仓库是私有软件。
 
 ## 正式环境（唯一准确信息源）
 
@@ -187,6 +191,10 @@ npm run smoke:mcp
 ```
 
 `smoke:mcp` 会启动临时 Web/API 服务，实际验证 OAuth Dynamic Client Registration、Authorization Code + PKCE、refresh token rotation、93 个工具发现、鉴权读写和幂等重放。
+
+## 参与贡献
+
+提交代码前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。发现安全问题时不要创建公开 Issue，请按照 [SECURITY.md](SECURITY.md) 中的方式私下报告。
 
 ## 数据库变更
 
