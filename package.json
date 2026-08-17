@@ -70,7 +70,7 @@
     "jose": "^5.9.6",
     "lucide-react": "^0.454.0",
     "nanoid": "^5.0.7",
-    "next": "15.5.23",
+    "next": "16.3.1",
     "next-auth": "^5.0.0-beta.31",
     "react": "19.1.0",
     "react-dom": "19.1.0",
