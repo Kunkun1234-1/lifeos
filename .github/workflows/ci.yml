@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -24,14 +27,14 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      AUTH_SECRET: ci-auth-secret
-      API_JWT_SECRET: ci-api-jwt-secret-at-least-32-characters
+      AUTH_SECRET: ci-test-secret-ci-test-secret-ci-test-secret
+      API_JWT_SECRET: ci-test-secret-ci-test-secret-ci-test-secret
       DATABASE_URL: postgresql://ci:ci@localhost:5432/lifeos?schema=public
       DEEPSEEK_BASE_URL: https://api.deepseek.com
       DEEPSEEK_MODEL: deepseek-chat
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
