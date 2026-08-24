@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -17,7 +18,6 @@ import {
   X,
 } from "lucide-react";
 import { PageTree } from "./page-tree";
-import { PageEditor } from "./page-editor";
 import {
   CommandPalette,
   type CommandAction,
@@ -39,6 +39,14 @@ import {
 import { countNoteDescendants } from "@/lib/notes";
 import type { NoteDTO, NoteTreeNodeDTO } from "@/lib/types";
 import styles from "./notes-workspace.module.css";
+
+const PageEditor = dynamic(
+  () => import("./page-editor").then((module) => module.PageEditor),
+  {
+    ssr: false,
+    loading: () => <div className={styles.editorLoading}>正在打开编辑器…</div>,
+  },
+);
 
 type NotesWorkspaceProps = {
   initialId?: string | null;
