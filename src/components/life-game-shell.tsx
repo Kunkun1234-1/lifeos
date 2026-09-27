@@ -10,6 +10,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Backpack,
   Bell,
@@ -22,8 +23,10 @@ import {
   Flag,
   Home,
   LayoutGrid,
+  Library,
   Mail,
   Medal,
+  MoreHorizontal,
   Settings,
   Sparkles,
   Zap,
@@ -42,11 +45,19 @@ const NAV_ITEMS = [
   { href: "/routines", label: "日程规划", icon: CalendarDays },
   { href: "/goals", label: "人生目标", icon: Flag },
   { href: "/review", label: "成长反思", icon: BookOpen },
-  { href: "/system", label: "角色成长", icon: LayoutGrid },
+  { href: "/notes", label: "知识库", icon: Library },
+  { href: "/system", label: "全部功能", icon: LayoutGrid },
   { href: "/inventory", label: "物品背包", icon: Backpack },
   { href: "/achievements", label: "成就系统", icon: Medal },
   { href: "/assets", label: "财务资产", icon: CircleDollarSign },
   { href: "/settings", label: "系统设置", icon: Settings },
+] as const;
+
+const MOBILE_NAV_ITEMS = [
+  NAV_ITEMS[0],
+  NAV_ITEMS[1],
+  NAV_ITEMS[2],
+  NAV_ITEMS[5],
 ] as const;
 
 const ROUTE_META = [
@@ -62,8 +73,8 @@ const ROUTE_META = [
   { prefix: "/projects", title: "项目管理", description: "推进重要项目，串联任务与阶段成果。" },
   { prefix: "/rewards", title: "奖励商店", description: "用积累的成果兑换旅途奖励。" },
   { prefix: "/gacha", title: "祈愿", description: "开启一次属于你的旅途邂逅。" },
-  { prefix: "/system", title: "角色成长", description: "查看角色状态与成长系统。" },
-  { prefix: "/notes", title: "冒险笔记", description: "记录灵感、见闻与重要线索。" },
+  { prefix: "/system", title: "全部功能", description: "在这里找到任务、知识、成长和奖励等全部模块。" },
+  { prefix: "/notes", title: "知识库", description: "整理笔记、收藏与重要线索。" },
   { prefix: "/habits", title: "习惯养成", description: "稳定重复小行动，积累长期改变。" },
   { prefix: "/principles", title: "人生原则", description: "整理帮助你做出选择的准则。" },
   { prefix: "/decisions", title: "决策记录", description: "记录关键选择与背后的思考。" },
@@ -80,7 +91,6 @@ const SYSTEM_CHILD_ROUTES = [
   "/habits",
   "/projects",
   "/strategy",
-  "/notes",
   "/analytics",
   "/rewards",
   "/gacha",
@@ -103,7 +113,8 @@ function isNavItemActive(pathname: string, href: string) {
   if (href === "/system") {
     return (
       pathname.startsWith("/system") ||
-      SYSTEM_CHILD_ROUTES.some((route) => pathname.startsWith(route))
+      (SYSTEM_CHILD_ROUTES.some((route) => pathname.startsWith(route)) &&
+        !NAV_ITEMS.some((item) => item.href !== "/" && item.href !== "/system" && pathname.startsWith(item.href)))
     );
   }
   return pathname.startsWith(href);
@@ -200,6 +211,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
   const resinProgress = resin ? Math.round((resin.current / Math.max(1, resin.max)) * 100) : 0;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [userMotto, setUserMotto] = useState(DEFAULT_USER_MOTTO);
   const [editingMottoSource, setEditingMottoSource] = useState<"greeting" | "side" | null>(null);
   const [mottoDraft, setMottoDraft] = useState(DEFAULT_USER_MOTTO);
@@ -217,6 +229,21 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
   useEffect(() => {
     applyThemeAccent(loadSettingsPrefs().appearance.color, shellRef.current);
   }, []);
+
+  useEffect(() => {
+    setMobileMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileMoreOpen) return;
+    const desktop = window.matchMedia("(min-width: 1051px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMobileMoreOpen(false);
+    };
+    closeOnDesktop();
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, [mobileMoreOpen]);
 
   useEffect(() => {
     if (editingMottoSource) return;
@@ -503,17 +530,45 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
         {children}
       </main>
 
+      <Dialog.Root open={mobileMoreOpen} onOpenChange={setMobileMoreOpen}>
       <nav className={styles.mobileNav} aria-label="移动端主要导航">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = isNavItemActive(pathname, href);
+        {MOBILE_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
-            <Link key={href} href={href} className={active ? styles.mobileActive : ""}>
+            <Link key={href} href={href} className={active ? styles.mobileActive : ""} aria-current={active ? "page" : undefined}>
               <Icon size={19} />
               <span>{label}</span>
             </Link>
           );
         })}
+        <Dialog.Trigger
+          type="button"
+          className={!MOBILE_NAV_ITEMS.some(({ href }) => pathname === href || (href !== "/" && pathname.startsWith(href))) ? styles.mobileActive : ""}
+        >
+          <MoreHorizontal size={19} />
+          <span>更多</span>
+        </Dialog.Trigger>
       </nav>
+
+      <Dialog.Portal>
+        <Dialog.Overlay className={styles.moreBackdrop} />
+          <Dialog.Content className={styles.morePanel} aria-describedby={undefined}>
+            <div className={styles.moreHeader}>
+              <Dialog.Title>全部功能</Dialog.Title>
+              <Dialog.Close type="button" aria-label="关闭全部功能">关闭</Dialog.Close>
+            </div>
+            <div className={styles.moreLinks}>
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                <Link key={href} href={href} onClick={() => setMobileMoreOpen(false)}>
+                  <Icon size={20} />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </div>
+            <Link className={styles.moreAllLink} href="/system" onClick={() => setMobileMoreOpen(false)}>打开全部模块 →</Link>
+          </Dialog.Content>
+      </Dialog.Portal>
+      </Dialog.Root>
 
       <MusicPlayer />
     </div>

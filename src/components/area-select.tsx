@@ -2,6 +2,7 @@
 
 import { Select } from "./ui/input";
 import { useAreas } from "@/hooks/queries";
+import { AREA_META, type AreaName } from "@/lib/area-meta";
 
 interface Props {
   value: string | null;
@@ -14,14 +15,15 @@ export function AreaSelect({ value, onChange, allowNone = true, className }: Pro
   const { data: areas } = useAreas();
   return (
     <Select
+      aria-label="人生领域"
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value || null)}
       className={className}
     >
-      {allowNone && <option value="">— No area —</option>}
+      {allowNone && <option value="">未指定领域</option>}
       {areas?.map((a) => (
         <option key={a.id} value={a.id}>
-          {a.icon} {a.name} · {a.attributeKey}
+          {a.icon} {AREA_META[a.name as AreaName]?.cn ?? a.name}
         </option>
       ))}
     </Select>

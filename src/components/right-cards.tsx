@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useDashboardData } from "@/components/dashboard-data";
 import { useAssets, useCommissions, useRoutines, useTasks, useCompleteCommission } from "@/hooks/queries";
 import type { CommissionItem } from "@/lib/commissions";
+import { buildEntries } from "@/app/routines/schedule-model";
+import { todayYMD } from "@/lib/date";
 import { Footprints, BookOpen, Sparkles, Dumbbell, Coffee, Trophy, Check, Loader2, ScrollText, Coins, Gem, Ticket, WalletCards } from "lucide-react";
 
 /**
@@ -50,41 +52,27 @@ export function ScheduleCard() {
     commissionItemId?: string;
   }> = [];
 
-  const TIMES = ["07:00-08:30", "09:30-11:30", "13:30-15:30", "16:00-17:00", "19:30-21:00"];
   const ICONS = [<Footprints size={14} key="run" />, <BookOpen size={14} key="book" />, <ScrollText size={14} key="scroll" />, <Dumbbell size={14} key="d" />, <Coffee size={14} key="c" />];
 
-  const routineCommissions = (commissions?.items ?? []).filter((x: CommissionItem) => x.sourceType === "routine");
-  routineCommissions.slice(0, 5).forEach((c: CommissionItem, i: number) => {
+  const routineCommissions = new Map(
+    (commissions?.items ?? [])
+      .filter((item: CommissionItem) => item.sourceType === "routine")
+      .map((item: CommissionItem) => [item.sourceId, item]),
+  );
+  buildEntries(routines ?? [], todayYMD()).slice(0, 5).forEach(({ routine, meta, note }, i) => {
+    const commission = routineCommissions.get(routine.id);
     scheduleItems.push({
-      id: c.id,
-      title: c.title,
-      notes: c.notes,
-      time: TIMES[i] ?? "",
-      tag: `+${c.xp}xp`,
-      tagColor: "var(--attr-int)",
-      done: c.done,
+      id: routine.id,
+      title: routine.title,
+      notes: note,
+      time: meta ? `${meta.startTime}–${meta.endTime}` : "未安排时间",
+      tag: `+${commission?.xp ?? routine.xpReward}xp`,
+      tagColor: routine.area?.attributeKey ? colorFor(routine.area.attributeKey) : "var(--attr-int)",
+      done: commission?.done ?? routine.completedToday,
       icon: ICONS[i % ICONS.length],
-      commissionItemId: c.id,
+      commissionItemId: commission?.id,
     });
   });
-
-  // Fill with generic routines that aren't in commissions
-  if (scheduleItems.length < 5 && routines) {
-    routines.slice(0, 5 - scheduleItems.length).forEach((r, i) => {
-      if (!scheduleItems.find((x) => x.title === r.title)) {
-        scheduleItems.push({
-          id: r.id,
-          title: r.title,
-          notes: r.notes,
-          time: TIMES[scheduleItems.length + i] ?? "",
-          tag: `+${r.xpReward}xp`,
-          tagColor: r.area?.attributeKey ? colorFor(r.area.attributeKey) : "var(--attr-int)",
-          done: r.completedToday,
-          icon: ICONS[(scheduleItems.length + i) % ICONS.length],
-        });
-      }
-    });
-  }
 
   return (
     <div className="panel-cream framed h-full min-h-0 overflow-hidden rounded-sm p-4 space-y-3 hover:-translate-y-0.5 hover:border-[var(--gold)] xl:p-3 2xl:p-4">

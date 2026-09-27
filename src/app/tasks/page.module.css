@@ -12,6 +12,7 @@
   --task-border: #d9dcc3;
   --task-radius: 14px;
   min-height: calc(100vh - 117px);
+  container-type: inline-size;
   padding: 16px 18px 28px;
   color: #18231f;
   background:
@@ -96,7 +97,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr) minmax(220px, 260px);
   gap: 16px;
   max-width: 1400px;
   margin: 0 auto;
@@ -113,6 +114,10 @@
 .leftPanel,
 .rightPanel {
   padding: 14px;
+}
+
+.mobileFilterToggle {
+  display: none;
 }
 
 .sectionTitle {
@@ -769,61 +774,23 @@
 
 .timeline {
   display: grid;
-  gap: 0;
+  gap: 7px;
+  max-height: 320px;
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-y: auto;
 }
 
 .timeItem {
-  display: grid;
-  grid-template-columns: 44px 12px minmax(0, 1fr);
-  gap: 8px;
-  min-height: 52px;
-}
-
-.timeLabel {
-  color: #65736c;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 10px;
-  font-weight: 700;
-  padding-top: 2px;
-}
-
-.timeRail {
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-
-.timeRail::before {
-  position: absolute;
-  top: 8px;
-  bottom: -8px;
-  width: 2px;
-  content: "";
-  background: #dde1c8;
-}
-
-.timeItem:last-child .timeRail::before {
-  bottom: auto;
-  height: 0;
-}
-
-.timeDot {
-  position: relative;
-  z-index: 1;
-  width: 8px;
-  height: 8px;
-  margin-top: 4px;
-  border-radius: 50%;
-  background: var(--task-green);
-  box-shadow: 0 0 0 3px rgba(36, 157, 109, 0.15);
+  padding: 9px 10px;
+  border: 1px solid #e4e9d8;
+  border-radius: 10px;
+  background: #f8fbf2;
 }
 
 .timeBody {
   min-width: 0;
-  padding-bottom: 12px;
 }
 
 .timeTitle {
@@ -909,11 +876,6 @@
   position: fixed;
   inset: 0;
   z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  overflow-y: auto;
   background: rgba(6, 22, 18, 0.72);
   backdrop-filter: blur(4px);
 }
@@ -924,9 +886,13 @@
   --task-cream: #f7f7ed;
   --task-green: #249d6d;
   --task-green-deep: #096149;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 201;
   display: flex;
   isolation: isolate;
-  width: min(560px, 100%);
+  width: min(560px, calc(100vw - 32px));
   max-height: min(88vh, 720px);
   flex-direction: column;
   overflow: hidden;
@@ -938,6 +904,31 @@
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.65) inset,
     0 28px 64px rgba(10, 28, 22, 0.45);
+  transform: translate(-50%, -50%);
+}
+
+.modalHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modalClose {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #d0d4b8;
+  border-radius: 8px;
+  background: #fff;
+  color: #315744;
+  cursor: pointer;
+}
+
+.modalClose:hover {
+  background: #e7f6ee;
 }
 
 .modalHeader {
@@ -983,6 +974,20 @@
   gap: 12px;
 }
 
+.formFieldset {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.formFieldset:disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .formGrid label {
   display: grid;
   gap: 5px;
@@ -1010,15 +1015,53 @@
   resize: vertical;
 }
 
+.moreSettings {
+  border: 1px solid #dfe5cf;
+  border-radius: 10px;
+  background: #f8fbf3;
+}
+
+.moreSettings summary {
+  padding: 11px 12px;
+  color: #196b4d;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.moreSettingsBody {
+  display: grid;
+  gap: 12px;
+  padding: 4px 12px 12px;
+}
+
+.formError {
+  margin: 0;
+  color: #a23e35;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.discardPrompt {
+  display: grid;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid #ead9ad;
+  background: #fff8e5;
+  color: #69481c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.discardPrompt > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .formRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.formRow3 {
-  display: grid;
-  grid-template-columns: 1.2fr 0.7fr 0.7fr;
   gap: 10px;
 }
 
@@ -1057,7 +1100,7 @@
 
 .daySlot {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 78px minmax(0, 1fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -1141,17 +1184,6 @@
   background: rgba(36, 157, 109, 0.12);
   color: var(--task-green-deep);
   cursor: pointer;
-}
-
-.daySlotEmpty {
-  min-height: 48px;
-  display: grid;
-  place-items: center;
-  border: 1px dashed #d9dcc3;
-  border-radius: 12px;
-  color: #9aa39b;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .undatedBlock {
@@ -1377,8 +1409,104 @@
     grid-template-columns: 1fr;
   }
 
-  .formRow,
-  .formRow3 {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@container (max-width: 1180px) {
+  .layout {
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+    grid-template-rows: min-content 1fr;
+  }
+
+  .leftPanel {
+    grid-row: 1 / span 2;
+  }
+
+  .center {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .rightStack {
+    display: grid;
+    grid-column: 2;
+    grid-row: 2;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+@container (max-width: 950px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+
+  .leftPanel {
+    order: 0;
+    grid-row: auto;
+  }
+
+  .center {
+    order: 1;
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .rightStack {
+    order: 2;
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .mobileFilterToggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    background: transparent;
+    color: #196b4d;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  .leftPanel[data-open="false"] .filterContent {
+    display: none;
+  }
+
+  .filterContent {
+    padding-top: 14px;
+  }
+
+  .overview {
+    grid-template-columns: 1fr;
+  }
+
+  .statRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tableHead {
+    display: none;
+  }
+
+  .taskRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 12px;
+    border: 1px solid #e4e6d4;
+    border-radius: 12px;
+  }
+
+  .rowActions {
+    justify-content: flex-start;
+  }
+
+  .weekGrid {
     grid-template-columns: 1fr;
   }
 }

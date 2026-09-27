@@ -52,6 +52,7 @@ const TIPS = [
 ];
 
 const AREA_COLORS = ["#249d6d", "#c9a227", "#5b9ec9", "#8a9a3a", "#d4784a", "#6b8f71"];
+const EMPTY_GOALS: GoalDTO[] = [];
 
 const TIMEFRAME_PRESETS = (() => {
   const y = new Date().getFullYear();
@@ -71,7 +72,7 @@ export default function GoalsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [action, setAction] = useState<PanelAction>(null);
 
-  const list = goals ?? [];
+  const list = goals ?? EMPTY_GOALS;
   const stats = useMemo(() => deriveGoalStats(list), [list]);
   const areas = useMemo(() => collectAreas(list), [list]);
   const milestones = useMemo(() => buildMilestones(list), [list]);
@@ -121,7 +122,7 @@ export default function GoalsPage() {
         <p className={styles.pageDesc}>Objective · Key Results · 把愿景拆成可推进的里程碑</p>
       </header>
 
-      <div className={styles.layout}>
+      <div className={styles.layout} data-empty={list.length === 0}>
         <aside className={styles.profile} aria-label="目标愿景卡">
           <div className={styles.profileArtWrap}>
             <Image
@@ -220,10 +221,10 @@ export default function GoalsPage() {
               </div>
             </article>
             <article className={styles.metricCard} data-tone="week">
-              <div className={styles.metricLabel}>本周推进</div>
+              <div className={styles.metricLabel}>当前进度</div>
               <div className={styles.metricValue}>{stats.weekProxy}%</div>
               <div className={styles.metricHint}>
-                占位：活跃目标均进度（无 KR 周更字段）
+                进行中目标的平均进度
               </div>
             </article>
           </section>
@@ -323,9 +324,16 @@ export default function GoalsPage() {
             </div>
             {filtered.length === 0 ? (
               <div className={styles.empty}>
-                暂无符合条件的目标。{" "}
+                {list.length === 0 ? (
+                  <>
+                    <strong>从第一个目标开始</strong>
+                    <span>写下想推进的方向，再逐步拆成可完成的关键结果。</span>
+                  </>
+                ) : (
+                  <span>当前筛选下没有目标。</span>
+                )}
                 <button type="button" onClick={() => setAction("create")}>
-                  立即创建一个 →
+                  {list.length === 0 ? "建立第一个目标 →" : "新建目标 →"}
                 </button>
               </div>
             ) : (

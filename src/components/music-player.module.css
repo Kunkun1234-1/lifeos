@@ -360,7 +360,14 @@
 
 @media (max-width: 860px) {
   .root {
-    left: 12px;
-    bottom: 78px;
+    left: auto;
+    right: 12px;
+    bottom: 82px;
+    align-items: flex-end;
+  }
+
+  .fab {
+    width: 40px;
+    height: 40px;
   }
 }

@@ -22,15 +22,16 @@ export function ProjectSelect({ value, onChange, allowNone = true, className }: 
   );
   return (
     <Select
+      aria-label="所属项目"
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value || null)}
       className={className}
     >
-      {allowNone && <option value="">— No project —</option>}
+      {allowNone && <option value="">不关联项目</option>}
       {visible.map((p) => (
         <option key={p.id} value={p.id}>
           {p.title}
-          {p.status !== "active" && p.status !== "idea" ? ` · ${p.status}` : ""}
+          {p.status !== "active" && p.status !== "idea" ? ` · ${{ paused: "已暂停", archived: "已归档", done: "已完成" }[p.status] ?? p.status}` : ""}
         </option>
       ))}
     </Select>

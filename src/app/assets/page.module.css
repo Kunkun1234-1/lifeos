@@ -60,13 +60,13 @@
   border-radius: 16px;
   background: #eef3df;
   box-shadow: 0 12px 28px rgba(41, 62, 52, 0.06);
-  min-height: 100%;
-  align-self: stretch;
+  min-height: 0;
+  align-self: start;
 }
 
 .profileArtWrap {
   position: relative;
-  height: 280px;
+  height: 150px;
   overflow: hidden;
   background: linear-gradient(180deg, #dfe9c8, #c5d9a8);
 }
@@ -79,12 +79,12 @@
 .profileBody {
   position: relative;
   z-index: 1;
-  flex: 1;
+  flex: none;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: -36px;
-  padding: 0 14px 18px;
+  gap: 8px;
+  margin-top: -22px;
+  padding: 0 14px 12px;
 }
 
 .profileCard {
@@ -216,13 +216,7 @@
 }
 
 .profileFoot {
-  margin-top: auto;
-  height: 48px;
-  border-radius: 0 0 14px 14px;
-  background:
-    radial-gradient(ellipse at 30% 100%, rgba(36, 157, 109, 0.35), transparent 55%),
-    linear-gradient(180deg, transparent, rgba(9, 97, 73, 0.25));
-  opacity: 0.9;
+  display: none;
 }
 
 /* ── Center column ── */
@@ -1187,7 +1181,7 @@
 
   .profileArtWrap {
     height: 100%;
-    min-height: 220px;
+    min-height: 150px;
   }
 
   .profileBody {
@@ -1216,7 +1210,8 @@
   }
 
   .profileArtWrap {
-    height: 220px;
+    height: 125px;
+    min-height: 125px;
   }
 
   .pools,

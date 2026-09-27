@@ -114,6 +114,23 @@
   gap: 14px;
 }
 
+.searchInput {
+  width: min(250px, 100%);
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--inv-border);
+  border-radius: 6px;
+  color: var(--inv-fg-strong);
+  background: var(--inv-raised);
+  font: inherit;
+  font-size: 13px;
+}
+
+.searchInput:focus {
+  outline: 2px solid rgba(36, 157, 109, 0.35);
+  outline-offset: 1px;
+}
+
 .raritySelect {
   min-width: 112px;
   height: 32px;
@@ -206,7 +223,9 @@
 
 .gridPane {
   min-width: 0;
-  min-height: 420px;
+  max-height: min(58vh, 580px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px 2px 8px;
 }
 

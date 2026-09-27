@@ -31,6 +31,61 @@
   align-items: start;
 }
 
+.pageActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1440px;
+  margin: 0 auto 16px;
+}
+
+.pageActions p {
+  margin: 0;
+  color: var(--cal-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.pageActions a {
+  color: var(--cal-green-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.createBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--cal-green-deep);
+  border-radius: 10px;
+  background: var(--cal-green-deep);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.loadNotice {
+  max-width: 1440px;
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--cal-border);
+  border-radius: 10px;
+  background: var(--cal-card);
+  color: var(--cal-muted);
+  font-size: 13px;
+}
+
+.loadNotice button {
+  margin-left: 12px;
+  color: var(--cal-green-deep);
+  text-decoration: underline;
+}
+
 .main,
 .sideCard {
   border: 1px solid var(--cal-border);
@@ -789,6 +844,19 @@
 }
 
 @media (max-width: 720px) {
+  .pageActions {
+    align-items: stretch;
+  }
+
+  .pageActions p {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .createBtn {
+    width: 100%;
+  }
+
   .monthGrid {
     min-height: 0;
   }

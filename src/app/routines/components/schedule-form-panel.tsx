@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { CalendarDays, Repeat, Trash2, X } from "lucide-react";
 import { AreaSelect } from "@/components/area-select";
@@ -32,8 +32,17 @@ type Props = {
 };
 
 export function ScheduleFormPanel({ open, initial, selectedDate, onOpenChange, onDelete, deletePending }: Props) {
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
+  const setDirty = useCallback((dirty: boolean) => { dirtyRef.current = dirty; }, []);
+  const setSaving = useCallback((saving: boolean) => { savingRef.current = saving; }, []);
+  const requestClose = () => {
+    if (savingRef.current || deletePending) return;
+    if (dirtyRef.current && !window.confirm("日程还有未保存的修改。要放弃这些修改吗？")) return;
+    onOpenChange(false);
+  };
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={(next) => next ? onOpenChange(true) : requestClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-[#071426]/48 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out" />
         <Dialog.Content className="fixed inset-y-0 right-0 z-50 w-full max-w-[480px] overflow-y-auto border-l border-[var(--gold)]/55 bg-[rgba(250,243,226,0.98)] p-5 shadow-[-24px_0_70px_-36px_rgba(4,12,24,0.9)] focus:outline-none sm:p-6">
@@ -42,6 +51,9 @@ export function ScheduleFormPanel({ open, initial, selectedDate, onOpenChange, o
             initial={initial}
             selectedDate={selectedDate}
             onDone={() => onOpenChange(false)}
+            onCancel={requestClose}
+            onDirtyChange={setDirty}
+            onSavingChange={setSaving}
             onDelete={onDelete}
             deletePending={deletePending}
           />
@@ -55,9 +67,17 @@ function ScheduleForm({
   initial,
   selectedDate,
   onDone,
+  onCancel,
+  onDirtyChange,
+  onSavingChange,
   onDelete,
   deletePending,
-}: Omit<Props, "open" | "onOpenChange"> & { onDone: () => void }) {
+}: Omit<Props, "open" | "onOpenChange"> & {
+  onDone: () => void;
+  onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onSavingChange: (saving: boolean) => void;
+}) {
   const decoded = decodeNotes(initial?.notes ?? null);
   const initialMeta = decoded.meta;
   const [kind, setKind] = useState<ScheduleKind>(initialMeta?.kind ?? "single");
@@ -70,13 +90,36 @@ function ScheduleForm({
   const [areaId, setAreaId] = useState<string | null>(initial?.areaId ?? null);
   const [xpReward, setXpReward] = useState(initial?.xpReward ?? 10);
   const [goldReward, setGoldReward] = useState(initial?.goldReward ?? 5);
+  const [error, setError] = useState<string | null>(null);
   const create = useCreateRoutine();
   const update = useUpdateRoutine();
   const editing = Boolean(initial);
+  const [moreOpen, setMoreOpen] = useState(editing);
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
   const validTime = startMinutes !== null && endMinutes !== null && endMinutes > startMinutes;
   const validDays = kind === "single" || days.length > 0;
+  const validDate = kind !== "single" || /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const pending = create.isPending || update.isPending;
+  const dirty = kind !== (initialMeta?.kind ?? "single")
+    || title !== (initial?.title ?? "")
+    || note !== decoded.note
+    || date !== (initialMeta?.date ?? selectedDate)
+    || days.join(",") !== parseRoutineDays(initial?.daysOfWeek).join(",")
+    || startTime !== (initialMeta?.startTime ?? "09:00")
+    || endTime !== (initialMeta?.endTime ?? "10:00")
+    || areaId !== (initial?.areaId ?? null)
+    || xpReward !== (initial?.xpReward ?? 10)
+    || goldReward !== (initial?.goldReward ?? 5);
+
+  useLayoutEffect(() => {
+    onDirtyChange(dirty);
+    return () => onDirtyChange(false);
+  }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => {
+    onSavingChange(pending);
+    return () => onSavingChange(false);
+  }, [pending, onSavingChange]);
 
   const toggleDay = (day: number) => {
     setDays((current) => current.includes(day)
@@ -85,7 +128,8 @@ function ScheduleForm({
   };
 
   const submit = async () => {
-    if (!title.trim() || !validTime || !validDays) return;
+    if (!title.trim() || !validTime || !validDays || !validDate || pending) return;
+    setError(null);
     const meta: ScheduleMeta = {
       [SCHEDULE_META_KEY]: true,
       purpose: "calendar",
@@ -104,16 +148,23 @@ function ScheduleForm({
       goldReward,
     };
 
-    if (initial) await update.mutateAsync({ id: initial.id, body: payload });
-    else await create.mutateAsync(payload);
-    onDone();
+    try {
+      if (initial) await update.mutateAsync({ id: initial.id, body: payload });
+      else await create.mutateAsync(payload);
+      onDone();
+    } catch {
+      setError("保存失败，你填写的内容仍然保留，请检查网络后重试。");
+    }
   };
-
-  const pending = create.isPending || update.isPending;
 
   const remove = async () => {
     if (!initial) return;
-    await onDelete(initial);
+    setError(null);
+    try {
+      await onDelete(initial);
+    } catch {
+      setError("删除失败，日程仍然保留，请稍后重试。");
+    }
   };
 
   return (
@@ -124,30 +175,27 @@ function ScheduleForm({
             {editing ? "编辑日程" : "添加日程"}
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-xs leading-5 text-[var(--fg-muted)]">
-            用于课表、会议、考试、截止日期等重要事项；每日习惯请在“习惯”功能中管理。
+            为课程、会议和重要事项安排时间。每日重复行动可在“习惯追踪”中管理。
           </Dialog.Description>
         </div>
         <Dialog.Close asChild>
-          <Button size="icon" variant="ghost" aria-label="关闭日程表单">
+          <Button size="icon" variant="ghost" aria-label="关闭日程表单" disabled={pending || deletePending}>
             <X size={18} />
           </Button>
         </Dialog.Close>
       </div>
 
-      <div className="grid gap-5">
+      <fieldset className="m-0 grid min-w-0 gap-5 border-0 p-0" disabled={pending || deletePending}>
         <Field label="标题">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：高数课 / 项目答辩 / 论文截止" autoFocus />
-        </Field>
-        <Field label="备注">
-          <Textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="地点、准备材料、提醒事项..." className="min-h-24" />
+          <Input aria-label="日程标题" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：高数课 / 项目答辩 / 论文截止" autoFocus />
         </Field>
 
         <Field label="安排类型">
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setKind("recurring")} className={kindButtonClass(kind === "recurring")}>
+            <button type="button" aria-pressed={kind === "recurring"} onClick={() => setKind("recurring")} className={kindButtonClass(kind === "recurring")}>
               <Repeat size={15} />固定周期
             </button>
-            <button type="button" onClick={() => setKind("single")} className={kindButtonClass(kind === "single")}>
+            <button type="button" aria-pressed={kind === "single"} onClick={() => setKind("single")} className={kindButtonClass(kind === "single")}>
               <CalendarDays size={15} />单次事项
             </button>
           </div>
@@ -155,7 +203,7 @@ function ScheduleForm({
 
         {kind === "single" ? (
           <Field label="日期">
-            <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <Input aria-label="日程日期" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </Field>
         ) : (
           <Field label="重复星期">
@@ -182,23 +230,34 @@ function ScheduleForm({
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="开始">
-            <Select value={startTime} onChange={(event) => setStartTime(event.target.value)}>
+            <Select aria-label="开始时间" value={startTime} onChange={(event) => setStartTime(event.target.value)}>
               {TIME_OPTIONS.slice(0, -1).map((time) => <option key={time}>{time}</option>)}
             </Select>
           </Field>
           <Field label="结束">
-            <Select value={endTime} onChange={(event) => setEndTime(event.target.value)}>
+            <Select aria-label="结束时间" value={endTime} onChange={(event) => setEndTime(event.target.value)}>
               {TIME_OPTIONS.slice(1).map((time) => <option key={time}>{time}</option>)}
             </Select>
           </Field>
         </div>
         {!validTime && <p className="text-xs text-[var(--danger)]">结束时间必须晚于开始时间。</p>}
+        {!validDays && <p className="text-xs text-[var(--danger)]">请选择至少一个重复星期。</p>}
+        {!validDate && <p className="text-xs text-[var(--danger)]">请选择日程日期。</p>}
 
-        <Field label="领域"><AreaSelect value={areaId} onChange={setAreaId} /></Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="XP"><Input type="number" min={0} value={xpReward} onChange={(event) => setXpReward(Number(event.target.value))} /></Field>
-          <Field label="Gold"><Input type="number" min={0} value={goldReward} onChange={(event) => setGoldReward(Number(event.target.value))} /></Field>
-        </div>
+        <details className="rounded-lg border border-[var(--border)] p-3" open={moreOpen} onToggle={(event) => setMoreOpen(event.currentTarget.open)}>
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--fg-strong)]">更多设置 · 备注、领域与奖励</summary>
+          <div className="mt-4 grid gap-4">
+            <Field label="备注">
+              <Textarea aria-label="日程备注" value={note} onChange={(event) => setNote(event.target.value)} placeholder="地点、准备材料、提醒事项..." className="min-h-24" />
+            </Field>
+            <Field label="领域"><AreaSelect value={areaId} onChange={setAreaId} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="经验值"><Input aria-label="经验值奖励" type="number" min={0} value={xpReward} onChange={(event) => setXpReward(Number(event.target.value))} /></Field>
+              <Field label="金币"><Input aria-label="金币奖励" type="number" min={0} value={goldReward} onChange={(event) => setGoldReward(Number(event.target.value))} /></Field>
+            </div>
+          </div>
+        </details>
+        {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
 
         <div className="sticky bottom-0 mt-2 flex flex-wrap gap-2 border-t border-[var(--border)] bg-[rgba(250,243,226,0.96)] pt-4">
           {initial ? (
@@ -206,12 +265,12 @@ function ScheduleForm({
               <Trash2 size={15} /> {deletePending ? "删除中..." : "删除日程"}
             </Button>
           ) : null}
-          <Button variant="outline" className="ml-auto" onClick={onDone}>取消</Button>
-          <Button className="flex-[1.4]" onClick={submit} disabled={pending || !title.trim() || !validTime || !validDays}>
+          <Button variant="outline" className="ml-auto" onClick={onCancel} disabled={pending || deletePending}>取消</Button>
+          <Button className="flex-[1.4]" onClick={submit} disabled={pending || deletePending || !title.trim() || !validTime || !validDays || !validDate}>
             {pending ? "保存中..." : editing ? "保存修改" : "创建日程"}
           </Button>
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 }

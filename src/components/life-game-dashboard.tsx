@@ -34,6 +34,8 @@ import {
 } from "@/hooks/queries";
 import type { CommissionItem } from "@/lib/commissions";
 import type { GoalDTO, TaskDTO } from "@/lib/types";
+import { buildEntries } from "@/app/routines/schedule-model";
+import { todayYMD } from "@/lib/date";
 import styles from "./life-game-dashboard.module.css";
 
 const DIMENSIONS = [
@@ -118,58 +120,26 @@ function DailyTimeline() {
   const routines = dashboard.data?.routines ?? queryRoutines;
   const commissions = dashboard.data?.commissions ?? queryCommissions;
   const complete = useCompleteCommission();
+  const today = todayYMD();
 
   const scheduleItems = useMemo(() => {
-    const times = ["08:00", "10:00", "14:00", "18:00", "20:00"];
-    const result: Array<{
-      id: string;
-      title: string;
-      reward: number;
-      done: boolean;
-      time: string;
-      commissionId?: string;
-      empty?: boolean;
-    }> = [];
-
-    (commissions?.items ?? [])
-      .filter((item: CommissionItem) => item.sourceType === "routine")
-      .slice(0, 5)
-      .forEach((item: CommissionItem, index: number) => {
-        result.push({
-          id: item.id,
-          title: item.title,
-          reward: item.xp,
-          done: item.done,
-          time: times[index],
-          commissionId: item.id,
-        });
-      });
-
-    for (const routine of routines ?? []) {
-      if (result.length >= 5) break;
-      if (result.some((item) => item.title === routine.title)) continue;
-      result.push({
+    const routineCommissions = new globalThis.Map<string, CommissionItem>(
+      (commissions?.items ?? [])
+        .filter((item: CommissionItem) => item.sourceType === "routine")
+        .map((item: CommissionItem) => [item.sourceId, item]),
+    );
+    return buildEntries(routines ?? [], today).slice(0, 5).map(({ routine, meta }) => {
+      const commission = routineCommissions.get(routine.id);
+      return {
         id: routine.id,
         title: routine.title,
-        reward: routine.xpReward,
-        done: routine.completedToday,
-        time: times[result.length],
-      });
-    }
-
-    return times.map((time, index) => {
-      const item = result[index];
-      if (item) return { ...item, time };
-      return {
-        id: `empty-${time}`,
-        title: "空闲",
-        reward: 0,
-        done: false,
-        time,
-        empty: true,
+        reward: commission?.xp ?? routine.xpReward,
+        done: commission?.done ?? routine.completedToday,
+        time: meta ? `${meta.startTime}–${meta.endTime}` : "未安排时间",
+        commissionId: commission?.id,
       };
     });
-  }, [commissions, routines]);
+  }, [commissions, routines, today]);
 
   return (
     <section className={`${styles.panel} ${styles.schedule}`}>
@@ -183,7 +153,9 @@ function DailyTimeline() {
         })}
         href="/routines"
       />
-      <div className={styles.timeline} role="list">
+      {scheduleItems.length === 0 ? (
+        <Link href="/routines" className={styles.scheduleNoItems}>今天尚无安排，去添加日程 →</Link>
+      ) : <div className={styles.timeline} role="list">
         {scheduleItems.map((item) => (
           <div
             className={styles.timeBlock}
@@ -191,12 +163,7 @@ function DailyTimeline() {
             role="listitem"
           >
             <span className={styles.time}>{item.time}</span>
-            {item.empty ? (
-              <Link href="/routines" className={`${styles.scheduleItem} ${styles.scheduleEmpty}`}>
-                <span className={styles.scheduleName}>尚未安排</span>
-                <span className={styles.scheduleReward}>去安排</span>
-              </Link>
-            ) : item.commissionId && !item.done ? (
+            {item.commissionId && !item.done ? (
               <button
                 type="button"
                 className={styles.scheduleItem}
@@ -220,7 +187,7 @@ function DailyTimeline() {
             )}
           </div>
         ))}
-      </div>
+      </div>}
     </section>
   );
 }
@@ -241,22 +208,22 @@ function QuestList() {
         <div className={styles.sectionTitle}>
           <Sword size={18} />
           <span>任务列表</span>
-          <div className={styles.taskTabs}>
-            <button
-              type="button"
-              className={`${styles.taskTab} ${tab === "todo" ? styles.taskTabActive : ""}`}
-              onClick={() => setTab("todo")}
-            >
-              进行中 ({todo.length})
-            </button>
-            <button
-              type="button"
-              className={`${styles.taskTab} ${tab === "done" ? styles.taskTabActive : ""}`}
-              onClick={() => setTab("done")}
-            >
-              已完成 ({done.length})
-            </button>
-          </div>
+        </div>
+        <div className={styles.taskTabs}>
+          <button
+            type="button"
+            className={`${styles.taskTab} ${tab === "todo" ? styles.taskTabActive : ""}`}
+            onClick={() => setTab("todo")}
+          >
+            待处理 ({todo.length})
+          </button>
+          <button
+            type="button"
+            className={`${styles.taskTab} ${tab === "done" ? styles.taskTabActive : ""}`}
+            onClick={() => setTab("done")}
+          >
+            已完成 ({done.length})
+          </button>
         </div>
         <Link href="/tasks" className={styles.addTask}>
           <Plus size={13} />

@@ -28,9 +28,16 @@ import {
   extractReflectionImages,
   type ReflectionEditorHandle,
 } from "@/components/reflection-editor";
-import { useCreateReview, useReviews } from "@/hooks/queries";
+import { useCreateReview, useReviews, useUser } from "@/hooks/queries";
 import type { ReviewDTO } from "@/lib/types";
 import { api } from "@/lib/fetcher";
+import {
+  canChangeReviewContext,
+  hasUnsavedReview,
+  reviewDraftStorageKey,
+  savedStateAfterRequest,
+  type ReviewSaveState,
+} from "./review-draft-state";
 
 type Tab = "daily" | "weekly" | "monthly" | "quarterly";
 
@@ -45,6 +52,7 @@ type ReflectionDraft = {
   body: string;
   images: ReflectionImage[];
 };
+
 
 type ReflectionTemplate = {
   name: string;
@@ -134,6 +142,17 @@ export default function ReviewPage() {
   const [openYears, setOpenYears] = useState<Record<string, boolean>>({});
   const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveStates, setSaveStates] = useState<Record<Tab, ReviewSaveState>>({
+    daily: "clean",
+    weekly: "clean",
+    monthly: "clean",
+    quarterly: "clean",
+  });
+  const [draftStoreReady, setDraftStoreReady] = useState<string | null>(null);
+  const [draftStorageStatus, setDraftStorageStatus] = useState<"pending" | "stored" | "unavailable">("pending");
+  const editVersions = useRef<Record<Tab, number>>({ daily: 0, weekly: 0, monthly: 0, quarterly: 0 });
+  const saveInFlight = useRef(false);
+  const uploadInFlight = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -142,6 +161,8 @@ export default function ReviewPage() {
 
   const create = useCreateReview();
   const { data: reviews = [] } = useReviews();
+  const { data: user, error: userError } = useUser();
+  const userId = user?.id ?? null;
   const draft = drafts[tab];
   const currentTemplate = templates[tab];
 
@@ -179,8 +200,55 @@ export default function ReviewPage() {
 
   useEffect(() => {
     if (!templatesLoaded) return;
-    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+    try {
+      window.localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+    } catch {
+      // Template preferences are optional when browser storage is unavailable.
+    }
   }, [templates, templatesLoaded]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const { drafts: restored, storageAvailable } = readStoredDrafts(userId);
+    setDraftStorageStatus(storageAvailable ? "stored" : "unavailable");
+    setDrafts({ ...makeInitialDrafts(), ...restored });
+    setSaveStates({
+      daily: restored.daily ? "dirty" : "clean",
+      weekly: restored.weekly ? "dirty" : "clean",
+      monthly: restored.monthly ? "dirty" : "clean",
+      quarterly: restored.quarterly ? "dirty" : "clean",
+    });
+    setDraftStoreReady(userId);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || draftStoreReady !== userId) return;
+    const pending = Object.fromEntries(
+      TABS.filter(({ value }) => ["dirty", "saving", "failed"].includes(saveStates[value]))
+        .map(({ value }) => [value, drafts[value]]),
+    );
+    try {
+      const key = reviewDraftStorageKey(userId);
+      if (Object.keys(pending).length) {
+        window.localStorage.setItem(key, JSON.stringify(pending));
+      } else {
+        window.localStorage.removeItem(key);
+      }
+      setDraftStorageStatus("stored");
+    } catch {
+      setDraftStorageStatus("unavailable");
+    }
+  }, [drafts, saveStates, userId, draftStoreReady]);
+
+  useEffect(() => {
+    if (!hasUnsavedReview(saveStates)) return;
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
+  }, [saveStates]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -196,6 +264,9 @@ export default function ReviewPage() {
 
   const updateDraft = (patch: Partial<ReflectionDraft>) => {
     setSaveMessage(null);
+    setDraftStorageStatus("pending");
+    editVersions.current[tab] += 1;
+    setSaveStates((prev) => ({ ...prev, [tab]: "dirty" }));
     setDrafts((prev) => ({
       ...prev,
       [tab]: { ...prev[tab], ...patch },
@@ -210,8 +281,13 @@ export default function ReviewPage() {
   };
 
   const newDraft = () => {
+    if (!canChangeReviewContext(saveInFlight.current, uploadInFlight.current)) return;
+    if (saveStates[tab] === "saving") return;
+    if (["dirty", "failed"].includes(saveStates[tab]) && !window.confirm("当前反思尚未保存，确定放弃这份草稿吗？")) return;
+    editVersions.current[tab] += 1;
     setSelectedReviewId(null);
     setSaveMessage(null);
+    setSaveStates((prev) => ({ ...prev, [tab]: "clean" }));
     setDrafts((prev) => ({
       ...prev,
       [tab]: makeDraft(tab),
@@ -219,7 +295,11 @@ export default function ReviewPage() {
   };
 
   const selectReview = (review: ReviewDTO) => {
+    if (!canChangeReviewContext(saveInFlight.current, uploadInFlight.current)) return;
     const nextTab = toTab(review.kind);
+    if (saveStates[nextTab] === "saving") return;
+    if (["dirty", "failed"].includes(saveStates[nextTab]) && !window.confirm("此周期有未保存的草稿，确定改为查看历史记录吗？")) return;
+    editVersions.current[nextTab] += 1;
     const content = parseContent(review.content);
     const hydratedBody = appendImagesAsMarkdown(
       content.body || legacyBody(content),
@@ -228,6 +308,7 @@ export default function ReviewPage() {
     setTab(nextTab);
     setSelectedReviewId(review.id);
     setSaveMessage("正在查看历史反思；再次保存会创建一条新的记录。");
+    setSaveStates((prev) => ({ ...prev, [nextTab]: "clean" }));
     setDrafts((prev) => ({
       ...prev,
       [nextTab]: {
@@ -267,6 +348,7 @@ export default function ReviewPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    uploadInFlight.current = true;
     setUploading(true);
     setUploadError(null);
     try {
@@ -287,36 +369,63 @@ export default function ReviewPage() {
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "图片上传失败");
     } finally {
+      uploadInFlight.current = false;
       setUploading(false);
     }
   };
 
   const saveReflection = async () => {
+    if (saveInFlight.current || uploadInFlight.current) return;
+    saveInFlight.current = true;
+    const savingTab = tab;
+    const version = editVersions.current[savingTab];
+    setSaveStates((prev) => ({ ...prev, [savingTab]: "saving" }));
+    setSaveMessage(null);
     const templateQuestions = currentTemplate.questions.filter(Boolean);
     const inlineImages = extractReflectionImages(draft.body).map((image) => ({
       id: image.id,
       url: image.url,
       name: image.name,
     }));
-    await create.mutateAsync({
-      kind: tab,
-      content: {
-        mode: "essay",
-        title: draft.title,
-        body: draft.body,
-        images: inlineImages,
-        templateName: currentTemplate.name,
-        templateQuestions,
-        oneLiner: firstLine(draft.body),
-        notes: draft.body,
-        biggestWin: tab === "weekly" || tab === "monthly" ? draft.title : undefined,
-        nextWeekTop3: tab === "weekly" ? templateQuestions.join("\n") : undefined,
-        nextQuarterTop3: tab === "quarterly" ? templateQuestions.join("\n") : undefined,
-      },
-    });
-    setSelectedReviewId(null);
-    setSaveMessage("已保存为新的反思记录。");
+    try {
+      await create.mutateAsync({
+        kind: tab,
+        content: {
+          mode: "essay",
+          title: draft.title,
+          body: draft.body,
+          images: inlineImages,
+          templateName: currentTemplate.name,
+          templateQuestions,
+          oneLiner: firstLine(draft.body),
+          notes: draft.body,
+          biggestWin: tab === "weekly" || tab === "monthly" ? draft.title : undefined,
+          nextWeekTop3: tab === "weekly" ? templateQuestions.join("\n") : undefined,
+          nextQuarterTop3: tab === "quarterly" ? templateQuestions.join("\n") : undefined,
+        },
+      });
+      if (savedStateAfterRequest(version, editVersions.current[savingTab]) === "saved") {
+        setSaveStates((prev) => ({ ...prev, [savingTab]: "saved" }));
+        setSelectedReviewId(null);
+        setSaveMessage("已保存为新的反思记录。");
+      } else {
+        setSaveStates((prev) => ({ ...prev, [savingTab]: "dirty" }));
+        setSaveMessage("保存期间有新修改，请再次保存。");
+      }
+    } catch (error) {
+      setSaveStates((prev) => ({ ...prev, [savingTab]: "failed" }));
+      setSaveMessage(error instanceof Error ? error.message : "保存失败，请重试。");
+    } finally {
+      saveInFlight.current = false;
+    }
   };
+
+  if (userError) {
+    return <div className="mx-auto max-w-xl p-6 text-sm text-[var(--danger)]">无法读取账户，反思草稿暂不可编辑。请刷新后重试。</div>;
+  }
+  if (!userId || draftStoreReady !== userId) {
+    return <div className="mx-auto max-w-xl p-6 text-sm text-[var(--fg-muted)]">正在读取你的反思草稿…</div>;
+  }
 
   return (
     <div className="mx-auto max-w-[1500px] px-3 py-4 md:px-5 lg:px-6">
@@ -355,6 +464,7 @@ export default function ReviewPage() {
                   type="button"
                   title="新建反思"
                   onClick={newDraft}
+                  disabled={create.isPending || uploading}
                   className="grid h-9 w-9 place-items-center rounded-sm border border-[var(--gold)]/70 bg-white/5 text-[var(--gold-pale)] transition hover:bg-[var(--gold)]/15"
                 >
                   <Plus size={15} />
@@ -442,7 +552,8 @@ export default function ReviewPage() {
                                             <button
                                               key={entry.review.id}
                                               type="button"
-                                              onClick={() => selectReview(entry.review)}
+                      onClick={() => selectReview(entry.review)}
+                      disabled={create.isPending || uploading}
                                               className={`w-full rounded-sm border px-2.5 py-2 text-left transition ${
                                                 selectedReviewId === entry.review.id
                                                   ? "border-[var(--gold)] bg-[var(--gold)]/16"
@@ -515,10 +626,12 @@ export default function ReviewPage() {
                       key={value}
                       type="button"
                       onClick={() => {
+                        if (!canChangeReviewContext(saveInFlight.current, uploadInFlight.current)) return;
                         setTab(value);
                         setSelectedReviewId(null);
                         setSaveMessage(null);
                       }}
+                      disabled={create.isPending || uploading}
                       className={`flex h-9 min-w-[84px] items-center justify-center gap-1.5 rounded-sm px-2.5 text-[13px] transition ${
                         tab === value
                           ? "bg-[var(--bg-panel-ink)] text-[var(--fg-on-ink)] shadow-sm"
@@ -649,22 +762,34 @@ export default function ReviewPage() {
 
               <div className="flex flex-col gap-3 border-t border-[var(--border)] bg-white/32 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6">
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-[var(--fg-muted)]">
-                  <span>{saveMessage ?? (selectedReview ? "历史反思已载入，保存会创建新记录。" : "手动保存")}</span>
+                  <span role="status" aria-live="polite">
+                    {saveStates[tab] === "dirty" ? (draftStorageStatus === "stored" ? "未保存 · 草稿已暂存本机" : draftStorageStatus === "pending" ? "未保存 · 正在暂存本机" : "未保存 · 本机暂存不可用，请保存后离开")
+                      : saveStates[tab] === "saving" ? "保存中…"
+                      : saveStates[tab] === "saved" ? "已保存到反思记录"
+                      : saveStates[tab] === "failed" ? (draftStorageStatus === "stored" ? "保存失败 · 草稿仍在本机" : draftStorageStatus === "pending" ? "保存失败 · 正在暂存草稿" : "保存失败 · 本机暂存不可用")
+                      : selectedReview ? "历史反思已载入，保存会创建新记录。" : "手动保存"}
+                  </span>
+                  {saveMessage && <span>{saveMessage}</span>}
                   <span>字数：{countCjkAwareWords(draft.body)}</span>
                   <span>图片：{draft.images.length}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant="secondary" onClick={newDraft}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={newDraft}
+                    disabled={create.isPending || uploading}
+                  >
                     <Plus size={15} />
                     新建
                   </Button>
                   <Button
                     type="button"
                     onClick={saveReflection}
-                    disabled={create.isPending || !draft.body.trim()}
+                    disabled={create.isPending || uploading || !draft.body.trim() || saveStates[tab] === "saved"}
                   >
                     <Save size={15} />
-                    {create.isPending ? "Saving..." : "保存反思"}
+                    {create.isPending ? "保存中…" : "保存反思"}
                   </Button>
                 </div>
               </div>
@@ -707,6 +832,31 @@ function makeInitialDrafts(): Record<Tab, ReflectionDraft> {
     monthly: makeDraft("monthly"),
     quarterly: makeDraft("quarterly"),
   };
+}
+
+function readStoredDrafts(userId: string): {
+  drafts: Partial<Record<Tab, ReflectionDraft>>;
+  storageAvailable: boolean;
+} {
+  try {
+    const raw = window.localStorage.getItem(reviewDraftStorageKey(userId));
+    if (!raw) return { drafts: {}, storageAvailable: true };
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object") return { drafts: {}, storageAvailable: false };
+    const restored: Partial<Record<Tab, ReflectionDraft>> = {};
+    for (const { value } of TABS) {
+      const entry = parsed[value] as Partial<ReflectionDraft> | undefined;
+      if (!entry || typeof entry.title !== "string" || typeof entry.body !== "string") continue;
+      restored[value] = {
+        title: entry.title,
+        body: entry.body,
+        images: extractReflectionImages(entry.body).map(({ id, url, name }) => ({ id, url, name })),
+      };
+    }
+    return { drafts: restored, storageAvailable: true };
+  } catch {
+    return { drafts: {}, storageAvailable: false };
+  }
 }
 
 function makeDraft(tab: Tab): ReflectionDraft {

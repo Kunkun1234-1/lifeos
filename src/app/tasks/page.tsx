@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Check,
   ChevronDown,
@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import { AreaSelect } from "@/components/area-select";
 import { ProjectSelect } from "@/components/project-select";
@@ -26,8 +27,10 @@ import {
 } from "@/hooks/queries";
 import { addDaysYMD, endOfWeekYMD, startOfWeekYMD, todayYMD, toYMD } from "@/lib/date";
 import { defaultTaskPriorityNumber } from "@/lib/settings-prefs";
+import { AREA_META, type AreaName } from "@/lib/area-meta";
 import type { TaskDTO } from "@/lib/types";
 import styles from "./page.module.css";
+import { decodeNotes, routineMatchesDate } from "@/app/routines/schedule-model";
 
 type ViewTab = "mine" | "schedule" | "week" | "month";
 /** 任务类型：主线=挂项目；支线=一次性无项目；日/周循环归 Routines */
@@ -62,7 +65,6 @@ const RECOMMENDATIONS = [
   { title: "散步 20 分钟", notes: "健康生活小目标", xp: 40, gold: 10 },
 ];
 
-const TIME_SLOTS = ["08:00", "10:00", "14:00", "16:00", "20:00"];
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
 
 function shiftMonth(ymd: string, delta: number) {
@@ -140,13 +142,17 @@ function taskIcon(task: TaskDTO) {
   return "📜";
 }
 
+function areaDisplayName(name: string) {
+  return AREA_META[name as AreaName]?.cn ?? name;
+}
+
 function taskTags(task: TaskDTO): Array<{ label: string; tone: string }> {
   const tags: Array<{ label: string; tone: string }> = [];
   if (task.projectId) tags.push({ label: "主线", tone: "orange" });
   else if (task.status !== "DONE") tags.push({ label: "支线", tone: "green" });
   if (task.area) {
     tags.push({
-      label: task.area.name,
+      label: areaDisplayName(task.area.name),
       tone: ATTR_TONE[task.area.attributeKey] ?? "blue",
     });
   }
@@ -157,10 +163,8 @@ function formatDue(task: TaskDTO, today = todayYMD()) {
   const ymd = dueYmd(task);
   if (!ymd) return "无截止日期";
   if (ymd === today) {
-    const d = task.dueDate ? new Date(task.dueDate) : null;
-    const hh = d ? String(d.getHours()).padStart(2, "0") : "23";
-    const mm = d ? String(d.getMinutes()).padStart(2, "0") : "59";
-    return `今天 ${hh}:${mm}`;
+    const time = taskDueTime(task);
+    return `今天${time ? ` ${time}` : ""}`;
   }
   const tomorrow = addDaysYMD(today, 1);
   if (ymd === tomorrow) return "明天";
@@ -170,6 +174,14 @@ function formatDue(task: TaskDTO, today = todayYMD()) {
   if (diff > 0 && diff <= 7) return `${Math.round(diff)} 天后`;
   if (diff < 0) return `逾期 ${Math.abs(Math.round(diff))} 天`;
   return ymd.slice(5);
+}
+
+function taskDueTime(task: TaskDTO): string | null {
+  if (!task.dueDate) return null;
+  const date = new Date(task.dueDate);
+  // The date-only task form saves 23:59 as its internal deadline.
+  if (date.getHours() === 23 && date.getMinutes() === 59) return null;
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatCompletedAt(task: TaskDTO, today = todayYMD()) {
@@ -237,6 +249,7 @@ export default function TasksPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menuId, setMenuId] = useState<string | null>(null);
   const [todayDoneOpen, setTodayDoneOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [completedVisibleCount, setCompletedVisibleCount] = useState(COMPLETED_PAGE_SIZE);
 
   const today = todayYMD();
@@ -422,7 +435,9 @@ export default function TasksPage() {
   }, [scoped]);
 
   const scheduleDayTasks = useMemo(() => {
-    const dated = scoped.filter((t) => dueYmd(t) === cursorDate);
+    const dated = scoped
+      .filter((t) => dueYmd(t) === cursorDate)
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
     const undated =
       cursorDate === today
         ? scoped.filter((t) => !t.dueDate && t.status !== "DONE" && t.status !== "CANCELED")
@@ -462,20 +477,25 @@ export default function TasksPage() {
       (t) => dueYmd(t) === today && t.status !== "DONE" && t.status !== "CANCELED",
     );
     const routineItems = routines
-      .filter((r) => !r.completedToday)
-      .slice(0, 3)
-      .map((r) => ({ title: r.title, sub: "日常习惯" }));
-    const taskItems = dueToday.slice(0, 5).map((t) => ({
+      .filter((r) => !r.completedToday && routineMatchesDate(r, today))
+      .map((r) => {
+        const meta = decodeNotes(r.notes).meta;
+        return {
+          id: `routine-${r.id}`,
+          title: r.title,
+          sub: meta?.purpose === "calendar" ? "日程" : "日常习惯",
+          time: meta?.purpose === "calendar" ? meta.startTime : null,
+          deadline: false,
+        };
+      });
+    const taskItems = dueToday.map((t) => ({
+      id: `task-${t.id}`,
       title: t.title,
-      sub: t.project?.title ?? t.area?.name ?? "任务",
+      sub: t.project?.title ?? (t.area ? areaDisplayName(t.area.name) : "任务"),
+      time: taskDueTime(t),
+      deadline: true,
     }));
-    const merged = [...taskItems, ...routineItems].slice(0, 5);
-    return TIME_SLOTS.map((time, i) => ({
-      time,
-      title: merged[i]?.title ?? "空闲时段",
-      sub: merged[i]?.sub ?? "可添加任务",
-      empty: !merged[i],
-    }));
+    return [...taskItems, ...routineItems];
   }, [tasks, routines, today]);
 
   const togglePriority = (p: number) => {
@@ -556,7 +576,11 @@ export default function TasksPage() {
       </div>
 
       <div className={styles.layout}>
-        <aside className={`${styles.panel} ${styles.leftPanel}`}>
+        <aside className={`${styles.panel} ${styles.leftPanel}`} data-open={filtersOpen}>
+          <button type="button" className={styles.mobileFilterToggle} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
+            筛选任务 {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          <div className={styles.filterContent}>
           <h2 className={styles.sectionTitle}>任务类型</h2>
           <ul className={styles.catList}>
             {TYPE_CATEGORIES.map((c) => (
@@ -598,7 +622,7 @@ export default function TasksPage() {
                   onClick={() => setAreaFilter(area.id)}
                 >
                   <span className={styles.catIcon}>{area.icon || "·"}</span>
-                  <span className={styles.catLabel}>{area.name}</span>
+                  <span className={styles.catLabel}>{areaDisplayName(area.name)}</span>
                   <span className={styles.catCount}>{areaCounts[area.id] ?? 0}</span>
                 </button>
               </li>
@@ -681,6 +705,7 @@ export default function TasksPage() {
                 <option value="none">无截止日期</option>
               </select>
             </label>
+          </div>
           </div>
         </aside>
 
@@ -765,7 +790,15 @@ export default function TasksPage() {
             <section className={`${styles.panel} ${styles.listPanel}`}>
               <div className={styles.listHead}>
                 <h2 className={styles.listTitle}>
-                  {typeId === "done" ? "已完成任务" : "进行中的任务"}
+                  {typeId === "done"
+                    ? "已完成任务"
+                    : statusFilter === "IN_PROGRESS"
+                      ? "进行中的任务"
+                      : statusFilter === "TODO"
+                        ? "待开始任务"
+                        : statusFilter === "CANCELED"
+                          ? "已取消任务"
+                          : "待处理任务"}
                 </h2>
                 <div className={styles.listMeta}>
                   {isLoading
@@ -867,13 +900,13 @@ export default function TasksPage() {
                 </div>
               </div>
               <div className={styles.dayAgenda}>
-                {TIME_SLOTS.map((slot, idx) => {
-                  const task = scheduleDayTasks.dated[idx];
+                {scheduleDayTasks.dated.map((task) => {
                   return (
-                    <div key={slot} className={styles.daySlot}>
-                      <div className={styles.daySlotTime}>{slot}</div>
+                    <div key={task.id} className={styles.daySlot}>
+                      <div className={styles.daySlotTime}>
+                        {taskDueTime(task) ? `${taskDueTime(task)} 截止` : "当日截止"}
+                      </div>
                       <div className={styles.daySlotBody}>
-                        {task ? (
                           <div className={styles.daySlotCard}>
                             <button
                               type="button"
@@ -897,9 +930,6 @@ export default function TasksPage() {
                               </button>
                             ) : null}
                           </div>
-                        ) : (
-                          <div className={styles.daySlotEmpty}>空闲</div>
-                        )}
                       </div>
                     </div>
                   );
@@ -1032,23 +1062,20 @@ export default function TasksPage() {
 
         <aside className={styles.rightStack}>
           <section className={`${styles.panel} ${styles.rightCard}`}>
-            <h2 className={styles.sectionTitle}>今日计划</h2>
+            <h2 className={styles.sectionTitle}>今日待办</h2>
             <ul className={styles.timeline}>
               {planItems.map((item) => (
-                <li key={item.time} className={styles.timeItem}>
-                  <span className={styles.timeLabel}>{item.time}</span>
-                  <span className={styles.timeRail}>
-                    <span className={styles.timeDot} />
-                  </span>
+                <li key={item.id} className={styles.timeItem}>
                   <div className={styles.timeBody}>
-                    <div className={styles.timeTitle} style={item.empty ? { opacity: 0.45 } : undefined}>
-                      {item.title}
+                    <div className={styles.timeTitle}>{item.title}</div>
+                    <div className={styles.timeSub}>
+                      {item.time ? `${item.time}${item.deadline ? " 截止" : ""} · ` : ""}{item.sub}
                     </div>
-                    <div className={styles.timeSub}>{item.sub}</div>
                   </div>
                 </li>
               ))}
             </ul>
+            {planItems.length === 0 ? <div className={styles.empty}>今天没有待办</div> : null}
           </section>
 
           <section className={`${styles.panel} ${styles.rightCard}`}>
@@ -1094,15 +1121,11 @@ export default function TasksPage() {
       </div>
 
       {creating ? (
-        <TaskModal title="添加任务" desc="创建一个带奖励与截止时间的任务。" onClose={() => setCreating(false)}>
-          <TaskForm onDone={() => setCreating(false)} />
-        </TaskModal>
+        <TaskModal title="添加任务" desc="先写下任务，其他设置可以稍后补充。" onClose={() => setCreating(false)} />
       ) : null}
 
       {editing ? (
-        <TaskModal title="任务详情" desc="查看并编辑任务内容、奖励与截止时间。" onClose={() => setEditing(null)}>
-          <TaskForm task={editing} onDone={() => setEditing(null)} />
-        </TaskModal>
+        <TaskModal title="任务详情" desc="查看并编辑任务内容、奖励与截止日期。" task={editing} onClose={() => setEditing(null)} />
       ) : null}
     </div>
   );
@@ -1340,93 +1363,160 @@ function CompletedHistory({
 function TaskModal({
   title,
   desc,
+  task,
   onClose,
-  children,
 }: {
   title: string;
   desc: string;
+  task?: TaskDTO;
   onClose: () => void;
-  children: ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const requestClose = () => {
+    if (saving) return;
+    if (dirty) setConfirmDiscard(true);
+    else onClose();
+  };
 
-  return createPortal(
-    <div className={styles.modalBackdrop} onClick={onClose} role="presentation">
-      <div
-        className={styles.modal}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-      >
-        <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>{title}</h3>
-          <p className={styles.modalDesc}>{desc}</p>
-        </div>
-        {children}
-      </div>
-    </div>,
-    document.body,
+  return (
+    <Dialog.Root open onOpenChange={(open) => { if (!open) requestClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className={styles.modalBackdrop} />
+        <Dialog.Content className={styles.modal}>
+          <div className={styles.modalHeader}>
+            <div className={styles.modalHeaderRow}>
+              <Dialog.Title className={styles.modalTitle}>{title}</Dialog.Title>
+              <button type="button" className={styles.modalClose} aria-label="关闭" disabled={saving} onClick={requestClose}>
+                <X size={18} />
+              </button>
+            </div>
+            <Dialog.Description className={styles.modalDesc}>{desc}</Dialog.Description>
+          </div>
+          <TaskForm
+            task={task}
+            saving={saving}
+            onDone={onClose}
+            onRequestClose={requestClose}
+            onDirtyChange={setDirty}
+            onSavingChange={setSaving}
+          />
+          {confirmDiscard ? (
+            <div className={styles.discardPrompt} role="alert">
+              <span>尚有未保存的修改，确定放弃吗？</span>
+              <div>
+                <button type="button" className={styles.btnGhost} autoFocus disabled={saving} onClick={() => setConfirmDiscard(false)}>继续编辑</button>
+                <button type="button" className={styles.btnPrimary} disabled={saving} onClick={onClose}>放弃修改</button>
+              </div>
+            </div>
+          ) : null}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
-function TaskForm({ task, onDone }: { task?: TaskDTO; onDone: () => void }) {
+function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavingChange }: {
+  task?: TaskDTO;
+  saving: boolean;
+  onDone: () => void;
+  onRequestClose: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onSavingChange: (saving: boolean) => void;
+}) {
   const [title, setTitle] = useState(task?.title ?? "");
   const [notes, setNotes] = useState(task?.notes ?? "");
-  const [areaId, setAreaId] = useState<string | null>(task?.area?.id ?? null);
+  const [areaId, setAreaId] = useState<string | null>(task?.areaId ?? null);
   const [projectId, setProjectId] = useState<string | null>(task?.projectId ?? null);
   const [priority, setPriority] = useState(
     task?.priority ?? defaultTaskPriorityNumber(),
   );
-  const [dueDate, setDueDate] = useState(task?.dueDate ? task.dueDate.slice(0, 10) : "");
+  const [dueDate, setDueDate] = useState(task?.dueDate ? toYMD(new Date(task.dueDate)) : "");
   const [xpReward, setXpReward] = useState(task?.xpReward ?? 10);
   const [goldReward, setGoldReward] = useState(task?.goldReward ?? 5);
+  const [error, setError] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(Boolean(task));
+
+  useEffect(() => {
+    onDirtyChange(
+      title !== (task?.title ?? "") ||
+      notes !== (task?.notes ?? "") ||
+      areaId !== (task?.areaId ?? null) ||
+      projectId !== (task?.projectId ?? null) ||
+      priority !== (task?.priority ?? defaultTaskPriorityNumber()) ||
+      dueDate !== (task?.dueDate ? toYMD(new Date(task.dueDate)) : "") ||
+      xpReward !== (task?.xpReward ?? 10) ||
+      goldReward !== (task?.goldReward ?? 5),
+    );
+  }, [title, notes, areaId, projectId, priority, dueDate, xpReward, goldReward, task, onDirtyChange]);
 
   const create = useCreateTask();
   const update = useUpdateTask();
-  const pending = create.isPending || update.isPending;
+  const pending = saving || create.isPending || update.isPending;
 
   const submit = async () => {
-    if (!title.trim()) return;
+    if (pending) return;
+    if (!title.trim()) {
+      setError("请填写任务标题。");
+      return;
+    }
+    setError(null);
     const body = {
       title: title.trim(),
       notes: notes.trim() || null,
       areaId,
       projectId,
       priority,
-      dueDate: dueDate ? new Date(`${dueDate}T23:59:00`).toISOString() : null,
+      dueDate: dueDate
+        ? task?.dueDate && dueDate === toYMD(new Date(task.dueDate))
+          ? task.dueDate
+          : new Date(`${dueDate}T23:59:00`).toISOString()
+        : null,
       xpReward,
       goldReward,
     };
-    if (task) await update.mutateAsync({ id: task.id, ...body });
-    else await create.mutateAsync(body);
-    onDone();
+    try {
+      onSavingChange(true);
+      if (task) await update.mutateAsync({ id: task.id, ...body });
+      else await create.mutateAsync(body);
+      onDone();
+    } catch {
+      setError("保存失败，已保留填写内容，请检查网络后重试。");
+    } finally {
+      onSavingChange(false);
+    }
   };
 
   return (
     <>
       <div className={styles.modalBody}>
         <div className={styles.formGrid}>
+          <fieldset className={styles.formFieldset} disabled={pending}>
           <label>
             标题
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="例如：完成周报"
-              autoFocus
             />
           </label>
           <label>
-            备注
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="可选说明" />
+            截止日期
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </label>
           <label>
-            挂载项目（主线）
-            <ProjectSelect value={projectId} onChange={setProjectId} />
+            备注（可选）
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="补充任务说明" />
           </label>
-          <div className={styles.formRow}>
+          <details className={styles.moreSettings} open={moreOpen} onToggle={(event) => setMoreOpen(event.currentTarget.open)}>
+            <summary>更多设置：项目、领域、优先级和奖励</summary>
+            <div className={styles.moreSettingsBody}>
+            <label>
+              所属项目（主线任务）
+              <ProjectSelect value={projectId} onChange={setProjectId} />
+            </label>
+            <div className={styles.formRow}>
             <label>
               人生领域
               <AreaSelect value={areaId} onChange={setAreaId} />
@@ -1440,13 +1530,9 @@ function TaskForm({ task, onDone }: { task?: TaskDTO; onDone: () => void }) {
               </select>
             </label>
           </div>
-          <div className={styles.formRow3}>
+          <div className={styles.formRow}>
             <label>
-              截止日期
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </label>
-            <label>
-              XP
+              经验值（XP）
               <input
                 type="number"
                 min={0}
@@ -1455,7 +1541,7 @@ function TaskForm({ task, onDone }: { task?: TaskDTO; onDone: () => void }) {
               />
             </label>
             <label>
-              Gold
+              金币（Gold）
               <input
                 type="number"
                 min={0}
@@ -1464,10 +1550,14 @@ function TaskForm({ task, onDone }: { task?: TaskDTO; onDone: () => void }) {
               />
             </label>
           </div>
+            </div>
+          </details>
+          {error ? <p className={styles.formError} role="alert">{error}</p> : null}
+          </fieldset>
         </div>
       </div>
       <div className={styles.modalFooter}>
-        <button type="button" className={styles.btnGhost} onClick={onDone}>
+        <button type="button" className={styles.btnGhost} disabled={pending} onClick={onRequestClose}>
           取消
         </button>
         <button

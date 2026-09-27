@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
@@ -203,8 +204,9 @@ export default function RoutinesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RoutineDTO | null>(null);
 
-  const { data: routines = [] } = useRoutines();
-  const { data: tasks = [] } = useTasks();
+  const { data: routines = [], isLoading: routinesLoading, isError: routinesError, refetch: refetchRoutines } = useRoutines();
+  const { data: tasks = [], isLoading: tasksLoading, isError: tasksError, refetch: refetchTasks } = useTasks();
+  const [actionError, setActionError] = useState<string | null>(null);
   const deleteRoutine = useDeleteRoutine();
 
   const monthDates = useMemo(() => calendarDatesMonday(cursor), [cursor]);
@@ -292,7 +294,13 @@ export default function RoutinesPage() {
     const decoded = decodeNotes(routine.notes);
     const target = decoded.meta?.kind === "recurring" ? "整条重复日程（所有日期）" : "这条日程";
     if (!window.confirm(`确定删除${target}“${routine.title}”吗？`)) return;
-    await deleteRoutine.mutateAsync(routine.id);
+    setActionError(null);
+    try {
+      await deleteRoutine.mutateAsync(routine.id);
+    } catch {
+      setActionError("日程未能删除，请稍后重试。原有安排仍然保留。");
+      throw new Error("日程未能删除，请稍后重试。");
+    }
     if (editing?.id === routine.id) {
       setFormOpen(false);
       setEditing(null);
@@ -342,6 +350,21 @@ export default function RoutinesPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.pageActions}>
+        <p>日程安排具体时间，<Link href="/tasks">任务</Link>记录待办，<Link href="/habits">习惯</Link>管理每日重复行动。</p>
+        <button type="button" className={styles.createBtn} onClick={() => openCreate()}>
+          <Plus size={16} /> 添加日程
+        </button>
+      </div>
+      {routinesError || tasksError ? (
+        <div className={styles.loadNotice} role="alert">
+          部分安排未能加载，当前日历可能不完整。
+          <button type="button" onClick={() => { void refetchRoutines(); void refetchTasks(); }}>重新加载</button>
+        </div>
+      ) : routinesLoading || tasksLoading ? (
+        <p className={styles.loadNotice} role="status">正在加载安排…</p>
+      ) : null}
+      {actionError ? <p className={styles.loadNotice} role="alert">{actionError}</p> : null}
       <div className={styles.layout}>
         <section className={styles.main}>
           <div className={styles.toolbar}>
@@ -351,6 +374,7 @@ export default function RoutinesPage() {
                   <button
                     key={tab.id}
                     type="button"
+                    aria-pressed={view === tab.id}
                     className={view === tab.id ? styles.segBtnActive : styles.segBtn}
                     onClick={() => {
                       setView(tab.id);
@@ -381,6 +405,8 @@ export default function RoutinesPage() {
               <button
                 type="button"
                 className={styles.filterBtn}
+                aria-expanded={filterOpen}
+                aria-controls="schedule-filters"
                 onClick={() => setFilterOpen((v) => !v)}
               >
                 <SlidersHorizontal size={14} /> 筛选
@@ -389,7 +415,7 @@ export default function RoutinesPage() {
           </div>
 
           {filterOpen ? (
-            <div className={styles.filterPanel}>
+            <div className={styles.filterPanel} id="schedule-filters">
               <button
                 type="button"
                 className={!toneFilter ? styles.filterChipActive : styles.filterChip}
@@ -575,7 +601,7 @@ export default function RoutinesPage() {
                 </span>
               ))}
             </div>
-            <div className={styles.legendHint}>点击日期可选中 · 双击可创建事件</div>
+            <div className={styles.legendHint}>选择日期后添加日程 · 也可双击日期快速添加</div>
           </div>
         </section>
 
@@ -625,7 +651,7 @@ export default function RoutinesPage() {
                           aria-label={`删除日程：${ev.title}`}
                           title="删除日程"
                           disabled={deleteRoutine.isPending}
-                          onClick={() => ev.routine && void removeRoutine(ev.routine)}
+                          onClick={() => { if (ev.routine) void removeRoutine(ev.routine).catch(() => {}); }}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -637,7 +663,7 @@ export default function RoutinesPage() {
             )}
 
             <button type="button" className={styles.addEvent} onClick={() => openCreate(selectedDate)}>
-              <Plus size={14} /> 添加事件
+              <Plus size={14} /> 为这一天添加日程
             </button>
           </section>
 

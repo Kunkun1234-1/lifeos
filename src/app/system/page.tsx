@@ -103,9 +103,9 @@ const MAIN_MODULES: SystemModule[] = [
   },
   {
     href: "/notes",
-    cn: "笔记收藏",
+    cn: "知识库",
     en: "Notes",
-    desc: "知识、灵感与语录",
+    desc: "笔记、收藏与灵感归档",
     group: "知识",
     icon: Library,
     tone: "#cbb7ef",
@@ -229,10 +229,10 @@ export default function SystemPage() {
                 </span>
                 <div>
                   <h1 className="font-display text-[26px] font-bold tracking-[0.16em] text-[#15231c] md:text-[30px]">
-                    系统模块
+                    全部功能
                   </h1>
                   <div className="font-display-en text-[10px] tracking-[0.35em] text-[#748078]">
-                    System Modules
+                    All Features
                   </div>
                 </div>
               </div>

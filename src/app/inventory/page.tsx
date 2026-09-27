@@ -13,6 +13,7 @@ import {
   Lightbulb,
   Lock,
   Pencil,
+  RotateCcw,
   Store,
   Trash2,
   X,
@@ -80,7 +81,6 @@ const RARITY_META: Record<
   legendary: { label: "传说", color: "#c9902c", glow: "rgba(201, 144, 44, 0.3)" },
 };
 
-const CAPACITY_MAX = 60;
 /** v2: no auto-prefill; empty by default until the user assigns slots. */
 const HOTBAR_STORAGE_KEY = "life-game-inventory-hotbar-v2";
 const HOTBAR_SLOT_COUNT = 6;
@@ -388,6 +388,7 @@ export default function InventoryPage() {
   const [category, setCategory] = useState<UiCategory>("all");
   const [rarityFilter, setRarityFilter] = useState<"all" | DisplayRarity>("all");
   const [usableOnly, setUsableOnly] = useState(false);
+  const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const [hotbar, setHotbar] = useState<HotbarState>(defaultHotbar);
@@ -453,13 +454,15 @@ export default function InventoryPage() {
   }, [items, hotbarReady]);
 
   const filtered = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
     return items.filter((item) => {
       if (category !== "all" && item.category !== category) return false;
       if (rarityFilter !== "all" && item.rarity !== rarityFilter) return false;
       if (usableOnly && !item.usable) return false;
+      if (query && !`${item.name} ${item.description} ${item.typeLabel}`.toLocaleLowerCase().includes(query)) return false;
       return true;
     });
-  }, [items, category, rarityFilter, usableOnly]);
+  }, [items, category, rarityFilter, usableOnly, search]);
 
   const selected =
     filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
@@ -516,6 +519,7 @@ export default function InventoryPage() {
     setUsableOnly(false);
     setCategory("all");
     setSelectedId(null);
+    setSearch("");
   };
 
   return (
@@ -541,6 +545,14 @@ export default function InventoryPage() {
 
         <div className={styles.filterStrip}>
           <div className={styles.filterLeft}>
+            <input
+              type="search"
+              className={styles.searchInput}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="搜索名称或描述"
+              aria-label="搜索背包物品"
+            />
             <select
               className={styles.raritySelect}
               value={rarityFilter}
@@ -569,18 +581,19 @@ export default function InventoryPage() {
 
           <div className={styles.filterRight}>
             <span className={styles.capacity}>
-              背包容量{" "}
+              显示 {filtered.length} 件 · 总计{" "}
               <strong>
-                {Math.min(usedSlots, CAPACITY_MAX)} / {CAPACITY_MAX}
+                {usedSlots}
               </strong>
             </span>
             <button
               type="button"
               className={styles.capacityBtn}
-              title="整理背包"
+              title="重置筛选"
+              aria-label="重置背包筛选"
               onClick={sortGridHint}
             >
-              +
+              <RotateCcw size={15} />
             </button>
           </div>
         </div>
@@ -596,7 +609,7 @@ export default function InventoryPage() {
                 {isLoading ? (
                   <div className={styles.loading}>加载中…</div>
                 ) : filtered.length === 0 ? (
-                  <div className={styles.empty}>当前筛选下没有物品。</div>
+                  <div className={styles.empty}>当前筛选下没有物品，可清除筛选重试。</div>
                 ) : (
                   filtered.map((item) => (
                     <ItemCard
