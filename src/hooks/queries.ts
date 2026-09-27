@@ -676,6 +676,14 @@ export function useInitializeWallet() {
   });
 }
 
+export function useResetWallet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<{ ok: true }>("/api/assets/reset", { method: "POST" }),
+    onSuccess: () => invalidateWallet(qc),
+  });
+}
+
 export function useCreateWalletTransaction() {
   const qc = useQueryClient();
   return useMutation({

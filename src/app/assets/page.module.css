@@ -904,6 +904,24 @@
   transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
 }
 
+.goalEdit {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #66766c;
+  cursor: pointer;
+}
+
+.goalEdit:hover {
+  color: var(--wallet-green-deep);
+  border-color: rgba(36, 157, 109, 0.35);
+  background: rgba(36, 157, 109, 0.08);
+}
+
 .goalDelete:hover {
   color: #c5554a;
   border-color: rgba(197, 85, 74, 0.35);
@@ -938,6 +956,64 @@
 
 .addGoal:hover {
   background: rgba(36, 157, 109, 0.1);
+}
+
+.addGoal:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.goalForm {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.goalForm label {
+  display: grid;
+  gap: 4px;
+  color: #52645a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.goalForm input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--wallet-border);
+  border-radius: 8px;
+  background: #fff;
+  color: #34423b;
+  font: inherit;
+}
+
+.goalFormAmounts,
+.goalFormActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.goalFormActions button {
+  min-height: 32px;
+  border: 1px solid var(--wallet-border);
+  border-radius: 8px;
+  background: #fff;
+  color: #34423b;
+  cursor: pointer;
+}
+
+.goalFormActions button[type="submit"] {
+  border-color: var(--wallet-green-deep);
+  background: var(--wallet-green-deep);
+  color: #fff;
+}
+
+.goalFormError {
+  color: #c5554a;
+  font-size: 11px;
 }
 
 .distBody {
@@ -1089,43 +1165,6 @@
 
 .usageFill[data-pool="living"] {
   background: #5b9ec9;
-}
-
-/* ── Tip banner (full width under three columns) ── */
-.tip {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
-  align-items: center;
-  padding: 12px 16px;
-  border: 1px solid rgba(185, 202, 49, 0.45);
-  border-radius: 14px;
-  background:
-    linear-gradient(90deg, rgba(251, 243, 180, 0.85), rgba(247, 247, 237, 0.95)),
-    #fbf3b4;
-  box-shadow: 0 8px 18px rgba(41, 62, 52, 0.04);
-}
-
-.tipMascot {
-  width: 56px;
-  height: 48px;
-  object-fit: contain;
-}
-
-.tipLabel {
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: #668b27;
-}
-
-.tipText {
-  margin-top: 3px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #34423b;
-  line-height: 1.45;
 }
 
 .message {

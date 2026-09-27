@@ -47,6 +47,7 @@ import type {
   WalletTransactionDTO,
 } from "@/lib/types";
 import { calculateIncomeAllocation } from "@/lib/wallet-calculations";
+import { FINANCE_GOALS_HIDDEN_KEY, FINANCE_GOALS_KEY } from "@/lib/finance-goals-storage";
 import styles from "./page.module.css";
 
 type WalletAction = "income" | "expense" | "transfer" | "settings" | null;
@@ -86,13 +87,6 @@ const POOL_META: Record<
 };
 
 const POOL_ORDER: WalletPoolType[] = ["savings", "flexible", "living"];
-const FINANCE_GOALS_KEY = "life-game-finance-goals";
-const FINANCE_GOALS_HIDDEN_KEY = "life-game-finance-goals-hidden";
-const TIPS = [
-  "先填满生活费池，再把结余按比例流入储蓄与自由池，节奏会更稳。",
-  "连续记账比单笔金额更重要——小笔记录也能堆出理财等级。",
-  "自由池适合「想买但可不急」的支出，避免挤占生活费与储蓄。",
-];
 
 type FinanceGoal = {
   id: string;
@@ -113,6 +107,11 @@ export default function AssetsPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [financeGoals, setFinanceGoals] = useState<FinanceGoal[]>([]);
   const [hiddenFinanceGoalIds, setHiddenFinanceGoalIds] = useState<string[]>([]);
+  const [editingFinanceGoalId, setEditingFinanceGoalId] = useState<string | null>(null);
+  const [financeGoalName, setFinanceGoalName] = useState("");
+  const [financeGoalCurrent, setFinanceGoalCurrent] = useState("0");
+  const [financeGoalTarget, setFinanceGoalTarget] = useState("");
+  const [financeGoalError, setFinanceGoalError] = useState("");
 
   useEffect(() => {
     setFinanceGoals(readFinanceGoals());
@@ -129,6 +128,41 @@ export default function AssetsPage() {
     const next = Array.from(new Set([...hiddenFinanceGoalIds, goalId]));
     setHiddenFinanceGoalIds(next);
     writeHiddenFinanceGoalIds(next);
+  };
+
+  const startFinanceGoal = (goal?: FinanceGoal) => {
+    setEditingFinanceGoalId(goal?.id ?? "new");
+    setFinanceGoalName(goal?.name ?? "");
+    setFinanceGoalCurrent(goal ? String(goal.currentCents / 100) : "0");
+    setFinanceGoalTarget(goal ? String(goal.targetCents / 100) : "");
+    setFinanceGoalError("");
+  };
+
+  const saveFinanceGoal = () => {
+    const name = financeGoalName.trim();
+    const current = Number(financeGoalCurrent);
+    const target = Number(financeGoalTarget);
+    if (!editingFinanceGoalId || !name || name.length > 40 || !financeGoalCurrent.trim() ||
+        !financeGoalTarget.trim() || !Number.isFinite(current) || current < 0 ||
+        !Number.isFinite(target) || target <= 0 ||
+        !Number.isSafeInteger(Math.round(current * 100)) ||
+        !Number.isSafeInteger(Math.round(target * 100))) {
+      setFinanceGoalError("请填写 1–40 字名称，以及有效的当前金额和大于 0 的目标金额");
+      return;
+    }
+    const goal: FinanceGoal = {
+      id: editingFinanceGoalId === "new" ? `local-${crypto.randomUUID()}` : editingFinanceGoalId,
+      name,
+      currentCents: Math.round(current * 100),
+      targetCents: Math.round(target * 100),
+    };
+    const next = editingFinanceGoalId === "new"
+      ? [...financeGoals, goal]
+      : financeGoals.map((item) => item.id === goal.id ? goal : item);
+    setFinanceGoals(next);
+    writeFinanceGoals(next);
+    setEditingFinanceGoalId(null);
+    setFinanceGoalError("");
   };
 
   const selectAction = (next: Exclude<WalletAction, null>) => {
@@ -200,7 +234,6 @@ export default function AssetsPage() {
   const stats = deriveBookkeepingStats(data.transactions, data.plan.month);
   const financeLevel = deriveFinanceLevel(stats.bookkeepingDays, stats.monthCount, total);
   const style = deriveFinanceStyle(data);
-  const tip = TIPS[stats.bookkeepingDays % TIPS.length];
 
   const displayGoals = buildFinanceGoals(data, goals ?? [], financeGoals, hiddenFinanceGoalIds);
   const distribution = buildExpenseDistribution(data.transactions, distMode);
@@ -515,6 +548,17 @@ export default function AssetsPage() {
                         <span className={styles.goalProgress}>
                           {formatPlain(goal.currentCents)} / {formatPlain(goal.targetCents)}
                         </span>
+                        {goal.id.startsWith("local-") ? (
+                          <button
+                            type="button"
+                            className={styles.goalEdit}
+                            title="编辑目标"
+                            aria-label={`编辑${goal.name}`}
+                            onClick={() => startFinanceGoal(goal)}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className={styles.goalDelete}
@@ -537,17 +581,63 @@ export default function AssetsPage() {
                 );
               })}
             </div>
-            <button
-              type="button"
-              className={styles.addGoal}
-              onClick={() => {
-                const next = addFinanceGoal(financeGoals);
-                setFinanceGoals(next);
-                writeFinanceGoals(next);
-              }}
-            >
-              + 添加新目标
-            </button>
+            {editingFinanceGoalId ? (
+              <form
+                className={styles.goalForm}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  saveFinanceGoal();
+                }}
+              >
+                <label>
+                  目标名称
+                  <input
+                    autoFocus
+                    maxLength={40}
+                    value={financeGoalName}
+                    onChange={(event) => setFinanceGoalName(event.target.value)}
+                  />
+                </label>
+                <div className={styles.goalFormAmounts}>
+                  <label>
+                    当前金额（元）
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={financeGoalCurrent}
+                      onChange={(event) => setFinanceGoalCurrent(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    目标金额（元）
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={financeGoalTarget}
+                      onChange={(event) => setFinanceGoalTarget(event.target.value)}
+                    />
+                  </label>
+                </div>
+                {financeGoalError ? (
+                  <p className={styles.goalFormError} role="alert">{financeGoalError}</p>
+                ) : null}
+                <div className={styles.goalFormActions}>
+                  <button type="button" onClick={() => setEditingFinanceGoalId(null)}>取消</button>
+                  <button type="submit">保存目标</button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                className={styles.addGoal}
+                disabled={displayGoals.length >= 6}
+                onClick={() => startFinanceGoal()}
+              >
+                + 添加新目标
+              </button>
+            )}
           </article>
 
           <article className={styles.panel}>
@@ -599,20 +689,6 @@ export default function AssetsPage() {
           </article>
         </aside>
 
-        <aside className={styles.tip}>
-          <Image
-            className={styles.tipMascot}
-            src="/life-game/pixel-dragon-v1.png"
-            alt=""
-            width={56}
-            height={48}
-            unoptimized
-          />
-          <div>
-            <div className={styles.tipLabel}>理财小贴士</div>
-            <p className={styles.tipText}>{tip}</p>
-          </div>
-        </aside>
       </div>
     </div>
   );
@@ -1621,17 +1697,6 @@ function buildFinanceGoals(
   return [livingGoal, savingsGoal, ...wealthGoals, ...locals]
     .filter((goal) => !hidden.has(goal.id))
     .slice(0, 6);
-}
-
-function addFinanceGoal(current: FinanceGoal[]) {
-  const next: FinanceGoal = {
-    id: `local-${Date.now()}`,
-    name: "新财务目标",
-    currentCents: 0,
-    targetCents: 100000,
-    removable: true,
-  };
-  return [...current, next].slice(-6);
 }
 
 function readFinanceGoals(): FinanceGoal[] {

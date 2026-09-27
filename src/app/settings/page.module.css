@@ -921,6 +921,41 @@
   background: rgba(197, 85, 74, 0.06);
 }
 
+.btnDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.financeReset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.financeReset strong {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.financeReset .hint {
+  margin-top: 4px;
+}
+
+.financeReset button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .financeReset {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .saveMsg {
   width: 100%;
   text-align: center;

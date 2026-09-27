@@ -19,12 +19,14 @@ import {
 } from "lucide-react";
 import {
   useAssets,
+  useResetWallet,
   useUpdateUser,
   useUpdateWalletSettings,
   useUser,
 } from "@/hooks/queries";
 import { signOutAction } from "@/app/login/actions";
 import { api } from "@/lib/fetcher";
+import { clearFinanceGoals } from "@/lib/finance-goals-storage";
 import {
   applyThemeAccent,
   DEFAULT_SETTINGS_PREFS,
@@ -76,6 +78,7 @@ export default function SettingsPage() {
   const { data: assets } = useAssets();
   const updateUser = useUpdateUser();
   const updateWallet = useUpdateWalletSettings();
+  const resetWallet = useResetWallet();
 
   const [prefs, setPrefs] = useState<SettingsPrefs>(DEFAULT_SETTINGS_PREFS);
   const [prefsReady, setPrefsReady] = useState(false);
@@ -97,6 +100,8 @@ export default function SettingsPage() {
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [avatarSaveError, setAvatarSaveError] = useState<string | null>(null);
   const [finance, setFinance] = useState({ savings: 50, freedom: 50 });
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const hydratedUserId = useRef<string | null>(null);
   const financeHydrated = useRef(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -230,6 +235,23 @@ export default function SettingsPage() {
     applyThemeAccent(next.appearance.color);
     setSaveMsg("已恢复本地默认偏好（账户资料与财务规则未改动）");
     setSaveError(null);
+  };
+
+  const handleResetWallet = async () => {
+    if (!window.confirm("确定重置财务数据吗？所有资金池余额、财务流水和月度预算将永久删除，之后需重新初始化。")) return;
+    setResetMessage(null);
+    setResetError(null);
+    try {
+      await resetWallet.mutateAsync();
+      const localGoalsCleared = clearFinanceGoals();
+      setFinance({ savings: 50, freedom: 50 });
+      setResetMessage(localGoalsCleared
+        ? "财务数据已重置。前往财务资产页可重新初始化。"
+        : "钱包数据已重置，但本机财务目标未能清除。请检查浏览器存储权限。"
+      );
+    } catch (error) {
+      setResetError((error as Error).message || "财务数据重置失败");
+    }
   };
 
   const avatarSrc = avatarUrl || "/lifeos/profile_avatar.png";
@@ -546,6 +568,17 @@ export default function SettingsPage() {
           <p className={styles.hint}>
             储蓄/自由比例随「保存更改」写入资产预算；生活费按金额在资产页管理。
           </p>
+          <div className={styles.financeReset}>
+            <div>
+              <strong>重置财务数据</strong>
+              <p className={styles.hint}>清空资金池余额、全部财务流水、月度预算和本机财务目标，之后可重新初始化。</p>
+            </div>
+            <button type="button" className={styles.btnDanger} disabled={resetWallet.isPending} onClick={() => void handleResetWallet()}>
+              {resetWallet.isPending ? "重置中…" : "重置财务数据"}
+            </button>
+          </div>
+          {resetMessage ? <p className={styles.saveMsg} role="status">{resetMessage}</p> : null}
+          {resetError ? <p className={styles.saveMsgError} role="alert">{resetError}</p> : null}
         </section>
 
         <section id="settings-tasks" className={styles.card}>

@@ -231,26 +231,8 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 136px), 1fr));
   gap: 12px;
-}
-
-@media (min-width: 520px) {
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 720px) {
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 900px) {
-  .grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
 }
 
 .empty,
@@ -277,8 +259,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  aspect-ratio: 0.92;
-  min-height: 156px;
+  height: 176px;
   overflow: hidden;
   padding: 8px 8px 10px;
   border: 2.5px solid transparent;
@@ -352,18 +333,17 @@
   z-index: 1;
   display: grid;
   flex: 1;
-  min-height: 88px;
+  min-height: 112px;
   place-items: center;
-  padding: 18px 8px 6px;
+  padding: 14px 4px 2px;
   font-size: 36px;
   line-height: 1;
 }
 
 .cardVisual img {
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
-  image-rendering: pixelated;
 }
 
 .itemPixel {

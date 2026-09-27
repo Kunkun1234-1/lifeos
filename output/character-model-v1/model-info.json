@@ -1,0 +1,21 @@
+{
+  "name": "Green Gold Companion v1",
+  "method": "Procedural mesh modeling in Blender; no image-to-3D service used",
+  "reference": "Approved 3D-style character concept from this conversation",
+  "stage": "First 3D model prototype; stylized approximation, not exact sculpt reproduction",
+  "blender_version": "5.2.0 LTS",
+  "mesh_objects": 119,
+  "evaluated_vertices": 74882,
+  "evaluated_triangles": 149295,
+  "animation": "Greeting loop: object-transform head nod, light breathing, hand wave and cape sway. No skeletal skinning or blink blendshapes.",
+  "frame_rate": 24,
+  "frame_start": 1,
+  "frame_end": 73,
+  "glb_export_excludes": [
+    "studio floor",
+    "plinth",
+    "lights",
+    "camera"
+  ],
+  "runtime_integration": false
+}

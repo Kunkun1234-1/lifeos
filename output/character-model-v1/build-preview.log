@@ -1,0 +1,254 @@
+/Users/wangkun/Downloads/game-life/output/character-model-v1/build_character.py:52: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes = True
+/Users/wangkun/Downloads/game-life/output/character-model-v1/build_character.py:442: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  scene.world=world;world.use_nodes=True
+Info: Saved as "companion-v1.blend"
+INFO Draco is available, use library at /Applications/Blender.app/Contents/Resources/5.2/scripts/addons_core/io_scene_gltf2/libbf_intern_draco_bridge.dylib
+INFO MeshOptimizer is available, use library at /Applications/Blender.app/Contents/Resources/5.2/scripts/addons_core/io_scene_gltf2/libbf_intern_meshopt_bridge.dylib
+20:09:43 | INFO: Starting glTF 2.0 export
+20:09:43 | INFO: Extracting primitive: Greeting hand finger 0
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Greeting hand finger 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Greeting hand finger 2
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Greeting hand finger 3
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Greeting hand glove seal
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.019
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Greeting hand thumb
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.018
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.017
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.016
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.014
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.015
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.025
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.026
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.027
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.028
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.029
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.021
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Resting glove seal
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.024
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.020
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.023
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.022
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.010
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.005
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Boot clasp 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Boot clasp -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.009
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.004
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Boot gold cuff 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Boot gold cuff -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.012
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.007
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Cape decorative lozenge
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Cape decorative lozenge.001
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Cape decorative lozenge.002
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Cape fold
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Cape lower gold piping
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Cape outer gold piping
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sculpted asymmetrical cape
+20:09:43 | INFO: Primitives created: 2
+20:09:43 | INFO: Extracting primitive: Chest gold lozenge
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Chest gold lozenge.001
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Chest gold lozenge.002
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.031
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Collar dark band
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Collar V trim
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Gold collar piping
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.057
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.056
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.047
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Dangling earring chain
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.036
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.033
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.037
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.034
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Expressive brow 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Expressive brow -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.048
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.039
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.049
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.040
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.060
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.061
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.062
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.038
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.035
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Golden hair flower petal 0
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Golden hair flower petal 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Golden hair flower petal 2
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Golden hair flower petal 3
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Golden hair flower petal 4
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.059
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Hair hanging braid
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | WARNING: Mesh Hair scalp | shaped hairline is not valid, and may be exported wrongly
+20:09:43 | INFO: Extracting primitive: Hair scalp | shaped hairline
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.051
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.042
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.050
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.041
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Jade earring drop
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.053
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.044
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.052
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.043
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Open smiling mouth
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.054
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.045
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.032
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.055
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.046
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Smile upper teeth
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Teal forehead rhombus
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Teal forehead rhombus.001
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Teal forehead rhombus.002
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Teal fringe accent left
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Teal fringe accent right
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.058
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Upper eyelid 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Upper eyelid -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.001
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.002
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.011
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.006
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sash central gold clip
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sash folded tail left
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sash folded tail right
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.013
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.030
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Toe cap stitch 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Toe cap stitch -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Trouser crease outer 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Trouser crease outer -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.008
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Sphere.003
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Trousers embroidery 1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Trousers embroidery -1
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Tunic hem left
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Tunic hem right
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Extracting primitive: Wrapped ivory sash
+20:09:43 | INFO: Primitives created: 1
+20:09:43 | INFO: Finished glTF 2.0 export in 0.26707005500793457 s
+00:13.639  render           | Saved: '/Users/wangkun/Downloads/game-life/output/character-model-v1/render-hero.png'
+
+COMPANION_BUILD_COMPLETE {"name": "Green Gold Companion v1", "method": "Procedural mesh modeling in Blender; no image-to-3D service used", "reference": "Approved 3D-style character concept from this conversation", "stage": "First 3D model prototype; stylized approximation, not exact sculpt reproduction", "blender_version": "5.2.0 LTS", "mesh_objects": 119, "evaluated_vertices": 74882, "evaluated_triangles": 149295, "animation": "Greeting loop: object-transform head nod, light breathing, hand wave and cape sway. No skeletal skinning or blink blendshapes.", "frame_rate": 24, "frame_start": 1, "frame_end": 73, "glb_export_excludes": ["studio floor", "plinth", "lights", "camera"], "runtime_integration": false}
+Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:31:22)
+
+Blender quit

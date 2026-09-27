@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LifeOS Promo Cards</title>
+  <style>
+    :root {
+      --ink: #101713;
+      --forest: #071510;
+      --green: #0e7c55;
+      --lime: #c7ff18;
+      --lime-soft: #e8ff8a;
+      --ivory: #f7f6e9;
+      --paper: #fffdf2;
+      --line: rgba(15, 52, 38, 0.16);
+      --gold: #d6a928;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+    body {
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--forest);
+      -webkit-font-smoothing: antialiased;
+    }
+    .deck { width: 100vw; height: 100vh; }
+    .slide { position: relative; width: 100%; height: 100%; overflow: hidden; display: none; }
+    .slide.active { display: block; }
+    .dark { color: var(--ivory); background: var(--forest); }
+    .light { color: var(--ink); background: var(--ivory); }
+    .noise::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .14;
+      background-image: radial-gradient(rgba(255,255,255,.32) .6px, transparent .7px);
+      background-size: 9px 9px; mix-blend-mode: overlay;
+    }
+    .pad { position: absolute; inset: 0; padding: 76px 76px 68px; }
+    .eyebrow { display: flex; align-items: center; gap: 16px; font-size: 24px; font-weight: 760; letter-spacing: .14em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 28px; height: 28px; border: 7px solid var(--lime); box-shadow: 10px 10px 0 -5px var(--lime); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 92px; line-height: 1.04; letter-spacing: -.055em; font-weight: 900; }
+    h2 { font-size: 72px; line-height: 1.08; letter-spacing: -.045em; font-weight: 900; }
+    h3 { font-size: 34px; line-height: 1.2; font-weight: 850; }
+    .accent { color: var(--lime); }
+    .muted { color: rgba(247,246,233,.68); }
+    .light .muted { color: rgba(16,23,19,.58); }
+    .subtitle { font-size: 31px; line-height: 1.55; font-weight: 620; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 14px; }
+    .pill { border: 1.5px solid currentColor; border-radius: 999px; padding: 13px 20px; font-size: 22px; font-weight: 760; letter-spacing: .02em; }
+    .pill.solid { color: var(--forest); background: var(--lime); border-color: var(--lime); }
+    .browser {
+      position: relative; overflow: hidden; border-radius: 24px; background: #f8f7ef;
+      border: 2px solid rgba(232,255,138,.45); box-shadow: 0 28px 70px rgba(0,0,0,.34);
+    }
+    .browser::before { content: "●  ●  ●"; display: block; height: 48px; padding: 10px 20px; color: rgba(16,23,19,.34); font-size: 18px; letter-spacing: 6px; background: #f0efe3; border-bottom: 1px solid rgba(16,23,19,.1); }
+    .browser img { display: block; width: 100%; height: calc(100% - 48px); object-fit: cover; }
+    .screen-label { position: absolute; z-index: 3; right: 22px; bottom: 20px; padding: 10px 14px; border-radius: 8px; background: rgba(7,21,16,.9); color: var(--lime); font-size: 18px; font-weight: 800; }
+    .page-no { position: absolute; right: 58px; bottom: 48px; font-size: 22px; font-weight: 800; letter-spacing: .12em; opacity: .58; }
+
+    /* XHS */
+    .xhs-cover .bg, .xhs-cta .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .xhs-cover .veil, .xhs-cta .veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(3,12,8,.18), rgba(3,12,8,.78) 62%, rgba(3,12,8,.95)); }
+    .xhs-cover h1 { margin-top: 74px; max-width: 980px; }
+    .xhs-cover .subtitle { margin-top: 28px; max-width: 980px; }
+    .xhs-cover .browser { position: absolute; left: 76px; right: 76px; bottom: 90px; height: 650px; transform: rotate(-1.5deg); }
+    .xhs-cover .browser img { object-position: 15% top; }
+    .open-badge { position: absolute; right: 70px; top: 72px; transform: rotate(4deg); color: var(--forest); background: var(--lime); padding: 18px 24px; border-radius: 12px; font-size: 23px; font-weight: 900; box-shadow: 8px 8px 0 rgba(255,255,255,.13); }
+
+    .problem .pad { padding-top: 86px; }
+    .problem h2 { margin-top: 58px; max-width: 970px; }
+    .problem .subtitle { margin-top: 28px; max-width: 930px; }
+    .app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 70px; }
+    .app-card { min-height: 230px; padding: 28px; border: 2px solid var(--line); border-radius: 24px; background: var(--paper); box-shadow: 0 14px 34px rgba(18,50,36,.06); }
+    .app-card.wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 26px; min-height: 190px; }
+    .app-icon { display: grid; place-items: center; width: 70px; height: 70px; border-radius: 18px; background: var(--forest); color: var(--lime); font-size: 34px; font-weight: 900; }
+    .app-card h3 { margin-top: 20px; }
+    .app-card p { margin-top: 9px; font-size: 22px; line-height: 1.45; color: rgba(16,23,19,.6); }
+    .app-card.wide h3 { margin-top: 0; }
+    .problem .answer { position: absolute; left: 76px; right: 76px; bottom: 82px; display: flex; align-items: center; justify-content: space-between; padding: 26px 30px; background: var(--forest); color: var(--ivory); border-radius: 22px; }
+    .problem .answer strong { font-size: 31px; }
+    .problem .answer span { color: var(--lime); font-size: 25px; font-weight: 850; }
+
+    .proof .pad { padding-top: 86px; }
+    .proof h2 { margin-top: 52px; }
+    .proof .subtitle { margin-top: 20px; }
+    .proof .browser { position: absolute; left: 76px; right: 76px; bottom: 120px; height: 930px; }
+    .proof .browser img { object-position: 68% top; }
+    .stat-strip { position: absolute; z-index: 4; left: 110px; right: 110px; bottom: 88px; display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+    .stat { border-radius: 16px; padding: 18px; background: rgba(7,21,16,.92); color: var(--ivory); text-align: center; box-shadow: 0 12px 25px rgba(0,0,0,.2); }
+    .stat b { display: block; font-size: 34px; color: var(--lime); }
+    .stat span { display: block; margin-top: 6px; font-size: 18px; opacity: .72; }
+
+    .execution h2 { margin-top: 48px; max-width: 1000px; }
+    .execution .subtitle { margin-top: 22px; }
+    .execution .browser { position: absolute; left: 76px; right: 76px; top: 520px; height: 770px; }
+    .execution .browser img { object-position: 25% top; }
+    .reward-row { position: absolute; left: 76px; right: 76px; bottom: 92px; display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .reward { padding: 24px; border-radius: 20px; color: var(--forest); background: var(--lime-soft); border: 2px solid rgba(7,21,16,.13); }
+    .reward b { font-size: 36px; }
+    .reward span { display: block; margin-top: 8px; font-size: 20px; opacity: .62; }
+
+    .path-slide .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.56); }
+    .path-slide .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,15,10,.12), rgba(4,15,10,.78)); }
+    .path-slide h2 { margin-top: 50px; max-width: 980px; }
+    .path-slide .browser { position: absolute; left: 76px; right: 76px; top: 500px; height: 800px; transform: rotate(1deg); }
+    .path-slide .browser img { object-position: 20% top; }
+    .path-slide .pill-row { position: absolute; left: 76px; right: 76px; bottom: 86px; }
+
+    .feedback h2 { margin-top: 50px; }
+    .feedback .subtitle { margin-top: 22px; }
+    .stack { position: absolute; left: 76px; right: 76px; top: 470px; height: 930px; }
+    .stack .browser { position: absolute; width: 88%; height: 690px; }
+    .stack .browser:first-child { left: 0; top: 0; transform: rotate(-2.2deg); }
+    .stack .browser:last-child { right: 0; bottom: 0; transform: rotate(2.1deg); }
+    .stack img { object-position: 60% top; }
+    .feedback .pill-row { position: absolute; left: 76px; bottom: 70px; }
+
+    .agent .pad { padding-top: 86px; }
+    .agent h2 { margin-top: 52px; }
+    .agent .subtitle { margin-top: 24px; max-width: 990px; }
+    .terminal { margin-top: 72px; border: 2px solid rgba(232,255,138,.24); border-radius: 26px; overflow: hidden; background: rgba(3,12,8,.86); box-shadow: 0 30px 90px rgba(0,0,0,.45); }
+    .terminal-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px; border-bottom: 1px solid rgba(232,255,138,.15); font-size: 21px; letter-spacing: .06em; color: rgba(247,246,233,.65); }
+    .terminal-body { padding: 34px 34px 42px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 25px; line-height: 2; }
+    .terminal-body .cmd { color: var(--lime); }
+    .terminal-body .ok { color: #8fe4bd; }
+    .terminal-body .dim { color: rgba(247,246,233,.42); }
+    .tool-count { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 26px; }
+    .tool-box { padding: 26px; border-radius: 20px; background: rgba(232,255,138,.08); border: 1px solid rgba(232,255,138,.18); }
+    .tool-box b { display: block; font-size: 52px; color: var(--lime); }
+    .tool-box span { display: block; margin-top: 8px; font-size: 20px; color: rgba(247,246,233,.65); }
+    .agent .foot { position: absolute; left: 76px; right: 76px; bottom: 72px; display: flex; align-items: center; justify-content: space-between; font-size: 22px; color: rgba(247,246,233,.66); }
+
+    .xhs-cta h2 { margin-top: 120px; max-width: 980px; }
+    .xhs-cta .subtitle { margin-top: 30px; max-width: 940px; }
+    .tech { margin-top: 66px; display: flex; flex-wrap: wrap; gap: 14px; }
+    .tech span { padding: 15px 19px; border-radius: 10px; border: 1px solid rgba(232,255,138,.34); background: rgba(7,21,16,.62); font-size: 20px; font-weight: 760; }
+    .cta-card { position: absolute; left: 76px; right: 76px; bottom: 110px; padding: 46px; border-radius: 28px; background: var(--lime); color: var(--forest); }
+    .cta-card strong { display: block; font-size: 48px; line-height: 1.24; }
+    .cta-card p { margin-top: 18px; font-size: 24px; font-weight: 760; opacity: .68; }
+
+    /* Zhihu horizontal */
+    .zh .pad { padding: 52px 60px; }
+    .zh h1 { font-size: 62px; line-height: 1.05; max-width: 860px; }
+    .zh h2 { font-size: 54px; }
+    .zh .eyebrow { font-size: 18px; gap: 12px; }
+    .zh .eyebrow::before { width: 20px; height: 20px; border-width: 5px; box-shadow: 7px 7px 0 -4px var(--lime); }
+    .zh .subtitle { font-size: 22px; line-height: 1.45; }
+    .zh-cover .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .zh-cover .veil { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,10,7,.92) 0%, rgba(2,10,7,.73) 52%, rgba(2,10,7,.12)); }
+    .zh-cover h1 { margin-top: 38px; }
+    .zh-cover .subtitle { margin-top: 17px; }
+    .zh-cover .mini-badge { position: absolute; right: 54px; top: 46px; padding: 14px 18px; color: var(--forest); background: var(--lime); border-radius: 10px; font-weight: 900; font-size: 18px; }
+    .zh-problem .content { display: grid; grid-template-columns: .85fr 1.15fr; gap: 52px; height: 100%; align-items: center; }
+    .zh-problem .app-grid { margin: 0; gap: 14px; }
+    .zh-problem .app-card { min-height: 145px; padding: 20px; border-radius: 16px; }
+    .zh-problem .app-card.wide { min-height: 118px; }
+    .zh-problem .app-icon { width: 52px; height: 52px; font-size: 26px; border-radius: 12px; }
+    .zh-problem .app-card h3 { font-size: 24px; margin-top: 12px; }
+    .zh-problem .app-card.wide h3 { margin-top: 0; }
+    .zh-problem .app-card p { font-size: 16px; }
+    .zh-product .title-block { position: absolute; left: 58px; top: 54px; width: 390px; z-index: 2; }
+    .zh-product .title-block .subtitle { margin-top: 16px; }
+    .zh-product .browser { position: absolute; right: 38px; top: 48px; width: 720px; height: 590px; transform: rotate(-1deg); }
+    .zh-product .browser img { object-position: 25% top; }
+    .zh-product .side-card { position: absolute; left: 58px; bottom: 54px; width: 360px; padding: 26px; border-radius: 18px; background: var(--lime); color: var(--forest); }
+    .zh-product .side-card strong { font-size: 30px; }
+    .zh-product .side-card p { margin-top: 8px; font-size: 18px; line-height: 1.45; opacity: .68; }
+    .zh-game .content { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; height: 100%; align-items: center; }
+    .zh-game .browser { height: 520px; }
+    .zh-game .browser img { object-position: 60% top; }
+    .zh-game .right h2 { margin-bottom: 20px; }
+    .zh-game .metric { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-top: 28px; }
+    .zh-game .metric div { padding: 22px; border-radius: 16px; background: var(--paper); border: 1.5px solid var(--line); }
+    .zh-game .metric b { display: block; font-size: 32px; color: var(--green); }
+    .zh-game .metric span { display: block; margin-top: 5px; font-size: 16px; color: rgba(16,23,19,.55); }
+    .zh-agent .pad { display: grid; grid-template-columns: .86fr 1.14fr; gap: 46px; align-items: center; }
+    .zh-agent .terminal { margin-top: 0; }
+    .zh-agent .terminal-body { font-size: 19px; padding: 24px 28px; }
+    .zh-agent .tool-count { margin-top: 22px; }
+    .zh-agent .tool-box { padding: 20px; }
+    .zh-agent .tool-box b { font-size: 42px; }
+    .zh-agent .tool-box span { font-size: 16px; }
+    .zh-arch .pad { display: grid; grid-template-columns: .75fr 1.25fr; gap: 50px; align-items: center; }
+    .arch-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: stretch; }
+    .arch-node { position: relative; display: grid; place-items: center; min-height: 210px; padding: 20px; text-align: center; border-radius: 18px; background: rgba(232,255,138,.08); border: 1.5px solid rgba(232,255,138,.22); }
+    .arch-node:not(:last-child)::after { content: "→"; position: absolute; right: -24px; top: 78px; font-size: 30px; color: var(--lime); z-index: 3; }
+    .arch-node b { display: block; font-size: 26px; color: var(--lime); }
+    .arch-node span { display: block; margin-top: 8px; font-size: 16px; line-height: 1.45; color: rgba(247,246,233,.64); }
+    @media (max-height: 500px) {
+      .zh .pad { padding: 30px 40px; }
+      .zh h1 { font-size: 44px; max-width: 700px; }
+      .zh .eyebrow { font-size: 14px; }
+      .zh .eyebrow::before { width: 16px; height: 16px; border-width: 4px; }
+      .zh-cover h1 { margin-top: 20px; }
+      .zh-cover .subtitle { margin-top: 12px; font-size: 17px; }
+      .zh-cover .mini-badge { right: 34px; top: 28px; padding: 10px 14px; font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="xhsDeck">
+    <section class="slide dark noise xhs-cover" data-slide="1">
+      <img class="bg" src="assets/key-visual-vertical.png" alt="" />
+      <div class="veil"></div>
+      <div class="pad">
+        <div class="eyebrow">LIFEOS · BUILD IN PUBLIC</div>
+        <div class="open-badge">现已开源</div>
+        <h1>我把人生管理<br />做成了一款 <span class="accent">RPG</span></h1>
+        <p class="subtitle muted">PARA + GTD + OKR + 复盘 + 游戏化成长<br />全部装进一套个人操作系统</p>
+        <div class="browser">
+          <img src="assets/ui-routines.png" alt="LifeOS 日程页面" />
+          <span class="screen-label">真实项目界面</span>
+        </div>
+      </div>
+      <div class="page-no">01 / 08</div>
+    </section>
+
+    <section class="slide light problem" data-slide="2">
+      <div class="pad">
+        <div class="eyebrow">WHY I BUILT IT</div>
+        <h2>我不想再在 <span style="color:var(--green)">5 个应用</span>之间搬运人生</h2>
+        <p class="subtitle muted">待办、目标、日历、笔记、预算各自为政，真正重要的“方向感”反而被切碎了。</p>
+        <div class="app-grid">
+          <div class="app-card"><div class="app-icon">✓</div><h3>待办</h3><p>知道要做什么，却看不见长期目标。</p></div>
+          <div class="app-card"><div class="app-icon">◫</div><h3>日历</h3><p>塞满了时间，却无法复盘成长。</p></div>
+          <div class="app-card"><div class="app-icon">◎</div><h3>目标</h3><p>写下愿望，却很难连接到每一天。</p></div>
+          <div class="app-card"><div class="app-icon">¥</div><h3>资产</h3><p>记录数字，却没有行动反馈。</p></div>
+          <div class="app-card wide"><div class="app-icon">✦</div><div><h3>所以我做了 LifeOS</h3><p>让计划、执行、奖励与复盘形成一个闭环。</p></div></div>
+        </div>
+      </div>
+      <div class="answer"><strong>不是再做一个待办 App</strong><span>而是把人生变成可运行系统 →</span></div>
+      <div class="page-no">02 / 08</div>
+    </section>
+
+    <section class="slide dark noise proof" data-slide="3">
+      <div class="pad">
+        <div class="eyebrow">ONE LIFE · ONE DASHBOARD</div>
+        <h2>一张总览，<br />看见今天与长期方向</h2>
+        <p class="subtitle muted">今日计划、任务、目标、属性成长和近期成就，集中在同一个页面。</p>
+        <div class="browser">
+          <img src="assets/ui-dashboard.png" alt="LifeOS 总览" />
+          <span class="screen-label">Dashboard</span>
+        </div>
+        <div class="stat-strip">
+          <div class="stat"><b>今日</b><span>计划与任务</span></div>
+          <div class="stat"><b>长期</b><span>目标与项目</span></div>
+          <div class="stat"><b>反馈</b><span>属性与成就</span></div>
+        </div>
+      </div>
+      <div class="page-no">03 / 08</div>
+    </section>
+
+    <section class="slide light execution" data-slide="4">
+      <div class="pad">
+        <div class="eyebrow">ACTION → PROGRESS</div>
+        <h2>任务完成，<br />不只是“打一个勾”</h2>
+        <p class="subtitle muted">每个行动都能回到某个人生领域，并转化为可见的成长反馈。</p>
+        <div class="browser">
+          <img src="assets/ui-tasks.png" alt="LifeOS 任务页面" />
+          <span class="screen-label">任务计划</span>
+        </div>
+        <div class="reward-row">
+          <div class="reward"><b>+ XP</b><span>积累等级经验</span></div>
+          <div class="reward"><b>+ 金币</b><span>兑换真实奖励</span></div>
+          <div class="reward"><b>+ 属性</b><span>看见长期变化</span></div>
+        </div>
+      </div>
+      <div class="page-no">04 / 08</div>
+    </section>
+
+    <section class="slide dark noise path-slide" data-slide="5">
+      <img class="bg" src="assets/key-visual-vertical.png" alt="" />
+      <div class="overlay"></div>
+      <div class="pad">
+        <div class="eyebrow">FROM INTENT TO ROUTINE</div>
+        <h2>把计划变成一条<br /><span class="accent">可执行路径</span></h2>
+        <p class="subtitle muted" style="margin-top:22px">不是只写一个目标，而是把它拆进项目、任务、日程，再通过复盘持续校准。</p>
+        <div class="browser">
+          <img src="assets/ui-routines.png" alt="LifeOS 日程页面" />
+          <span class="screen-label">日程规划</span>
+        </div>
+        <div class="pill-row"><span class="pill solid">目标</span><span class="pill">项目</span><span class="pill">任务</span><span class="pill">日程</span><span class="pill">复盘</span></div>
+      </div>
+      <div class="page-no">05 / 08</div>
+    </section>
+
+    <section class="slide light feedback" data-slide="6">
+      <div class="pad">
+        <div class="eyebrow">FEEDBACK THAT FEELS GOOD</div>
+        <h2>持续行动，<br />也应该有即时反馈</h2>
+        <p class="subtitle muted">成就、背包、金币与资产系统，把“长期坚持”变成每一天都能看到的进度。</p>
+        <div class="stack">
+          <div class="browser"><img src="assets/ui-achievements.png" alt="成就系统" /><span class="screen-label">成就</span></div>
+          <div class="browser"><img src="assets/ui-inventory.png" alt="物品背包" /><span class="screen-label">背包</span></div>
+        </div>
+        <div class="pill-row"><span class="pill">XP</span><span class="pill">金币</span><span class="pill">成就</span><span class="pill">背包</span><span class="pill">资产</span></div>
+      </div>
+      <div class="page-no">06 / 08</div>
+    </section>
+
+    <section class="slide dark noise agent" data-slide="7">
+      <div class="pad">
+        <div class="eyebrow">BUILT FOR HUMANS + AGENTS</div>
+        <h2>真正特别的是：<br />它能被 <span class="accent">Agent</span> 使用</h2>
+        <p class="subtitle muted">LifeOS 不只是一套网页，还提供完整 OAuth MCP 服务。</p>
+        <div class="terminal">
+          <div class="terminal-head"><span>lifeos-mcp / authenticated</span><span class="accent">● connected</span></div>
+          <div class="terminal-body">
+            <div><span class="dim">› </span><span class="cmd">lifeos.list_tasks</span>()</div>
+            <div class="ok">✓ 返回今天的任务与截止时间</div>
+            <div><span class="dim">› </span><span class="cmd">lifeos.complete_task</span>({ id, idempotencyKey })</div>
+            <div class="ok">✓ 完成任务并结算 XP / 金币 / 成就</div>
+            <div><span class="dim">› </span><span class="cmd">lifeos.create_review</span>({ period: "weekly" })</div>
+            <div class="ok">✓ 写入本周复盘草稿</div>
+          </div>
+        </div>
+        <div class="tool-count">
+          <div class="tool-box"><b>93</b><span>MCP 工具，覆盖网页已有功能</span></div>
+          <div class="tool-box"><b>OAuth</b><span>按账号隔离、权限控制与幂等执行</span></div>
+        </div>
+      </div>
+      <div class="foot"><span>任务 · 目标 · 笔记 · 复盘 · 资产 · 游戏化 · AI</span><span>07 / 08</span></div>
+    </section>
+
+    <section class="slide dark noise xhs-cta" data-slide="8">
+      <img class="bg" src="assets/key-visual-vertical.png" alt="" />
+      <div class="veil"></div>
+      <div class="pad">
+        <div class="eyebrow">OPEN SOURCE · BUILD TOGETHER</div>
+        <h2>这是我正式开源的<br /><span class="accent">LifeOS</span></h2>
+        <p class="subtitle muted">一个把人生规划、行动反馈与 AI Agent 连接起来的个人操作系统。</p>
+        <div class="tech"><span>Next.js 15</span><span>React 19</span><span>PostgreSQL</span><span>Prisma</span><span>OAuth 2.1</span><span>MCP</span></div>
+        <div class="cta-card"><strong>想体验、想贡献，<br />或想一起把它做得更好？</strong><p>GitHub：Kunkun1234-1/lifeos · 欢迎 Issue / PR / 真实使用反馈</p></div>
+      </div>
+      <div class="page-no">08 / 08</div>
+    </section>
+  </main>
+
+  <main class="deck" id="zhihuDeck">
+    <section class="slide zh dark noise zh-cover" data-slide="1">
+      <img class="bg" src="assets/key-visual-horizontal.png" alt="" /><div class="veil"></div>
+      <div class="pad"><div class="eyebrow">LIFEOS · OPEN-SOURCE BUILD LOG</div><h1>我把 PARA、GTD、OKR<br />和 RPG 做进了一个 <span class="accent">LifeOS</span></h1><p class="subtitle muted">从个人工具到 93 个 MCP 工具的完整实践</p></div>
+      <div class="mini-badge">现已开源</div>
+    </section>
+    <section class="slide zh light zh-problem" data-slide="2">
+      <div class="pad content"><div><div class="eyebrow">01 · WHY</div><h2 style="margin-top:34px">真正的问题，<br />不是缺少工具</h2><p class="subtitle muted" style="margin-top:20px">而是待办、日历、目标、笔记和资产彼此割裂，无法形成“方向 → 行动 → 反馈 → 复盘”的闭环。</p></div><div class="app-grid"><div class="app-card"><div class="app-icon">✓</div><h3>待办</h3><p>今天做什么</p></div><div class="app-card"><div class="app-icon">◫</div><h3>日历</h3><p>时间怎么分配</p></div><div class="app-card"><div class="app-icon">◎</div><h3>目标</h3><p>长期去哪里</p></div><div class="app-card"><div class="app-icon">¥</div><h3>资产</h3><p>资源如何使用</p></div><div class="app-card wide"><div class="app-icon">✦</div><div><h3>LifeOS</h3><p>让所有模块共享同一套人生上下文</p></div></div></div></div></div>
+    </section>
+    <section class="slide zh dark noise zh-product" data-slide="3">
+      <div class="title-block"><div class="eyebrow">02 · PRODUCT</div><h2 style="margin-top:30px">一套系统，连接今天与长期方向</h2><p class="subtitle muted">任务、日程、目标、项目和复盘，不再是五个孤岛。</p></div>
+      <div class="browser"><img src="assets/ui-routines.png" alt="LifeOS 日程" /><span class="screen-label">真实项目界面</span></div>
+      <div class="side-card"><strong>计划不是收藏夹</strong><p>目标需要被拆解、安排、执行，并在复盘中持续校准。</p></div>
+    </section>
+    <section class="slide zh light zh-game" data-slide="4">
+      <div class="pad content"><div class="browser"><img src="assets/ui-achievements.png" alt="LifeOS 成就" /><span class="screen-label">成就系统</span></div><div class="right"><div class="eyebrow">03 · FEEDBACK</div><h2 style="margin-top:30px">把长期坚持，<br />变成即时反馈</h2><p class="subtitle muted">完成任务不只打勾，还能结算经验、金币、属性、成就与背包奖励。</p><div class="metric"><div><b>XP</b><span>等级成长</span></div><div><b>金币</b><span>奖励兑换</span></div><div><b>属性</b><span>长期变化</span></div><div><b>成就</b><span>里程碑反馈</span></div></div></div></div>
+    </section>
+    <section class="slide zh dark noise zh-agent" data-slide="5">
+      <div class="pad"><div><div class="eyebrow">04 · MCP</div><h2 style="margin-top:30px">不只给人用，<br />也给 <span class="accent">Agent</span> 用</h2><p class="subtitle muted" style="margin-top:20px">93 个 MCP 工具覆盖查询、计划、执行、复盘、资产和游戏化功能；写操作带权限、审计与幂等保护。</p><div class="tool-count"><div class="tool-box"><b>93</b><span>工具</span></div><div class="tool-box"><b>4</b><span>权限 Scope</span></div></div></div><div class="terminal"><div class="terminal-head"><span>ChatGPT ↔ LifeOS</span><span class="accent">● OAuth</span></div><div class="terminal-body"><div><span class="dim">› </span><span class="cmd">list_tasks</span>()</div><div class="ok">✓ 获取今天的任务</div><div><span class="dim">› </span><span class="cmd">complete_task</span>({ id, key })</div><div class="ok">✓ 执行并结算奖励</div><div><span class="dim">› </span><span class="cmd">create_review</span>({ period })</div><div class="ok">✓ 写入周期复盘</div></div></div></div>
+    </section>
+    <section class="slide zh dark noise zh-arch" data-slide="6">
+      <div class="pad"><div><div class="eyebrow">05 · ARCHITECTURE</div><h2 style="margin-top:30px">一个真实可部署的<br />开源全栈项目</h2><p class="subtitle muted" style="margin-top:20px">Web 与 Business API 独立部署，通过 OAuth 2.1 + PKCE 为 MCP 客户端授权。</p></div><div class="arch-flow"><div class="arch-node"><div><b>用户 / Agent</b><span>网页、ChatGPT、MCP Client</span></div></div><div class="arch-node"><div><b>Web</b><span>Next.js · Auth.js · OAuth</span></div></div><div class="arch-node"><div><b>API / MCP</b><span>93 Tools · Audit · Idempotency</span></div></div><div class="arch-node"><div><b>Data</b><span>PostgreSQL · Prisma</span></div></div></div></div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const platform = params.get('platform') || 'xhs';
+    const slide = params.get('slide') || '1';
+    const offset = Number(params.get('offset') || '0');
+    if (platform === 'xhs') {
+      document.documentElement.style.width = '1242px';
+      document.documentElement.style.height = '1660px';
+      document.body.style.width = '1242px';
+      document.body.style.height = '1660px';
+      if (offset > 0) document.body.style.transform = `translateY(-${offset}px)`;
+    }
+    const xhsDeck = document.getElementById('xhsDeck');
+    const zhihuDeck = document.getElementById('zhihuDeck');
+    if (platform === 'xhs') {
+      xhsDeck.style.width = '1242px';
+      xhsDeck.style.height = '1660px';
+      xhsDeck.querySelectorAll('.slide').forEach((node) => {
+        node.style.width = '1242px';
+        node.style.height = '1660px';
+      });
+    }
+    xhsDeck.style.display = platform === 'xhs' ? 'block' : 'none';
+    zhihuDeck.style.display = platform === 'zhihu' ? 'block' : 'none';
+    const deck = platform === 'xhs' ? xhsDeck : zhihuDeck;
+    deck.querySelector(`[data-slide="${slide}"]`)?.classList.add('active');
+  </script>
+</body>
+</html>

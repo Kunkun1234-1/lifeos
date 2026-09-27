@@ -355,7 +355,38 @@ try {
   assert.ok(initialTransaction, "initial allocation snapshot must remain in history");
   assertAllocation(initialTransaction, { living: 600_000, savings: 200_000, flexible: 200_000 });
 
-  console.log("Wallet smoke passed: initialization, manual allocation, editing, refunds, filters, expenses, transfers, rollback, ratio boundaries, rollover, and target carry preference");
+  const resetExpense = await request(
+    "/api/assets/transactions",
+    jsonRequest(headers, {
+      type: "expense",
+      amountCents: 100,
+      necessity: "optional",
+      sourcePoolType: "flexible",
+    }),
+    201,
+  );
+  await request(`/api/assets/transactions/${resetExpense.id}/refund`, { method: "POST", headers }, 201);
+  await request("/api/assets/reset", { method: "POST", headers }, 200);
+  assert.equal(await prisma.walletTransaction.count({ where: { userId: user.id } }), 0);
+  assert.equal(await prisma.walletMonthlyPlan.count({ where: { userId: user.id } }), 0);
+  wallet = await walletSnapshot(headers);
+  assert.equal(wallet.plan.initialized, false, "reset wallet must require initialization again");
+  assert.equal(wallet.summary.totalBalanceCents, 0);
+  assert.equal(wallet.transactions.length, 0);
+  assertPools(wallet, { living: 0, savings: 0, flexible: 0 });
+  await request(
+    "/api/assets/initialize",
+    jsonRequest(headers, {
+      livingTargetCents: 10_000,
+      savingsRateBps: 5000,
+      livingBalanceCents: 10_000,
+      savingsBalanceCents: 0,
+      flexibleBalanceCents: 0,
+    }),
+    201,
+  );
+
+  console.log("Wallet smoke passed: initialization, manual allocation, editing, refunds, filters, expenses, transfers, rollback, ratio boundaries, rollover, reset, and reinitialization");
 } catch (error) {
   console.error(error instanceof Error ? error.stack ?? error.message : error);
   if (serverLogs.length) console.error(serverLogs.join("").slice(-5000));

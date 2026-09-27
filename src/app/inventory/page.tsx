@@ -81,6 +81,13 @@ const RARITY_META: Record<
   legendary: { label: "传说", color: "#c9902c", glow: "rgba(201, 144, 44, 0.3)" },
 };
 
+const REWARD_STATUS_LABEL: Record<InventoryRewardInstanceDTO["status"], string> = {
+  pending_fulfillment: "待兑现",
+  available: "可使用",
+  used: "已使用",
+  discarded: "已丢弃",
+};
+
 /** v2: no auto-prefill; empty by default until the user assigns slots. */
 const HOTBAR_STORAGE_KEY = "life-game-inventory-hotbar-v2";
 const HOTBAR_SLOT_COUNT = 6;
@@ -114,15 +121,15 @@ function mapTitleTier(tier: string): DisplayRarity {
 function thematicIcon(kind: InventoryItem["kind"]) {
   switch (kind) {
     case "resource":
-      return "/life-game/items/resource-gold.png";
+      return "/life-game/items/fantasy-gold.webp";
     case "reward":
-      return "/life-game/items/item-gift.png";
+      return "/life-game/items/fantasy-gift.webp";
     case "equipment":
-      return "/life-game/items/item-frame.png";
+      return "/life-game/items/fantasy-frame.webp";
     case "title":
-      return "/life-game/items/item-crown.png";
+      return "/life-game/items/fantasy-crown.webp";
     case "achievement":
-      return "/life-game/items/item-book.png";
+      return "/life-game/items/fantasy-book.webp";
     default:
       return null;
   }
@@ -144,9 +151,13 @@ function resolveItemImage(
   imageSrc: string | null | undefined,
   resourceKey?: "gold" | "gems" | "fate" | "freeze",
 ) {
-  if (resourceKey) return `/life-game/items/resource-${resourceKey}.png`;
+  if (resourceKey) return `/life-game/items/fantasy-${resourceKey}.webp`;
   if (isThematicAsset(imageSrc)) return imageSrc!;
   return thematicIcon(kind) ?? null;
+}
+
+function rewardStackId(row: InventoryRewardInstanceDTO) {
+  return `reward:${row.reward.id}:${row.status}:${row.costMoneyCents}`;
 }
 
 function buildItems(data: InventoryData): InventoryItem[] {
@@ -248,16 +259,26 @@ function buildItems(data: InventoryData): InventoryItem[] {
     },
   ];
 
-  const rewards = data.rewards.map((row): InventoryItem => {
+  const rewardStacks = new Map<string, InventoryRewardInstanceDTO[]>();
+  for (const row of data.rewards) {
+    const key = rewardStackId(row);
+    const stack = rewardStacks.get(key);
+    if (stack) stack.push(row);
+    else rewardStacks.set(key, [row]);
+  }
+
+  const rewards = [...rewardStacks].map(([id, stack]): InventoryItem => {
+    const row = stack[0];
     const reward = row.reward;
     const usable = row.status === "available" || row.status === "pending_fulfillment";
+    const mixedSources = stack.some((entry) => entry.source !== row.source);
     return {
-      id: `reward:${row.id}`,
+      id,
       name: reward.name,
       description:
         reward.description ||
         "旅途中兑换或祈愿获得的奖励道具，可在合适时机使用或兑现。",
-      quantity: 1,
+      quantity: stack.length,
       rarity: mapRewardTier(reward.tier),
       category: "reward",
       typeLabel: "奖励",
@@ -272,7 +293,7 @@ function buildItems(data: InventoryData): InventoryItem[] {
           : row.status === "available"
             ? "可直接使用或记录兑现"
             : `状态：${row.status === "used" ? "已使用" : "已丢弃"}`,
-        `来源：${row.source === "store" ? "商店" : "祈愿"}`,
+        `来源：${mixedSources ? "商店 / 祈愿" : row.source === "store" ? "商店" : "祈愿"}`,
       ],
       attrs: [
         { label: "价值", value: `${reward.costGold}金`, tone: "gold" },
@@ -282,7 +303,9 @@ function buildItems(data: InventoryData): InventoryItem[] {
           tone: "green",
         },
       ],
-      obtain: row.source === "store" ? "奖励商店兑换获得。" : "祈愿抽取获得。",
+      obtain: mixedSources
+        ? "奖励商店兑换或祈愿抽取获得。"
+        : row.source === "store" ? "奖励商店兑换获得。" : "祈愿抽取获得。",
       canUse: usable,
       canEquip: false,
       kind: "reward",
@@ -434,24 +457,31 @@ export default function InventoryPage() {
 
   const items = useMemo(() => (data ? buildItems(data) : []), [data]);
 
-  // Drop stale hotbar ids (e.g. used/discarded rewards) without auto-filling.
+  // Keep saved shortcuts when individual reward cards become stacks.
   useEffect(() => {
     if (!hotbarReady || !items.length) return;
     const valid = new Set(items.map((item) => item.id));
+    const legacyRewardIds = new Map(
+      data?.rewards.map((row) => [`reward:${row.id}`, rewardStackId(row)]) ?? [],
+    );
     setHotbar((prev) => {
       let changed = false;
-      const nextPresets = prev.presets.map((preset) =>
-        preset.map((slot) => {
-          if (slot != null && !valid.has(slot)) {
-            changed = true;
+      const nextPresets = prev.presets.map((preset) => {
+        const seen = new Set<string>();
+        return preset.map((slot) => {
+          const next = slot == null ? null : (legacyRewardIds.get(slot) ?? slot);
+          if (next !== slot) changed = true;
+          if (next == null || !valid.has(next) || seen.has(next)) {
+            if (slot != null) changed = true;
             return null;
           }
-          return slot;
-        }),
-      ) as HotbarState["presets"];
+          seen.add(next);
+          return next;
+        });
+      }) as HotbarState["presets"];
       return changed ? { ...prev, presets: nextPresets } : prev;
     });
-  }, [items, hotbarReady]);
+  }, [data, items, hotbarReady]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -467,7 +497,10 @@ export default function InventoryPage() {
   const selected =
     filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
 
-  const usedSlots = items.length;
+  const usedSlots = items.reduce(
+    (count, item) => count + (item.kind === "reward" ? item.quantity : 1),
+    0,
+  );
   const currentSlots = hotbar.presets[hotbar.preset];
   const hotbarItemIds = useMemo(
     () => new Set(currentSlots.filter((id): id is string => id != null)),
@@ -581,7 +614,7 @@ export default function InventoryPage() {
 
           <div className={styles.filterRight}>
             <span className={styles.capacity}>
-              显示 {filtered.length} 件 · 总计{" "}
+              显示 {filtered.length} 组 · 总计{" "}
               <strong>
                 {usedSlots}
               </strong>
@@ -820,11 +853,14 @@ function ItemCard({
       )}
       <span className={styles.cardQty}>x{formatQty(item.quantity)}</span>
       <div className={styles.cardVisual}>
-        <ItemVisual item={item} size={72} />
+        <ItemVisual item={item} size={96} />
       </div>
       <div className={styles.cardMeta}>
         <span className={styles.cardName}>{item.name}</span>
-        <span className={styles.cardRarity}>{rarity.label}</span>
+        <span className={styles.cardRarity}>
+          {rarity.label}
+          {item.reward && ` · ${REWARD_STATUS_LABEL[item.reward.status]}`}
+        </span>
       </div>
     </button>
   );
@@ -934,7 +970,13 @@ function DetailPanel({
         </div>
         <div className={styles.detailStats}>
           <div className={styles.detailStat}>
-            <span className={styles.detailStatLabel}>持有数量</span>
+            <span className={styles.detailStatLabel}>
+              {item.reward?.status === "pending_fulfillment"
+                ? "待兑现数量"
+                : item.reward?.status === "used" || item.reward?.status === "discarded"
+                  ? "记录数量"
+                  : "持有数量"}
+            </span>
             <span className={styles.detailStatValue}>
               × {formatQty(item.quantity)}
             </span>
@@ -1042,7 +1084,7 @@ function ItemVisual({ item, size }: { item: InventoryItem; size: number }) {
         width={size}
         height={size}
         unoptimized
-        className={styles.itemPixel}
+        className={src.includes("/fantasy-") ? undefined : styles.itemPixel}
         style={{ width: size, height: size, objectFit: "contain" }}
       />
     );
