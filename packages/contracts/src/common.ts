@@ -38,3 +38,8 @@ export const ProjectSummarySchema = z.object({
   createdAt: z.union([z.string().datetime(), z.date()]),
   updatedAt: z.union([z.string().datetime(), z.date()]),
 });
+
+export const MilestoneSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+});

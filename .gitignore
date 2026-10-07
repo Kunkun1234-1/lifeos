@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Claude Code runtime files (per-machine)
 /.claude/scheduled_tasks.lock
+
+# Generated art drafts; approved source assets live in public/art-packs.
+/output/imagegen/

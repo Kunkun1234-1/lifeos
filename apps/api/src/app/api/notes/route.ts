@@ -33,14 +33,14 @@ function firstValidationMessage(error: ZodError) {
 async function resolveParentDepth(userId: string, parentId: string | null | undefined) {
   if (!parentId) return -1;
   const parent = await prisma.note.findFirst({
-    where: { id: parentId, userId },
+    where: { id: parentId, userId, deletedAt: null },
     select: { id: true, parentId: true },
   });
   if (!parent) return null;
 
   const getParentId = async (id: string) => {
     const row = await prisma.note.findFirst({
-      where: { id, userId },
+      where: { id, userId, deletedAt: null },
       select: { parentId: true },
     });
     return row?.parentId;
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("q");
   const archived = url.searchParams.get("archived") === "1";
 
-  const where: Prisma.NoteWhereInput = { userId, archived };
+  const where: Prisma.NoteWhereInput = { userId, archived, deletedAt: null };
   if (kind) where.kind = kind;
   if (areaId) where.areaId = areaId;
   if (projectId) where.projectId = projectId;
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const siblingWhere = { userId, parentId, archived: false };
+  const siblingWhere = { userId, parentId, archived: false, deletedAt: null };
   let position = data.position;
   if (position === undefined) {
     const agg = await prisma.note.aggregate({

@@ -4,7 +4,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import Link from "next/link";
@@ -34,6 +33,8 @@ import {
 } from "@/hooks/queries";
 import type { RewardCategory, RewardItemDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ItemDetailHero, ItemTile, rewardGalleryRarity } from "@/components/item-gallery";
+import gallery from "@/components/item-gallery.module.css";
 import styles from "./page.module.css";
 
 type CategoryFilter = "all" | RewardCategory;
@@ -54,12 +55,12 @@ const CATEGORY_LABEL: Record<RewardCategory, string> = {
 
 const TIER_META: Record<
   RewardItemDTO["tier"],
-  { label: string; color: string; glow: string }
+  { label: string }
 > = {
-  common: { label: "通常", color: "#8a918c", glow: "rgba(138, 145, 140, 0.28)" },
-  rare: { label: "稀有", color: "#3b82c4", glow: "rgba(59, 130, 196, 0.3)" },
-  epic: { label: "史诗", color: "#8b6bb8", glow: "rgba(139, 107, 184, 0.3)" },
-  legendary: { label: "传说", color: "#c9902c", glow: "rgba(201, 144, 44, 0.3)" },
+  common: { label: "通常" },
+  rare: { label: "稀有" },
+  epic: { label: "史诗" },
+  legendary: { label: "传说" },
 };
 
 export default function RewardsPage() {
@@ -123,8 +124,8 @@ export default function RewardsPage() {
     visibleRewards.find((item) => item.id === selectedId) ?? null;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.topBar}>
+    <div className={cn(styles.page, gallery.page)}>
+      <div className={cn(styles.topBar, gallery.topBar)}>
         <div className={styles.tabs} role="tablist" aria-label="商品分类">
           {CATEGORY_TABS.map((tab) => (
             <button
@@ -141,7 +142,7 @@ export default function RewardsPage() {
           ))}
         </div>
 
-        <div className={styles.filterStrip}>
+        <div className={cn(styles.filterStrip, gallery.filterStrip)}>
           <div className={styles.filterLeft}>
             <label className={styles.checkLabel}>
               <input
@@ -195,9 +196,9 @@ export default function RewardsPage() {
       {error ? (
         <div className={styles.error}>{(error as Error).message}</div>
       ) : (
-        <div className={styles.mainRow}>
-          <section className={styles.gridPane}>
-            <div className={styles.grid}>
+        <div className={gallery.mainRow}>
+          <section className={gallery.gridPane} aria-label="商品列表">
+            <div className={gallery.grid}>
               {isLoading ? (
                 <div className={styles.loading}>加载中…</div>
               ) : visibleRewards.length === 0 ? (
@@ -296,36 +297,23 @@ function ProductCard({
 }) {
   const tier = TIER_META[reward.tier];
   return (
-    <button
-      type="button"
+    <ItemTile
+      name={reward.name}
+      subtitle={tier.label}
+      rarity={rewardGalleryRarity(reward.tier)}
+      selected={selected}
+      amount={`${reward.costGold.toLocaleString()} 金币`}
+      amountLabel={`价格 ${reward.costGold.toLocaleString()} 金币`}
+      badge={reward.inGachaPool ? "祈愿" : undefined}
       onClick={onClick}
-      className={cn(styles.card, selected && styles.cardSelected)}
-      style={
-        {
-          "--rarity-color": tier.color,
-          "--rarity-glow": tier.glow,
-        } as CSSProperties
-      }
     >
-      {reward.inGachaPool ? (
-        <span className={styles.cardWish} title="已加入祈愿池">
-          ★
-        </span>
-      ) : null}
-      <span className={styles.cardPrice}>{reward.costGold}G</span>
-      <div className={styles.cardVisual}>
         {reward.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={reward.imageUrl} alt={reward.name} />
+          <img src={reward.imageUrl} alt="" />
         ) : (
           <span>{reward.emoji || "🎁"}</span>
         )}
-      </div>
-      <div className={styles.cardMeta}>
-        <span className={styles.cardName}>{reward.name}</span>
-        <span className={styles.cardRarity}>{tier.label}</span>
-      </div>
-    </button>
+    </ItemTile>
   );
 }
 
@@ -344,7 +332,7 @@ function DetailPanel({
 }) {
   if (!reward) {
     return (
-      <aside className={styles.detail}>
+      <aside className={gallery.detail} aria-label="商品详情">
         <div className={styles.detailEmpty}>选择一件商品查看详情。</div>
       </aside>
     );
@@ -356,40 +344,31 @@ function DetailPanel({
   const canPurchase = moneyShort === 0 && goldShort === 0;
 
   return (
-    <aside className={styles.detail}>
-      <div className={styles.detailHead}>
-        <div>
-          <h2 className={styles.detailTitle}>{reward.name}</h2>
-          <span
-            className={styles.detailTag}
-            style={{ "--rarity-color": tier.color } as CSSProperties}
+    <aside className={gallery.detail} aria-label="商品详情">
+      <ItemDetailHero
+        title={reward.name}
+        subtitle={`${CATEGORY_LABEL[reward.category]} · ${tier.label}`}
+        rarity={rewardGalleryRarity(reward.tier)}
+        action={
+          <button
+            type="button"
+            className={styles.detailEdit}
+            onClick={onEdit}
+            title="编辑商品"
+            aria-label="编辑商品"
           >
-            {tier.label}
-          </span>
-          <span className={`${styles.detailTag} ${styles.detailTagSoft}`}>
-            {CATEGORY_LABEL[reward.category]}
-          </span>
-        </div>
-        <button
-          type="button"
-          className={styles.detailEdit}
-          onClick={onEdit}
-          title="编辑商品"
-          aria-label="编辑商品"
-        >
-          <Pencil size={14} />
-        </button>
-      </div>
-
-      <div className={styles.detailPreviewRow}>
-        <div className={styles.detailThumb}>
+            <Pencil size={14} />
+          </button>
+        }
+      >
           {reward.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={reward.imageUrl} alt={reward.name} />
+            <img src={reward.imageUrl} alt="" />
           ) : (
             <span>{reward.emoji || "🎁"}</span>
           )}
-        </div>
+      </ItemDetailHero>
+      <div className={gallery.detailBody}>
         <div className={styles.detailStats}>
           <div className={styles.detailStat}>
             <span className={styles.detailStatLabel}>Money</span>
@@ -410,39 +389,39 @@ function DetailPanel({
             </span>
           </div>
         </div>
-      </div>
 
-      <p className={styles.detailDesc}>
-        {reward.description || "暂无说明，买下后可在背包中兑现。"}
-      </p>
-
-      <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>购买条件</h3>
-        <p className={`${styles.affordNote} ${canPurchase ? styles.affordOk : styles.affordBad}`}>
-          {canPurchase
-            ? "余额充足，可以兑换。"
-            : moneyShort > 0 && goldShort > 0
-              ? `还差 ${formatMoney(moneyShort)} 与 ${goldShort} Gold`
-              : moneyShort > 0
-                ? `还差 ${formatMoney(moneyShort)}`
-                : `还差 ${goldShort} Gold`}
+        <p className={styles.detailDesc}>
+          {reward.description || "暂无说明，买下后可在背包中兑现。"}
         </p>
-      </div>
 
-      <div className={styles.detailActions}>
-        <button
-          type="button"
-          className={styles.btnPrimary}
-          onClick={onPurchase}
-          disabled={!canPurchase}
-        >
-          {canPurchase ? <Gift size={15} /> : <WalletCards size={15} />}
-          {canPurchase ? "购买" : "余额不足"}
-        </button>
-        <button type="button" className={styles.btnSecondary} onClick={onEdit}>
-          <Pencil size={15} />
-          编辑商品
-        </button>
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>购买条件</h3>
+          <p className={`${styles.affordNote} ${canPurchase ? styles.affordOk : styles.affordBad}`}>
+            {canPurchase
+              ? "余额充足，可以兑换。"
+              : moneyShort > 0 && goldShort > 0
+                ? `还差 ${formatMoney(moneyShort)} 与 ${goldShort} Gold`
+                : moneyShort > 0
+                  ? `还差 ${formatMoney(moneyShort)}`
+                  : `还差 ${goldShort} Gold`}
+          </p>
+        </div>
+
+        <div className={styles.detailActions}>
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            onClick={onPurchase}
+            disabled={!canPurchase}
+          >
+            {canPurchase ? <Gift size={15} /> : <WalletCards size={15} />}
+            {canPurchase ? "购买" : "余额不足"}
+          </button>
+          <button type="button" className={styles.btnSecondary} onClick={onEdit}>
+            <Pencil size={15} />
+            编辑商品
+          </button>
+        </div>
       </div>
     </aside>
   );

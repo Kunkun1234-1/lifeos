@@ -13,7 +13,7 @@
   --cal-muted: #65736c;
   --cal-border: #d9dcc3;
   --cal-radius: 16px;
-  min-height: calc(100vh - 117px);
+  min-height: calc(100vh - var(--app-header-height, 56px));
   padding: 16px 18px 28px;
   color: #18231f;
   background:

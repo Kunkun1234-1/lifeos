@@ -254,7 +254,8 @@ export default function SettingsPage() {
     }
   };
 
-  const avatarSrc = avatarUrl || "/lifeos/profile_avatar.png";
+  const avatarSrc =
+    avatarUrl || "/art-packs/legacy-lifeos/lifeos/profile_avatar.png";
   const dayCount = journeyDay(user?.onboardedAt ?? user?.createdAt);
   const timezone = user?.timezone ?? "Asia/Shanghai";
   const livingLabel =

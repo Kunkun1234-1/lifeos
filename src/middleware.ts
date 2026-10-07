@@ -1,5 +1,12 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import legacyArtUrls from "../public/art-packs/legacy-urls.json";
+
+const LEGACY_ART_URLS: Record<string, string> = legacyArtUrls;
+
+export function isLegacyArtPath(path: string) {
+  return Object.prototype.hasOwnProperty.call(LEGACY_ART_URLS, path);
+}
 
 /**
  * Auth gate. Protects everything except:
@@ -7,7 +14,7 @@ import { NextResponse } from "next/server";
  *   - /api/auth/*           — Auth.js routes
  *   - OAuth discovery, registration, and token endpoints
  *   - /_next/*              — Next.js assets
- *   - /favicon.ico, /lifeos/*, /uploads/*, /gacha/items/*, /gacha/videos/*, /gacha/audio/* — static
+ *   - /favicon.ico, /art-packs/*, legacy art paths, /uploads/*, /gacha/audio/* — static
  */
 export default auth((req) => {
   const path = req.nextUrl.pathname;
@@ -18,11 +25,9 @@ export default auth((req) => {
     path === "/oauth/register" ||
     path === "/oauth/token" ||
     path.startsWith("/_next") ||
-    path.startsWith("/lifeos") ||
+    path.startsWith("/art-packs") ||
+    isLegacyArtPath(path) ||
     path.startsWith("/gacha/audio") ||
-    path.startsWith("/gacha/backgrounds") ||
-    path.startsWith("/gacha/items") ||
-    path.startsWith("/gacha/videos") ||
     path.startsWith("/uploads") ||
     path === "/favicon.ico";
 

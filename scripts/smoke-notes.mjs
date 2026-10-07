@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import { PrismaClient } from "@prisma/client";
 
 loadEnvFile(".env.local");
 loadEnvFile(".env");
@@ -278,17 +279,167 @@ async function smokeNotes() {
     throw new Error(`Expected child moved to root: ${JSON.stringify(moved)}`);
   }
 
-  const deleteChildRes = await businessRequest(`/api/notes/${child.id}`, { method: "DELETE" });
-  if (!deleteChildRes.ok) {
-    throw new Error(`Cleanup child delete failed: ${deleteChildRes.status} ${JSON.stringify(await readResponse(deleteChildRes))}`);
+  const moveBackRes = await businessRequest(`/api/notes/${child.id}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ parentId: note.id, position: 0 }),
+  });
+  if (!moveBackRes.ok) {
+    throw new Error(`Move child back failed: ${moveBackRes.status} ${JSON.stringify(await readResponse(moveBackRes))}`);
+  }
+
+  const archiveChildRes = await businessRequest(`/api/notes/${child.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ archived: true }),
+  });
+  if (!archiveChildRes.ok) {
+    throw new Error(`Archive child failed: ${archiveChildRes.status} ${JSON.stringify(await readResponse(archiveChildRes))}`);
+  }
+
+  const priorChildRes = await businessRequest("/api/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      kind: "note",
+      title: `Previously trashed child of ${firstLine}`,
+      body: "Must keep its older deletion batch",
+      parentId: note.id,
+    }),
+  });
+  if (priorChildRes.status !== 201) {
+    throw new Error(`Create prior child failed: ${priorChildRes.status} ${JSON.stringify(await readResponse(priorChildRes))}`);
+  }
+  const priorChild = (await readResponse(priorChildRes))?.note;
+  const priorDeleteRes = await businessRequest(`/api/notes/${priorChild.id}`, { method: "DELETE" });
+  if (!priorDeleteRes.ok) {
+    throw new Error(`Prior child trash failed: ${priorDeleteRes.status} ${JSON.stringify(await readResponse(priorDeleteRes))}`);
   }
 
   const deleteRes = await businessRequest(`/api/notes/${note.id}`, { method: "DELETE" });
   if (!deleteRes.ok) {
-    throw new Error(`Cleanup delete failed: ${deleteRes.status} ${JSON.stringify(await readResponse(deleteRes))}`);
+    throw new Error(`Subtree trash failed: ${deleteRes.status} ${JSON.stringify(await readResponse(deleteRes))}`);
+  }
+  const deleted = await readResponse(deleteRes);
+  if (
+    deleted?.deletedSubtreeSize !== 2 ||
+    !deleted.deletedIds?.includes(note.id) ||
+    !deleted.deletedIds?.includes(child.id) ||
+    deleted.deletedIds?.includes(priorChild.id)
+  ) {
+    throw new Error(`Unexpected subtree trash response: ${JSON.stringify(deleted)}`);
   }
 
-  console.log(`Notes smoke passed: body-only note + tree/move as "${firstLine}"`);
+  const hiddenRes = await businessRequest(`/api/notes?q=${encodeURIComponent(firstLine)}`);
+  const hidden = await readResponse(hiddenRes);
+  if (!hiddenRes.ok || hidden.some((item) => item.id === note.id || item.id === child.id)) {
+    throw new Error(`Trashed notes leaked into normal search: ${JSON.stringify(hidden)}`);
+  }
+
+  const hiddenTreeRes = await businessRequest("/api/notes/tree?flat=1");
+  const hiddenTree = await readResponse(hiddenTreeRes);
+  if (
+    !hiddenTreeRes.ok ||
+    hiddenTree?.nodes?.some((item) =>
+      [note.id, child.id, priorChild.id].includes(item.id)
+    )
+  ) {
+    throw new Error(`Trashed notes leaked into normal tree: ${JSON.stringify(hiddenTree)}`);
+  }
+
+  const hiddenDetailRes = await businessRequest(`/api/notes/${note.id}`);
+  if (hiddenDetailRes.status !== 404) {
+    throw new Error(`Trashed note detail leaked: ${hiddenDetailRes.status} ${JSON.stringify(await readResponse(hiddenDetailRes))}`);
+  }
+
+  const trashRes = await businessRequest("/api/notes/trash");
+  const trash = await readResponse(trashRes);
+  if (
+    !trashRes.ok ||
+    ![note.id, child.id, priorChild.id].every((id) =>
+      trash.some((item) => item.id === id && typeof item.deletedAt === "string")
+    )
+  ) {
+    throw new Error(`Trash list missing notes: ${JSON.stringify(trash)}`);
+  }
+
+  const invalidParentRes = await businessRequest("/api/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      kind: "note",
+      title: "Invalid child under trash",
+      body: "Should fail",
+      parentId: priorChild.id,
+    }),
+  });
+  if (invalidParentRes.status !== 400) {
+    throw new Error(`Trashed parent was accepted: ${invalidParentRes.status} ${JSON.stringify(await readResponse(invalidParentRes))}`);
+  }
+
+  const restoreRes = await businessRequest(`/api/notes/${note.id}/restore`, { method: "POST" });
+  const restored = await readResponse(restoreRes);
+  if (
+    !restoreRes.ok ||
+    restored?.note?.id !== note.id ||
+    !restored.restoredIds?.includes(child.id) ||
+    restored.restoredIds?.includes(priorChild.id)
+  ) {
+    throw new Error(`Unexpected restore response: ${JSON.stringify(restored)}`);
+  }
+
+  const restoredChildRes = await businessRequest(`/api/notes/${child.id}`);
+  const restoredChild = await readResponse(restoredChildRes);
+  if (!restoredChildRes.ok || restoredChild.parentId !== note.id || restoredChild.archived !== true) {
+    throw new Error(`Restore did not preserve child metadata: ${JSON.stringify(restoredChild)}`);
+  }
+
+  const priorChildDetailRes = await businessRequest(`/api/notes/${priorChild.id}`);
+  if (priorChildDetailRes.status !== 404) {
+    throw new Error(`Older trash was resurrected: ${priorChildDetailRes.status} ${JSON.stringify(await readResponse(priorChildDetailRes))}`);
+  }
+
+  const activePurgeRes = await businessRequest(`/api/notes/${note.id}?permanent=1`, { method: "DELETE" });
+  if (activePurgeRes.status !== 409) {
+    throw new Error(`Active purge guard failed: ${activePurgeRes.status} ${JSON.stringify(await readResponse(activePurgeRes))}`);
+  }
+
+  const prisma = new PrismaClient();
+  const foreignUserId = `trash-foreign-${Date.now()}`;
+  try {
+    await prisma.user.create({ data: { id: foreignUserId } });
+    const foreignNote = await prisma.note.create({
+      data: {
+        userId: foreignUserId,
+        title: "Foreign trash ownership probe",
+        body: "Must be invisible to the authenticated smoke user",
+      },
+    });
+    const foreignDeleteRes = await businessRequest(`/api/notes/${foreignNote.id}`, {
+      method: "DELETE",
+    });
+    if (foreignDeleteRes.status !== 404) {
+      throw new Error(`Foreign user delete was not hidden: ${foreignDeleteRes.status} ${JSON.stringify(await readResponse(foreignDeleteRes))}`);
+    }
+  } finally {
+    await prisma.user.deleteMany({ where: { id: foreignUserId } });
+    await prisma.$disconnect();
+  }
+
+  const retrashRes = await businessRequest(`/api/notes/${note.id}`, { method: "DELETE" });
+  if (!retrashRes.ok) {
+    throw new Error(`Re-trash failed: ${retrashRes.status} ${JSON.stringify(await readResponse(retrashRes))}`);
+  }
+  const purgeRes = await businessRequest(`/api/notes/${note.id}?permanent=1`, { method: "DELETE" });
+  const purged = await readResponse(purgeRes);
+  if (
+    !purgeRes.ok ||
+    ![note.id, child.id, priorChild.id].every((id) => purged.deletedIds?.includes(id))
+  ) {
+    throw new Error(`Permanent subtree cleanup failed: ${purgeRes.status} ${JSON.stringify(purged)}`);
+  }
+
+  console.log(`Notes smoke passed: tree/move + trash/restore/purge as "${firstLine}"`);
 }
 
 async function smokeBackendBridge() {

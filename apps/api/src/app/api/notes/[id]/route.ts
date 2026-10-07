@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/user";
 import { NoteUpdateSchema } from "@/lib/validators";
 import {
   NOTE_MAX_DEPTH,
-  countNoteDescendants,
   getNoteDepth,
   hasNoteWritableContent,
   normalizeNoteTitle,
+  planNotePermanentDelete,
+  planNoteSoftDelete,
   serializeNote,
   tagsToString,
   wouldCreateNoteCycle,
@@ -33,7 +35,7 @@ function firstValidationMessage(error: ZodError) {
 function makeGetParentId(userId: string) {
   return async (noteId: string) => {
     const row = await prisma.note.findFirst({
-      where: { id: noteId, userId },
+      where: { id: noteId, userId, deletedAt: null },
       select: { parentId: true },
     });
     return row?.parentId;
@@ -44,7 +46,7 @@ export async function GET(_req: Request, { params }: Params) {
   const userId = await getCurrentUserId();
   const { id } = await params;
   const note = await prisma.note.findFirst({
-    where: { id, userId },
+    where: { id, userId, deletedAt: null },
     include: NOTE_INCLUDE,
   });
   if (!note) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -64,7 +66,9 @@ export async function PATCH(req: Request, { params }: Params) {
   }
   const data = parsed.data;
 
-  const existing = await prisma.note.findFirst({ where: { id, userId } });
+  const existing = await prisma.note.findFirst({
+    where: { id, userId, deletedAt: null },
+  });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const nextContent = {
@@ -89,7 +93,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const nextParentId = data.parentId;
     if (nextParentId) {
       const parent = await prisma.note.findFirst({
-        where: { id: nextParentId, userId },
+        where: { id: nextParentId, userId, deletedAt: null },
         select: { id: true },
       });
       if (!parent) {
@@ -166,22 +170,78 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json(serializeNote(updated));
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const userId = await getCurrentUserId();
   const { id } = await params;
+  const permanent = new URL(req.url).searchParams.get("permanent") === "1";
 
-  const existing = await prisma.note.findFirst({
-    where: { id, userId },
-    select: { id: true },
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.note.findFirst({
+      where: { id, userId },
+      select: { id: true, deletedAt: true },
+    });
+    if (!existing) return { status: "missing" as const };
+
+    const all = await tx.note.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        parentId: true,
+        deletedAt: true,
+        deletionBatchId: true,
+      },
+    });
+
+    if (permanent) {
+      if (!existing.deletedAt) return { status: "active" as const };
+      let deletedIds: string[];
+      try {
+        deletedIds = planNotePermanentDelete(all, id);
+      } catch {
+        return { status: "active-descendant" as const };
+      }
+      await tx.note.deleteMany({
+        where: { userId, id: { in: deletedIds }, deletedAt: { not: null } },
+      });
+      return { status: "deleted" as const, deletedIds };
+    }
+
+    if (existing.deletedAt) return { status: "trashed" as const };
+    const deletedIds = planNoteSoftDelete(all, id);
+    const deletedAt = new Date();
+    const deletionBatchId = randomUUID();
+    await tx.note.updateMany({
+      where: { userId, id: { in: deletedIds }, deletedAt: null },
+      data: { deletedAt, deletionBatchId },
+    });
+    return { status: "deleted" as const, deletedIds };
   });
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const all = await prisma.note.findMany({
-    where: { userId },
-    select: { id: true, parentId: true },
+  if (result.status === "missing") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  if (result.status === "active") {
+    return NextResponse.json(
+      { error: "活动页面不能永久删除，请先移入垃圾桶" },
+      { status: 409 }
+    );
+  }
+  if (result.status === "active-descendant") {
+    return NextResponse.json(
+      { error: "页面树中仍有活动页面，无法永久删除" },
+      { status: 409 }
+    );
+  }
+  if (result.status === "trashed") {
+    return NextResponse.json(
+      { error: "页面已在垃圾桶中" },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    deletedIds: result.deletedIds,
+    deletedSubtreeSize: result.deletedIds.length,
   });
-  const descendantCount = countNoteDescendants(all, id);
-
-  await prisma.note.deleteMany({ where: { id, userId } });
-  return NextResponse.json({ ok: true, deletedSubtreeSize: descendantCount + 1 });
 }

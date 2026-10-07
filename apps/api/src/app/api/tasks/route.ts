@@ -10,9 +10,11 @@ export async function GET(req: Request) {
   const status = url.searchParams.get("status");
 
   const projectId = url.searchParams.get("projectId");
+  const milestoneId = url.searchParams.get("milestoneId");
   const tasks = await listTasks(prisma, userId, {
     status: status ?? undefined,
     projectId: projectId ?? undefined,
+    milestoneId: milestoneId ?? undefined,
   });
   return NextResponse.json(tasks);
 }

@@ -123,7 +123,7 @@ export default function StrategyPage() {
             <div className={styles.profileArtWrap}>
               <Image
                 className={styles.profileArt}
-                src="/life-game/profile-panel-v2.png"
+                src="/art-packs/legacy-lifeos/life-game/profile-panel-v2.png"
                 alt=""
                 fill
                 sizes="260px"
@@ -229,7 +229,7 @@ export default function StrategyPage() {
 
           <aside className={styles.tip}>
             <Image
-              src="/life-game/pixel-dragon-v1.png"
+              src="/art-packs/legacy-lifeos/life-game/pixel-dragon-v1.png"
               alt=""
               width={56}
               height={48}

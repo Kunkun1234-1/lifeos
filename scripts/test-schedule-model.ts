@@ -89,6 +89,8 @@ const task: TaskDTO = {
   area: null,
   projectId: null,
   project: null,
+  milestoneId: null,
+  milestone: null,
   completedAt: null,
   createdAt: "2026-07-10T00:00:00.000Z",
 };

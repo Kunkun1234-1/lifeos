@@ -11,6 +11,18 @@ export {
   type TaskCreateInput,
 } from "@lifeos/contracts/tasks";
 
+export {
+  MilestoneCreateSchema,
+  MilestoneUpdateSchema,
+} from "@lifeos/contracts";
+
+export {
+  PeriodicTaskCheckInSchema,
+  PeriodicTaskCreateSchema,
+  PeriodicTaskFrequencySchema,
+  PeriodicTaskUpdateSchema,
+} from "@lifeos/contracts/periodic-tasks";
+
 // ---------- Habit ----------
 export const HabitCreateSchema = z.object({
   title: z.string().min(1).max(200),

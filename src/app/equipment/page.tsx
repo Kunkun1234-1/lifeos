@@ -196,7 +196,7 @@ function FrameCard({
             <span>{item.sourceAchievement.name}</span>
           </Link>
         ) : item.source === "event" ? (
-          <Link href="/events" className="text-[var(--gold-deep)] hover:underline">
+          <Link href="/events/archive" className="text-[var(--gold-deep)] hover:underline">
             {SOURCE_LABEL[item.source]}
           </Link>
         ) : (

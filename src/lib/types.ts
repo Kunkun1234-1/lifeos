@@ -64,6 +64,8 @@ export type TaskDTO = {
   area: AreaDTO | null;
   projectId: string | null;
   project: { id: string; title: string; status: string } | null;
+  milestoneId: string | null;
+  milestone: { id: string; title: string } | null;
   completedAt: string | null;
   createdAt: string;
 };
@@ -73,6 +75,41 @@ export type HabitTickDTO = {
   direction: "+" | "-";
   date: string; // YYYY-MM-DD in user timezone
   createdAt: string;
+};
+
+export type PeriodicTaskFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export type PeriodicTaskDTO = {
+  id: string;
+  title: string;
+  notes: string | null;
+  frequency: PeriodicTaskFrequency;
+  areaId: string | null;
+  area: Pick<AreaDTO, "id" | "name" | "icon" | "color"> | null;
+  xpReward: number;
+  goldReward: number;
+  completed: boolean;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PeriodicTasksSnapshotDTO = {
+  frequency: PeriodicTaskFrequency;
+  periodStart: string;
+  periodEnd: string;
+  today: string;
+  timeZone: string;
+  tasks: PeriodicTaskDTO[];
+};
+
+export type DailyTaskWeekSnapshotDTO = {
+  periodStart: string;
+  periodEnd: string;
+  today: string;
+  timeZone: string;
+  days: string[];
+  tasks: Array<PeriodicTaskDTO & { availableFrom: string; completedDates: string[] }>;
 };
 
 export type HabitDTO = {
@@ -181,6 +218,34 @@ export type ProjectDTO = {
   goal: { id: string; objective: string } | null;
   taskCount: number;
   taskDoneCount: number;
+};
+
+export type MilestoneStatus = "TODO" | "IN_PROGRESS" | "DONE";
+
+export type MilestoneDTO = {
+  id: string;
+  projectId: string;
+  title: string;
+  notes: string | null;
+  acceptanceCriteria: string | null;
+  status: MilestoneStatus;
+  order: number;
+  startDate: string | null;
+  deadline: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectTreeDTO = {
+  project: ProjectDTO;
+  milestones: MilestoneDTO[];
+  tasks: TaskDTO[];
+};
+
+export type GoalTreeDTO = {
+  goal: GoalDTO;
+  projects: ProjectTreeDTO[];
 };
 
 export type RewardCategory = "virtual" | "physical_small" | "physical_large";
@@ -562,6 +627,7 @@ export type NoteDTO = {
   tags: string[];
   pinned: boolean;
   archived: boolean;
+  deletedAt: string | null;
   areaId: string | null;
   area: { id: string; name: string; icon: string; color: string } | null;
   projectId: string | null;

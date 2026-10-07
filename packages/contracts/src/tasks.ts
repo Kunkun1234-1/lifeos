@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   AreaSummarySchema,
+  MilestoneSummarySchema,
   NullableDateTimeSchema,
   ProjectSummarySchema,
 } from "./common";
@@ -17,6 +18,7 @@ export const TaskCreateSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   areaId: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  milestoneId: z.string().optional().nullable(),
   priority: z.number().int().min(1).max(3).optional(),
   dueDate: z.string().datetime().optional().nullable(),
   xpReward: z.number().int().min(0).max(1000).optional(),
@@ -32,6 +34,7 @@ export const TaskResponseSchema = z.object({
   userId: z.string(),
   areaId: z.string().nullable(),
   projectId: z.string().nullable(),
+  milestoneId: z.string().nullable(),
   title: z.string(),
   notes: z.string().nullable(),
   status: TaskStatusSchema.or(z.string()),
@@ -44,6 +47,7 @@ export const TaskResponseSchema = z.object({
   updatedAt: z.union([z.string().datetime(), z.date()]),
   area: AreaSummarySchema.nullable(),
   project: ProjectSummarySchema.nullable(),
+  milestone: MilestoneSummarySchema.nullable(),
 });
 
 export const TasksResponseSchema = z.array(TaskResponseSchema);

@@ -1,0 +1,891 @@
+{
+  "version": 1,
+  "canonicalRoot": "public/art-packs",
+  "sources": [
+    {
+      "originalPath": "public/gacha/backgrounds/wish-banner-v2.png",
+      "file": "legacy-lifeos/gacha/backgrounds/wish-banner-v2.png",
+      "sha256": "4791da65e7c378171ef888c1470aeb246fc5733afc70645d011e26e297e66854"
+    },
+    {
+      "originalPath": "public/gacha/backgrounds/wish-observatory-v1.png",
+      "file": "legacy-lifeos/gacha/backgrounds/wish-observatory-v1.png",
+      "sha256": "4583d30c961c2bcb4d337a3084aece5414503234e6fc42b7d8c55e09c4f04098"
+    },
+    {
+      "originalPath": "public/gacha/items/artisan-box.png",
+      "file": "legacy-lifeos/gacha/items/artisan-box.png",
+      "sha256": "26522deb91221715a7615029a1c7b6edc90610105c17a8cd4abeaf408a7d0566"
+    },
+    {
+      "originalPath": "public/gacha/items/artisan-box.svg",
+      "file": "legacy-lifeos/gacha/items/artisan-box.svg",
+      "sha256": "ca5c02f3b1af85cd1ebb5ab0121bd765cda95681d30e3795bcb712f63644dcdc"
+    },
+    {
+      "originalPath": "public/gacha/items/astral-passport.png",
+      "file": "legacy-lifeos/gacha/items/astral-passport.png",
+      "sha256": "2218f33279b920e66eaf2cb9a57602eedd3e2df8f51903fd42eb2387015533f0"
+    },
+    {
+      "originalPath": "public/gacha/items/astral-passport.svg",
+      "file": "legacy-lifeos/gacha/items/astral-passport.svg",
+      "sha256": "abfe9e3d79441e4d5cdc94f8c99346f50b8998af47a723468f4b74811fefd0a6"
+    },
+    {
+      "originalPath": "public/gacha/items/aurora-keyboard.png",
+      "file": "legacy-lifeos/gacha/items/aurora-keyboard.png",
+      "sha256": "6154b2e339e5db5dbda55c3aba729ef707f01dae2e69a1de0107522c368652aa"
+    },
+    {
+      "originalPath": "public/gacha/items/aurora-keyboard.svg",
+      "file": "legacy-lifeos/gacha/items/aurora-keyboard.svg",
+      "sha256": "e8774521f25b75999a8ea99f6e784a611f10d8ba6ad015d88cc8d29b53968fdb"
+    },
+    {
+      "originalPath": "public/gacha/items/azure-book.png",
+      "file": "legacy-lifeos/gacha/items/azure-book.png",
+      "sha256": "de43ad0a05d7c9fab9e9cec72e4c8fdb628ba4c9eb13e2a8d0cead9708ece07d"
+    },
+    {
+      "originalPath": "public/gacha/items/azure-book.svg",
+      "file": "legacy-lifeos/gacha/items/azure-book.svg",
+      "sha256": "41c098cf222268f89189a22a04691b1f3604fbce1e6eab3b7b5afa8669bbcc2e"
+    },
+    {
+      "originalPath": "public/gacha/items/cloud-massage.png",
+      "file": "legacy-lifeos/gacha/items/cloud-massage.png",
+      "sha256": "dbedd427232712b23e8398933cac1d313152e8b6c2803f0f4f8fdff0c2caf3ed"
+    },
+    {
+      "originalPath": "public/gacha/items/cloud-massage.svg",
+      "file": "legacy-lifeos/gacha/items/cloud-massage.svg",
+      "sha256": "27a59774bae4c43b8bdd85337d7cd73f19cd18f759ef854f152b9e91a8b73848"
+    },
+    {
+      "originalPath": "public/gacha/items/crystal-pen.png",
+      "file": "legacy-lifeos/gacha/items/crystal-pen.png",
+      "sha256": "4ab21f86888dd94e013a25ac658360f386a926b9a02f5a2df8fae4d3a8ecf37a"
+    },
+    {
+      "originalPath": "public/gacha/items/crystal-pen.svg",
+      "file": "legacy-lifeos/gacha/items/crystal-pen.svg",
+      "sha256": "4b6d31f39c6388beca9dacf60c5a2368c6e8087d9a4c2e22dae485f102e72a57"
+    },
+    {
+      "originalPath": "public/gacha/items/dream-candle.png",
+      "file": "legacy-lifeos/gacha/items/dream-candle.png",
+      "sha256": "24dee1a2ebebe01c6506d1d8e795db86bc77d5e2c1c96780136a8cf1b52cc1d7"
+    },
+    {
+      "originalPath": "public/gacha/items/dream-candle.svg",
+      "file": "legacy-lifeos/gacha/items/dream-candle.svg",
+      "sha256": "0eeb67a64e0bf9bf4b4e7718fb8d36ab8716ff7a5fd4022bba8fafdf42575470"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-artisan-gift.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-artisan-gift.webp",
+      "sha256": "a7a93a024d7807a8ea3224ed6fd33b4e461586cfb9d791f81eb988221e15ec31"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-astral-pass.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-astral-pass.webp",
+      "sha256": "ed52c57d0625756325d521faf4f50bde0c2f464015ae23b3b19cc32b064db029"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-aurora-workshop.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-aurora-workshop.webp",
+      "sha256": "36b5ebdae123fd2f5497a1140758812587b859203c4e1a0f41609a82474bdcb3"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-azure-book.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-azure-book.webp",
+      "sha256": "54de015f91d620cabccf30fb3236618569d094679106c89713c820c1d0a262e6"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-cloud-healing.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-cloud-healing.webp",
+      "sha256": "cda3d009399eb4eedda4385f74de90292b3d2adf1d10260ae61abafb444e66ea"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-crystal-tool.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-crystal-tool.webp",
+      "sha256": "d4a16154d6f5d6ab3d6711bb501c1c242f2c84f12ab07f666a873821fb05fd8d"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-dream-rest.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-dream-rest.webp",
+      "sha256": "a5a7b19714d743f5ed7ebd932cc49e6a8edf697cf510a3095d2917221ca3b826"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-free-time-ticket.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-free-time-ticket.webp",
+      "sha256": "70c56e786966a54b5e078724405c916d1ead21f87f9bbc6e5be82e504b75d334"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-horizon-map.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-horizon-map.webp",
+      "sha256": "3218482adfc765fa77f0fb6403990af6415c3440a268fffb0c9460ad6b197d84"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-moon-tea.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-moon-tea.webp",
+      "sha256": "9cc7cc8f18715e557c6a55bf3818e5ca4e1c9bc5928492b62958e5badc70b3b5"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-sakura-voucher.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-sakura-voucher.webp",
+      "sha256": "0afac7b01aac2adc4e91c67f138c643a95f176548997ca66609aa94bbe875953"
+    },
+    {
+      "originalPath": "public/gacha/items/fantasy-starlit-treat.webp",
+      "file": "legacy-lifeos/gacha/items/fantasy-starlit-treat.webp",
+      "sha256": "642ca44b78aaf0a409c4d754cfe35291fb54eba00bccceed816338f0b26f283c"
+    },
+    {
+      "originalPath": "public/gacha/items/glider-ticket.png",
+      "file": "legacy-lifeos/gacha/items/glider-ticket.png",
+      "sha256": "f6926760691a541089673a7597e50a5a76bfcb6ba871a63527990f771edd3819"
+    },
+    {
+      "originalPath": "public/gacha/items/glider-ticket.svg",
+      "file": "legacy-lifeos/gacha/items/glider-ticket.svg",
+      "sha256": "9b968ddc9f41413ab531651fb0c4f324bfc08abae2fa52ced0ca9017d4c2def0"
+    },
+    {
+      "originalPath": "public/gacha/items/horizon-map.png",
+      "file": "legacy-lifeos/gacha/items/horizon-map.png",
+      "sha256": "eb38ad330a30c27afcd64345a42d2a847a7c5f4b7cffb4db014228b141375750"
+    },
+    {
+      "originalPath": "public/gacha/items/horizon-map.svg",
+      "file": "legacy-lifeos/gacha/items/horizon-map.svg",
+      "sha256": "6a67d38365ba8ca7c262f261f867e73aa426ab290c03e8e96b589710b01fa8df"
+    },
+    {
+      "originalPath": "public/gacha/items/material-artisan-gift.png",
+      "file": "legacy-lifeos/gacha/items/material-artisan-gift.png",
+      "sha256": "8a326fe469254d8b9cb7ebe7c890159777ff42ca2d404235ebe29059bc664046"
+    },
+    {
+      "originalPath": "public/gacha/items/material-astral-pass.png",
+      "file": "legacy-lifeos/gacha/items/material-astral-pass.png",
+      "sha256": "c047b596c7328d6b05175e1df85f49c63387651a005496b873db6bda6f639979"
+    },
+    {
+      "originalPath": "public/gacha/items/material-aurora-workshop.png",
+      "file": "legacy-lifeos/gacha/items/material-aurora-workshop.png",
+      "sha256": "a3f8b0697c83703bda59ffdea388c7afa25e24e3c3cf10e64d77d59f14ab7622"
+    },
+    {
+      "originalPath": "public/gacha/items/material-azure-book.png",
+      "file": "legacy-lifeos/gacha/items/material-azure-book.png",
+      "sha256": "0790f601d229164201b767a76784a62a56ac8217bedae795a4e6062e456ce20e"
+    },
+    {
+      "originalPath": "public/gacha/items/material-cloud-healing.png",
+      "file": "legacy-lifeos/gacha/items/material-cloud-healing.png",
+      "sha256": "9ebb0500a04057f34306d0e1ae29c12af092ff484f0f28d5894c5cb7c4dd97d1"
+    },
+    {
+      "originalPath": "public/gacha/items/material-crystal-tool.png",
+      "file": "legacy-lifeos/gacha/items/material-crystal-tool.png",
+      "sha256": "a428e54ff935c038b03a28904f0aa81fc41225be345ac07bd8cec19f3724181a"
+    },
+    {
+      "originalPath": "public/gacha/items/material-dream-rest.png",
+      "file": "legacy-lifeos/gacha/items/material-dream-rest.png",
+      "sha256": "89b639e71265c9c7dd659681997a8e292ce20855c4eec43966dac6d303dc885f"
+    },
+    {
+      "originalPath": "public/gacha/items/material-free-time-ticket.png",
+      "file": "legacy-lifeos/gacha/items/material-free-time-ticket.png",
+      "sha256": "1011812787787ab86a6c4b04cd5956200026c15fc8b289437f1cf864f70b4637"
+    },
+    {
+      "originalPath": "public/gacha/items/material-horizon-map.png",
+      "file": "legacy-lifeos/gacha/items/material-horizon-map.png",
+      "sha256": "0433f0b3174998704b2d85a2315b08f361c719219f5d82f3c6f95d26db43a581"
+    },
+    {
+      "originalPath": "public/gacha/items/material-moon-tea.png",
+      "file": "legacy-lifeos/gacha/items/material-moon-tea.png",
+      "sha256": "530eec6fd61dcd8e818d79635e68ac373f8144d88fd8efd74f9b04d64597e1de"
+    },
+    {
+      "originalPath": "public/gacha/items/material-sakura-voucher.png",
+      "file": "legacy-lifeos/gacha/items/material-sakura-voucher.png",
+      "sha256": "ceaab3b1eb3a75fc9187987f6a7681f8c564636e6efdce5eb770603a7aa9b706"
+    },
+    {
+      "originalPath": "public/gacha/items/material-starlit-treat.png",
+      "file": "legacy-lifeos/gacha/items/material-starlit-treat.png",
+      "sha256": "fcfe9aaeb8e87bfd8a5d6adeb9ea9e80417f6d7b82fb329b2fd0fb115972961f"
+    },
+    {
+      "originalPath": "public/gacha/items/moon-tea.png",
+      "file": "legacy-lifeos/gacha/items/moon-tea.png",
+      "sha256": "b82a294be1123821340937e8a73d931089df1a4e0c3185e581e3b7a672b15885"
+    },
+    {
+      "originalPath": "public/gacha/items/moon-tea.svg",
+      "file": "legacy-lifeos/gacha/items/moon-tea.svg",
+      "sha256": "85fde94c7421e4e00f3e323f1dd583b735e95a0d26ce403bcf43b2022869ae1d"
+    },
+    {
+      "originalPath": "public/gacha/items/sakura-meal.png",
+      "file": "legacy-lifeos/gacha/items/sakura-meal.png",
+      "sha256": "f1d7a62f792d14f6928c6afd949e7a9bc8b75c5838664d8da9b40361d9320c82"
+    },
+    {
+      "originalPath": "public/gacha/items/sakura-meal.svg",
+      "file": "legacy-lifeos/gacha/items/sakura-meal.svg",
+      "sha256": "02c6c24dd66e787ad41ea8987f98b135c222344a52b41774889cf65d8342af6b"
+    },
+    {
+      "originalPath": "public/gacha/items/starlit-macaron.png",
+      "file": "legacy-lifeos/gacha/items/starlit-macaron.png",
+      "sha256": "c79dedf0d6692cb7a73f1b6ef496b0c76846f8b058a64a6bfdc7606aa3d157da"
+    },
+    {
+      "originalPath": "public/gacha/items/starlit-macaron.svg",
+      "file": "legacy-lifeos/gacha/items/starlit-macaron.svg",
+      "sha256": "218227517874ab363f813beac4c5f901fa135ae7e2663cdead5e797ed8636581"
+    },
+    {
+      "originalPath": "public/gacha/videos/single-blue.mp4",
+      "file": "legacy-lifeos/gacha/videos/single-blue.mp4",
+      "sha256": "4f7c0056e8a6a57e798d129ca4e780eb0e534773228d74ca4b1957164ec38ded"
+    },
+    {
+      "originalPath": "public/gacha/videos/single-gold.mp4",
+      "file": "legacy-lifeos/gacha/videos/single-gold.mp4",
+      "sha256": "c474665aeffd44e0586530049df7d5d863e8073b06c4e8e635bba038864d210e"
+    },
+    {
+      "originalPath": "public/gacha/videos/single-purple.mp4",
+      "file": "legacy-lifeos/gacha/videos/single-purple.mp4",
+      "sha256": "740c9a220921caa9a8249ed3f9d0d958f9de059e479236b8623a5a0bb3896af6"
+    },
+    {
+      "originalPath": "public/gacha/videos/ten-gold.mp4",
+      "file": "legacy-lifeos/gacha/videos/ten-gold.mp4",
+      "sha256": "d5e9b0dc97b03aa48f7152c5b53980ba5a60d3dc68c22109bc4aa43398ff1436"
+    },
+    {
+      "originalPath": "public/gacha/videos/ten-purple.mp4",
+      "file": "legacy-lifeos/gacha/videos/ten-purple.mp4",
+      "sha256": "cd97f3f27b1a96165c1d6aaad296cb1d89c10e77a79225f55ce69d79c33ac9d0"
+    },
+    {
+      "originalPath": "public/life-game/dashboard-hunter-v1.png",
+      "file": "legacy-lifeos/life-game/dashboard-hunter-v1.png",
+      "sha256": "7f61febb9bc0233196ee330e703856bf7106e59528ed8603923d3deff8971ce6"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-book.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-book.webp",
+      "sha256": "0d930cbfe669abd63bed096079662b9499a103e3ca49de56d046a2788613f743"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-crown.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-crown.webp",
+      "sha256": "a90f90c8c689dbdb5af8402046115c168858cbb7f21d5c40ab0e167be550237b"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-fate.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-fate.webp",
+      "sha256": "6c3d656d76f2b8f0b5792e20c928b2b0ba1495b12b56db81b11ffc0374ff4445"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-frame.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-frame.webp",
+      "sha256": "944b1f6f59ac17f45118d002a952fdf9846b3f22350dd47cca8f3eeacdc62ce7"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-freeze.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-freeze.webp",
+      "sha256": "1e5beec49955397d81f199ca59abee6e5a00586ec5f79c9d1d08627cd1ed78ba"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-gems.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-gems.webp",
+      "sha256": "33ce7c27c7f4eddd9a2a0f07306d2f95bafc603332a1d0c46015908c643cbc61"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-gift.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-gift.webp",
+      "sha256": "093d54675fed623162bb576604972018c507582b20235717c9078a94a5ceab4a"
+    },
+    {
+      "originalPath": "public/life-game/items/fantasy-gold.webp",
+      "file": "legacy-lifeos/life-game/items/fantasy-gold.webp",
+      "sha256": "2ca859e4b99d85aaf7e9bcf6c31bdd3be2be41cb98144b796ccdd2e4a8cbd97c"
+    },
+    {
+      "originalPath": "public/life-game/items/item-book.png",
+      "file": "legacy-lifeos/life-game/items/item-book.png",
+      "sha256": "40c3197d5a80a04d4de8a6ad227d2fd8041a9313074ad3db619872778f9c3e22"
+    },
+    {
+      "originalPath": "public/life-game/items/item-crown.png",
+      "file": "legacy-lifeos/life-game/items/item-crown.png",
+      "sha256": "f7df4d27d2338df001faee4d10d1a3fb458ba7b084ebcd53744556b61fb43c00"
+    },
+    {
+      "originalPath": "public/life-game/items/item-frame.png",
+      "file": "legacy-lifeos/life-game/items/item-frame.png",
+      "sha256": "889d5d0553758fddd9702ef1d62baa89bf5011c5d02ae93d244c05be1b4ad12f"
+    },
+    {
+      "originalPath": "public/life-game/items/item-gift.png",
+      "file": "legacy-lifeos/life-game/items/item-gift.png",
+      "sha256": "2c98be04ca5b894294aa4864fc3301ffd08f2671d6a9c916bf4a7238c01aca7c"
+    },
+    {
+      "originalPath": "public/life-game/items/resource-fate.png",
+      "file": "legacy-lifeos/life-game/items/resource-fate.png",
+      "sha256": "f9ed0eff4cfdaece74f079106298deeccc89fb2c2de1b9c25dace25f1d810bc4"
+    },
+    {
+      "originalPath": "public/life-game/items/resource-freeze.png",
+      "file": "legacy-lifeos/life-game/items/resource-freeze.png",
+      "sha256": "920d96256d8d9c8b9d43441b443783389e88bf915828fa5c96b867c551d5ef72"
+    },
+    {
+      "originalPath": "public/life-game/items/resource-gems.png",
+      "file": "legacy-lifeos/life-game/items/resource-gems.png",
+      "sha256": "07a6f6a949cca97ab19a037bde64159baca05f5b0605637cd3b41f5d3b2f6efd"
+    },
+    {
+      "originalPath": "public/life-game/items/resource-gold.png",
+      "file": "legacy-lifeos/life-game/items/resource-gold.png",
+      "sha256": "b46f36534c30833cac7347ecbd3a69d4dcfc3feb1a634769278e100ed818e6ad"
+    },
+    {
+      "originalPath": "public/life-game/pixel-dragon-v1.png",
+      "file": "legacy-lifeos/life-game/pixel-dragon-v1.png",
+      "sha256": "8bb561e11c11d76e3852b9841fff7822494a776d903a099bc9acdc8bf2f013e8"
+    },
+    {
+      "originalPath": "public/life-game/profile-panel-v2.png",
+      "file": "legacy-lifeos/life-game/profile-panel-v2.png",
+      "sha256": "115e13dd93c334f4bf61d08597ef0856544a8112f3874670ea33f399f9f763e5"
+    },
+    {
+      "originalPath": "public/life-game/sidebar-bg-v2.png",
+      "file": "legacy-lifeos/life-game/sidebar-bg-v2.png",
+      "sha256": "6520fb7d54522c7acb1a0209a05aaebb83ea93f5461f6de3baaf9729371434d1"
+    },
+    {
+      "originalPath": "public/life-game/sidebar-guide-v1.png",
+      "file": "legacy-lifeos/life-game/sidebar-guide-v1.png",
+      "sha256": "ddcfe1ccf9fd52a2907514eecb5027cf595f12dd36eb6051a1fec19355d6c858"
+    },
+    {
+      "originalPath": "public/lifeos/00_full_asset_sheet.png",
+      "file": "legacy-lifeos/lifeos/00_full_asset_sheet.png",
+      "sha256": "933d701cef55f3f7fb739efc3c491cc19a8e617765a6dfc7ec312b836bae6668"
+    },
+    {
+      "originalPath": "public/lifeos/achievements_card.png",
+      "file": "legacy-lifeos/lifeos/achievements_card.png",
+      "sha256": "3d6319a31f9672e97adf64512b57ad8d60fd3cee702e727399171838d873ed45"
+    },
+    {
+      "originalPath": "public/lifeos/assets_card.png",
+      "file": "legacy-lifeos/lifeos/assets_card.png",
+      "sha256": "454dbd37ae6e455640f9ad8a511a9c0c8c37184148d435602dce226fe0e89f16"
+    },
+    {
+      "originalPath": "public/lifeos/assets_card_v2.png",
+      "file": "legacy-lifeos/lifeos/assets_card_v2.png",
+      "sha256": "5099f43a2674964c75e02e5e1f4e4654df280329af7e58b4a0be71ff0821b33c"
+    },
+    {
+      "originalPath": "public/lifeos/background-wallpaper.png",
+      "file": "legacy-lifeos/lifeos/background-wallpaper.png",
+      "sha256": "584af69fafb7bcc3530fa229f298c34e110bcdccc5f001413cde1e3200aba594"
+    },
+    {
+      "originalPath": "public/lifeos/background_city_card.png",
+      "file": "legacy-lifeos/lifeos/background_city_card.png",
+      "sha256": "3f357077abc7d1830d5a0826c687018e56c1053ba522e860505d64154e495221"
+    },
+    {
+      "originalPath": "public/lifeos/background_sky_card.png",
+      "file": "legacy-lifeos/lifeos/background_sky_card.png",
+      "sha256": "03092901dd099cfd0d773201eea612a7e10b87f22c5f589da47756bd2f81170e"
+    },
+    {
+      "originalPath": "public/lifeos/decorative_elements.png",
+      "file": "legacy-lifeos/lifeos/decorative_elements.png",
+      "sha256": "77db48949bb44274b82c41e0bd1ef43ae506d74afbe6c4f1ae6bf8dddcb604b5"
+    },
+    {
+      "originalPath": "public/lifeos/divider_decorations.png",
+      "file": "legacy-lifeos/lifeos/divider_decorations.png",
+      "sha256": "ac986a3df1a441976c114a045dd33fbf73f3685f1b8502e2678580b406036a40"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/analytics.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/analytics.webp",
+      "sha256": "85b1f8c94f7fd7ed4a22a703cc3b598c8bb6f1e44ad29047a59b164a9205fcee"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/gacha.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/gacha.webp",
+      "sha256": "298ac392d9855dc0ad3428326398cb4e43ba37e013b228c015650e070cffa902"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/goals.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/goals.webp",
+      "sha256": "386e6b8b1414f95ece7c30185cc7c12955609b5a7a62888a3bf0c21362b23f6a"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/habits.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/habits.webp",
+      "sha256": "b2710500268ce362c6162f787cb2028c0c58cd6b901ba7cecb094afc081158a5"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/hero.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/hero.webp",
+      "sha256": "471476b0a3cf8565d88dc3f8a4abc6ad9a3a9d5464a92381a1f2f8b01445b930"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/inventory.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/inventory.webp",
+      "sha256": "a6c383eee0f7682d2053b89cb95c7d5930a06b4600db28c9fb49e2fdf7c51bca"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/notes.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/notes.webp",
+      "sha256": "b8922cc720cb5c0c562e9b898f89415c3871f4340a4d9a97e575231667f8326c"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/projects.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/projects.webp",
+      "sha256": "2d9978f5a3c3d2a2de6fd71989d9cd8b5d9eced8eb02a6fbb34a4a757fc974d3"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/review.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/review.webp",
+      "sha256": "cab6ad729487500f6371345ce27791f645eb2d0cd71117aa89dc59d9cc184414"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/rewards.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/rewards.webp",
+      "sha256": "a73c90994c7e9dfbfb6a747e54aa5a627cad30c8e1cadda265a4ad78e9b093aa"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/routines.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/routines.webp",
+      "sha256": "330bd814a6d91808b61cdf3375c7c5e6082eff63ab96eec635df237bb2640e27"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/strategy.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/strategy.webp",
+      "sha256": "8a01057799959a3e0e71950c3981995a5a235bb2ba9a938cf39a01ae02ead7a3"
+    },
+    {
+      "originalPath": "public/lifeos/feature-art/tasks.webp",
+      "file": "legacy-lifeos/lifeos/feature-art/tasks.webp",
+      "sha256": "3fdb971b66c5963fd438c34e8d0d77f8b2ebb95fbc5593bb8d9c6d956a757cf7"
+    },
+    {
+      "originalPath": "public/lifeos/inventory/resource-fate.png",
+      "file": "legacy-lifeos/lifeos/inventory/resource-fate.png",
+      "sha256": "41ad5489e8aad7dc2e3c711425a79680fe6773866508256b3057126e2cf9fe06"
+    },
+    {
+      "originalPath": "public/lifeos/inventory/resource-freeze.png",
+      "file": "legacy-lifeos/lifeos/inventory/resource-freeze.png",
+      "sha256": "18f9c33ac4fc1c7e9320766502be020e293fb787364e6de0f38ce2194a4f6bd8"
+    },
+    {
+      "originalPath": "public/lifeos/inventory/resource-gems.png",
+      "file": "legacy-lifeos/lifeos/inventory/resource-gems.png",
+      "sha256": "8c471255a28a0d277c8041ec81b6b30db8ae29cb4bdcf8dbca470a7af8091864"
+    },
+    {
+      "originalPath": "public/lifeos/inventory/resource-gold.png",
+      "file": "legacy-lifeos/lifeos/inventory/resource-gold.png",
+      "sha256": "6706a14c3013b5f509ed4dd49859c73f77bb1f91adc8dcc300dffb5ef602ca61"
+    },
+    {
+      "originalPath": "public/lifeos/logo_large.png",
+      "file": "legacy-lifeos/lifeos/logo_large.png",
+      "sha256": "ce00de6bf559c2fd9100a7cc180cddc16f4b76805dac9d738e1392ee253213c3"
+    },
+    {
+      "originalPath": "public/lifeos/logo_small.png",
+      "file": "legacy-lifeos/lifeos/logo_small.png",
+      "sha256": "4b44f6970f4312d4eded7d28e7830a24e818e3594a2a58bb93bcbdb732de1371"
+    },
+    {
+      "originalPath": "public/lifeos/main_character_scene.png",
+      "file": "legacy-lifeos/lifeos/main_character_scene.png",
+      "sha256": "b29d23924335035a4a8b6526fdb6e3acc6dd98d3d8c5ab496b15dcdb3db45fe2"
+    },
+    {
+      "originalPath": "public/lifeos/module_academics.png",
+      "file": "legacy-lifeos/lifeos/module_academics.png",
+      "sha256": "b176d463aeedfc239eeded58ac0deedbb529b304eb8214823691bfdaf2d19d34"
+    },
+    {
+      "originalPath": "public/lifeos/module_mind.png",
+      "file": "legacy-lifeos/lifeos/module_mind.png",
+      "sha256": "a7d515a410646caa6db7d12d65fb390b39a890df889f2dabb75cc0a6ba32a0bd"
+    },
+    {
+      "originalPath": "public/lifeos/module_relationships.png",
+      "file": "legacy-lifeos/lifeos/module_relationships.png",
+      "sha256": "74058b3c7863646520c0c28bd3dee8231b812b119d7b2ddbe5f13cec6298a006"
+    },
+    {
+      "originalPath": "public/lifeos/module_reputation.png",
+      "file": "legacy-lifeos/lifeos/module_reputation.png",
+      "sha256": "b1e366a59705103f04984ee358b97ab3ef3a775aef4ee4c1670516e463805b78"
+    },
+    {
+      "originalPath": "public/lifeos/module_skills.png",
+      "file": "legacy-lifeos/lifeos/module_skills.png",
+      "sha256": "41d250b4fc9c1a2cf3689237e7bdaeca7cf36061d54f79d63f26f837633a10b3"
+    },
+    {
+      "originalPath": "public/lifeos/module_wealth.png",
+      "file": "legacy-lifeos/lifeos/module_wealth.png",
+      "sha256": "6c0b5ec06408211b61f4db120fa6b0701af479a389fda5f6b4fd9c700ef42448"
+    },
+    {
+      "originalPath": "public/lifeos/profile_avatar.png",
+      "file": "legacy-lifeos/lifeos/profile_avatar.png",
+      "sha256": "871a3ce74ef9c06178244b7a5364905d53d5511d6b06261813a355c84cbf3961"
+    },
+    {
+      "originalPath": "素材/像素龙.png",
+      "file": "source-library/originals/像素龙.png",
+      "sha256": "b5765d8761bb0c1ec8508d6e1a53c6d3e87563347aa9d601284aba8959789d8e"
+    },
+    {
+      "originalPath": "素材/头像.png",
+      "file": "source-library/originals/头像.png",
+      "sha256": "99ffbba635131657202fab9445ee7ef66857c3091eada4942d7690d011c9c3ef"
+    },
+    {
+      "originalPath": "素材/左中侧背景栏.png",
+      "file": "source-library/originals/左中侧背景栏.png",
+      "sha256": "a9fc2aebfef4ae5b50192ac61cdbeca68a4e16dfa495c686a94d866eb6823670"
+    },
+    {
+      "originalPath": "素材/左侧边栏.png",
+      "file": "source-library/originals/左侧边栏.png",
+      "sha256": "ba89393737612b66fd6fda53c2bcdcaff76ba4ba7ac72debc49352d1dbb23783"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.20.59.png",
+      "file": "source-library/originals/截屏2026-07-11 15.20.59.png",
+      "sha256": "2fcbc8f0e6d2524eda6561c29c7f7c89ae5e9f9be283c7c34facd0db98f475ec"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.04.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.04.png",
+      "sha256": "6aa04d36a718c103ca05bd54226cd52053dc8646ec0e7887fada998090a5534d"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.08.png",
+      "file": "legacy-lifeos/gacha/items/material-starlit-treat.png",
+      "sha256": "fcfe9aaeb8e87bfd8a5d6adeb9ea9e80417f6d7b82fb329b2fd0fb115972961f"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.11.png",
+      "file": "legacy-lifeos/gacha/items/material-aurora-workshop.png",
+      "sha256": "a3f8b0697c83703bda59ffdea388c7afa25e24e3c3cf10e64d77d59f14ab7622"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.15.png",
+      "file": "legacy-lifeos/gacha/items/material-moon-tea.png",
+      "sha256": "530eec6fd61dcd8e818d79635e68ac373f8144d88fd8efd74f9b04d64597e1de"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.20.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.20.png",
+      "sha256": "31b98ff2b53f1df2638d0efe2ad4158d95f46b47472fe3e764fc95e32fbaaa63"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.23.png",
+      "file": "legacy-lifeos/gacha/items/material-crystal-tool.png",
+      "sha256": "a428e54ff935c038b03a28904f0aa81fc41225be345ac07bd8cec19f3724181a"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.27.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.27.png",
+      "sha256": "f910814b7b46f1a538be26463ed0a7a3955067cc30b4878fde5d47fd797968f6"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.30.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.30.png",
+      "sha256": "1f1625e03b79777c5aef99c069b201e56c958cedcd700830f6984bdb66715252"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.33.png",
+      "file": "legacy-lifeos/gacha/items/material-horizon-map.png",
+      "sha256": "0433f0b3174998704b2d85a2315b08f361c719219f5d82f3c6f95d26db43a581"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.37.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.37.png",
+      "sha256": "c3e2eef37146e408dd6e38ad4ffb39a02f812e22f7ded8359ab90f7a06eaf56d"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.40.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.40.png",
+      "sha256": "94ed938662aee8aa472bdea5e506d07e43545c2efddf2c6539718cd5121d4cad"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.43.png",
+      "file": "legacy-lifeos/gacha/items/material-artisan-gift.png",
+      "sha256": "8a326fe469254d8b9cb7ebe7c890159777ff42ca2d404235ebe29059bc664046"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.47.png",
+      "file": "legacy-lifeos/gacha/items/material-cloud-healing.png",
+      "sha256": "9ebb0500a04057f34306d0e1ae29c12af092ff484f0f28d5894c5cb7c4dd97d1"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.51.png",
+      "file": "source-library/originals/截屏2026-07-11 15.21.51.png",
+      "sha256": "c6dcfb969f1d24a74473bc29bf388f522d13832173934b188a2bd1c77db2cb24"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.56.png",
+      "file": "legacy-lifeos/gacha/items/material-astral-pass.png",
+      "sha256": "c047b596c7328d6b05175e1df85f49c63387651a005496b873db6bda6f639979"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.21.59.png",
+      "file": "legacy-lifeos/gacha/items/material-dream-rest.png",
+      "sha256": "89b639e71265c9c7dd659681997a8e292ce20855c4eec43966dac6d303dc885f"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.22.03.png",
+      "file": "legacy-lifeos/gacha/items/material-sakura-voucher.png",
+      "sha256": "ceaab3b1eb3a75fc9187987f6a7681f8c564636e6efdce5eb770603a7aa9b706"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.22.07.png",
+      "file": "legacy-lifeos/gacha/items/material-free-time-ticket.png",
+      "sha256": "1011812787787ab86a6c4b04cd5956200026c15fc8b289437f1cf864f70b4637"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.22.13.png",
+      "file": "legacy-lifeos/gacha/items/material-azure-book.png",
+      "sha256": "0790f601d229164201b767a76784a62a56ac8217bedae795a4e6062e456ce20e"
+    },
+    {
+      "originalPath": "素材/截屏2026-07-11 15.22.23.png",
+      "file": "source-library/originals/截屏2026-07-11 15.22.23.png",
+      "sha256": "0875588d9b3695add1ed9ae77c71daede22cd1b817b96b174e702ea108d4a254"
+    },
+    {
+      "originalPath": "素材/祈愿背景图.png",
+      "file": "legacy-lifeos/gacha/backgrounds/wish-banner-v2.png",
+      "sha256": "4791da65e7c378171ef888c1470aeb246fc5733afc70645d011e26e297e66854"
+    },
+    {
+      "originalPath": "素材/背景.png",
+      "file": "legacy-lifeos/lifeos/background-wallpaper.png",
+      "sha256": "584af69fafb7bcc3530fa229f298c34e110bcdccc5f001413cde1e3200aba594"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/00_full_asset_sheet.png",
+      "file": "legacy-lifeos/lifeos/00_full_asset_sheet.png",
+      "sha256": "933d701cef55f3f7fb739efc3c491cc19a8e617765a6dfc7ec312b836bae6668"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/achievements_card.png",
+      "file": "legacy-lifeos/lifeos/achievements_card.png",
+      "sha256": "3d6319a31f9672e97adf64512b57ad8d60fd3cee702e727399171838d873ed45"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/assets_card.png",
+      "file": "legacy-lifeos/lifeos/assets_card.png",
+      "sha256": "454dbd37ae6e455640f9ad8a511a9c0c8c37184148d435602dce226fe0e89f16"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/background_city_card.png",
+      "file": "legacy-lifeos/lifeos/background_city_card.png",
+      "sha256": "3f357077abc7d1830d5a0826c687018e56c1053ba522e860505d64154e495221"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/background_sky_card.png",
+      "file": "legacy-lifeos/lifeos/background_sky_card.png",
+      "sha256": "03092901dd099cfd0d773201eea612a7e10b87f22c5f589da47756bd2f81170e"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/badges_tags.png",
+      "file": "source-library/asset-sheet-crops/badges_tags.png",
+      "sha256": "ef76ed03b2612791477f375442835df68272739ab42bd3397389cbd765f88f1c"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/buttons_common.png",
+      "file": "source-library/asset-sheet-crops/buttons_common.png",
+      "sha256": "a0b6c7e45c0247edeb725d08756a2bcf76ee7bce58cabf97b35279379dceb4a8"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/decorative_elements.png",
+      "file": "legacy-lifeos/lifeos/decorative_elements.png",
+      "sha256": "77db48949bb44274b82c41e0bd1ef43ae506d74afbe6c4f1ae6bf8dddcb604b5"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/divider_decorations.png",
+      "file": "legacy-lifeos/lifeos/divider_decorations.png",
+      "sha256": "ac986a3df1a441976c114a045dd33fbf73f3685f1b8502e2678580b406036a40"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/icons_status_row.png",
+      "file": "source-library/asset-sheet-crops/icons_status_row.png",
+      "sha256": "d27ce069373a21ec7d70cfa5bfe2b49d65b1c11da734d968e3bbf03a2879ca0a"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/image.png",
+      "file": "source-library/asset-sheet-crops/image.png",
+      "sha256": "cade67ce80c5dfe5c7b60c98c5b6da941d9820e627a2435adc618f58ce637939"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/left_profile_panel.png",
+      "file": "source-library/asset-sheet-crops/left_profile_panel.png",
+      "sha256": "5efa938d42c4938dab93ff0111ffe568de56809035d5783d8baa7cedcdca0207"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/logo_large.png",
+      "file": "legacy-lifeos/lifeos/logo_large.png",
+      "sha256": "ce00de6bf559c2fd9100a7cc180cddc16f4b76805dac9d738e1392ee253213c3"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/logo_small.png",
+      "file": "legacy-lifeos/lifeos/logo_small.png",
+      "sha256": "4b44f6970f4312d4eded7d28e7830a24e818e3594a2a58bb93bcbdb732de1371"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/main_character_scene.png",
+      "file": "legacy-lifeos/lifeos/main_character_scene.png",
+      "sha256": "b29d23924335035a4a8b6526fdb6e3acc6dd98d3d8c5ab496b15dcdb3db45fe2"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/manifest.json",
+      "file": "source-library/asset-sheet-crops/original-manifest.json",
+      "sha256": "5d62a06e05623003d05dd58fb7734f526cd4ad6b2c501b276a15c5685ccba0b3"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/module_academics.png",
+      "file": "legacy-lifeos/lifeos/module_academics.png",
+      "sha256": "b176d463aeedfc239eeded58ac0deedbb529b304eb8214823691bfdaf2d19d34"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/module_mind.png",
+      "file": "legacy-lifeos/lifeos/module_mind.png",
+      "sha256": "a7d515a410646caa6db7d12d65fb390b39a890df889f2dabb75cc0a6ba32a0bd"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/module_relationships.png",
+      "file": "legacy-lifeos/lifeos/module_relationships.png",
+      "sha256": "74058b3c7863646520c0c28bd3dee8231b812b119d7b2ddbe5f13cec6298a006"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/module_reputation.png",
+      "file": "legacy-lifeos/lifeos/module_reputation.png",
+      "sha256": "b1e366a59705103f04984ee358b97ab3ef3a775aef4ee4c1670516e463805b78"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/module_skills.png",
+      "file": "legacy-lifeos/lifeos/module_skills.png",
+      "sha256": "41d250b4fc9c1a2cf3689237e7bdaeca7cf36061d54f79d63f26f837633a10b3"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/module_wealth.png",
+      "file": "legacy-lifeos/lifeos/module_wealth.png",
+      "sha256": "6c0b5ec06408211b61f4db120fa6b0701af479a389fda5f6b4fd9c700ef42448"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/profile_avatar.png",
+      "file": "legacy-lifeos/lifeos/profile_avatar.png",
+      "sha256": "871a3ce74ef9c06178244b7a5364905d53d5511d6b06261813a355c84cbf3961"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/profile_radar_chart.png",
+      "file": "source-library/asset-sheet-crops/profile_radar_chart.png",
+      "sha256": "8fd8178b58b9847939d02bd914cccd02269951d3744fe9de07625c13738f2fe2"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/profile_stats_bars.png",
+      "file": "source-library/asset-sheet-crops/profile_stats_bars.png",
+      "sha256": "88af94e1eac3963e4821ac314b876dddf2954f9a55fea6515add517efcc46ecd"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/progress_bars.png",
+      "file": "source-library/asset-sheet-crops/progress_bars.png",
+      "sha256": "f82af57a0c10edfd0fd4c8841d0d06009a06497b4e08c45135ff9be2c3389bbe"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/schedule_card.png",
+      "file": "source-library/asset-sheet-crops/schedule_card.png",
+      "sha256": "97312c05bb218272401c80de38755bde35d8d6b0053b1dc477c41857853a15d9"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/tasks_card.png",
+      "file": "source-library/asset-sheet-crops/tasks_card.png",
+      "sha256": "c3b1f02a4fc534a9db11c0825d3e98832635ba6085e4534bfb1fc88b89655951"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_birth.png",
+      "file": "source-library/asset-sheet-crops/timeline_birth.png",
+      "sha256": "ab3df9faee89110edce2062d4778094c266af5172bbc1c473ed536a64dd0bd59"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_current.png",
+      "file": "source-library/asset-sheet-crops/timeline_current.png",
+      "sha256": "cad831f1fde0d70660000006faaf6af7a8fd7ba4d453052c9abd4c08e6d5e32c"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_eye.png",
+      "file": "source-library/asset-sheet-crops/timeline_eye.png",
+      "sha256": "10a40870f68cfba250eaea491d393fd4a91977cbdc8f0b7444349f577a79e1b7"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_full.png",
+      "file": "source-library/asset-sheet-crops/timeline_full.png",
+      "sha256": "7592d9c509c65501c4345fab43f5f831b08fbd0a5e439df6fdae13aac47166ea"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_highschool.png",
+      "file": "source-library/asset-sheet-crops/timeline_highschool.png",
+      "sha256": "5d4ed8b3faefcdb33dec5ae6b9a95f725dcdcd45f72e56bc3fc9feec83b1c057"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_locked_1.png",
+      "file": "source-library/asset-sheet-crops/timeline_locked_1.png",
+      "sha256": "2629960bd471b111709f22f2044ec7cd5731e2283926a750a5d3373e95dff34c"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_locked_2.png",
+      "file": "source-library/asset-sheet-crops/timeline_locked_2.png",
+      "sha256": "b0541413672245235672b487153ee182d54e716562c4650396d33cf45cb25f7f"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_middle.png",
+      "file": "source-library/asset-sheet-crops/timeline_middle.png",
+      "sha256": "f2572e72a471eb4e734d18504439cc3d4ddc9778d9bf87caa6c350cd6040a303"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/timeline_primary.png",
+      "file": "source-library/asset-sheet-crops/timeline_primary.png",
+      "sha256": "ce63e7df3d8a0bf8da637efc70a6d0fbb2aa782d507fb1ca1dfe611b81d3373c"
+    },
+    {
+      "originalPath": "life_manager_asset_sheet_crops/top_navigation_bar.png",
+      "file": "source-library/asset-sheet-crops/top_navigation_bar.png",
+      "sha256": "88d7e444f2a7b0f5ecefb50e24cb6c4a10a15e23c033f611c92536042cde73b1"
+    }
+  ]
+}

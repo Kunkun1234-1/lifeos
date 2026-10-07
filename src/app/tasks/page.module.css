@@ -11,7 +11,7 @@
   --task-ink: #063b2f;
   --task-border: #d9dcc3;
   --task-radius: 14px;
-  min-height: calc(100vh - 117px);
+  min-height: calc(100vh - var(--app-header-height, 56px));
   container-type: inline-size;
   padding: 16px 18px 28px;
   color: #18231f;

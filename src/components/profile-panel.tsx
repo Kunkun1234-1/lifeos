@@ -23,7 +23,9 @@ export function ProfilePanel() {
   const birthdayLabel = birthday
     ? `${pad2(birthday.getMonth() + 1)}/${pad2(birthday.getDate())}`
     : null;
-  const avatarSrc = user ? user.avatarUrl || "/lifeos/profile_avatar.png" : null;
+  const avatarSrc = user
+    ? user.avatarUrl || "/art-packs/legacy-lifeos/lifeos/profile_avatar.png"
+    : null;
 
   return (
     <aside className="space-y-5 px-1">

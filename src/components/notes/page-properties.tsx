@@ -168,7 +168,7 @@ export function PageProperties({
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onDelete}>
           <Trash2 size={14} />
-          删除
+          移入垃圾桶
         </Button>
       </div>
     </aside>

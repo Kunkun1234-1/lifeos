@@ -85,7 +85,7 @@ function CharacterProfile() {
     <section className={`${styles.panel} ${styles.profile}`} aria-label="角色档案">
       <Image
         className={styles.profileArt}
-        src="/life-game/profile-panel-v2.png"
+        src="/art-packs/legacy-lifeos/life-game/profile-panel-v2.png"
         alt="角色立绘"
         fill
         sizes="270px"

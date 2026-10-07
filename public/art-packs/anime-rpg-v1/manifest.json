@@ -1,0 +1,330 @@
+{
+  "id": "anime-rpg-v1",
+  "name": "二次元手绘道具",
+  "approvedDate": "2026-10-07",
+  "style": "STYLE.md",
+  "approvedReference": {
+    "file": "sources/approved-inventory-sheet.png",
+    "sha256": "e1e7bb1284c057d01427e54f6263536115bd4d8c5f0477d27b8f190048ee6459"
+  },
+  "items": [
+    {
+      "id": "gold",
+      "name": "金币",
+      "file": "items/gold.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "gems",
+      "name": "宝石",
+      "file": "items/gems.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "fate",
+      "name": "命运点",
+      "file": "items/fate.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "freeze",
+      "name": "冻结券",
+      "file": "items/freeze.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "moon-tea",
+      "name": "月露茶券",
+      "file": "items/moon-tea.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "starlit-treat",
+      "name": "星糖点心",
+      "file": "items/starlit-treat.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "free-time-ticket",
+      "name": "风之空白券",
+      "file": "items/free-time-ticket.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "dream-rest",
+      "name": "安眠烛",
+      "file": "items/dream-rest.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "azure-book",
+      "name": "蔚蓝书契",
+      "file": "items/azure-book.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "sakura-voucher",
+      "name": "樱宴席券",
+      "file": "items/sakura-voucher.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "cloud-healing",
+      "name": "云息疗愈",
+      "file": "items/cloud-healing.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "crystal-tool",
+      "name": "灵感晶笔",
+      "file": "items/crystal-tool.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "horizon-map",
+      "name": "远野地图",
+      "file": "items/horizon-map.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "artisan-gift",
+      "name": "匠心礼匣",
+      "file": "items/artisan-gift.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "aurora-workshop",
+      "name": "极光工坊",
+      "file": "items/aurora-workshop.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "astral-pass",
+      "name": "星海通行证",
+      "file": "items/astral-pass.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "frame",
+      "name": "装饰相框",
+      "file": "items/frame.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "crown",
+      "name": "荣誉冠冕",
+      "file": "items/crown.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "book",
+      "name": "成就之书",
+      "file": "items/book.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    },
+    {
+      "id": "gift",
+      "name": "神秘礼物",
+      "file": "items/gift.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true
+    }
+  ],
+  "featureArt": [
+    {
+      "id": "tasks",
+      "name": "待办事项",
+      "file": "feature-art/tasks.webp",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "source": {
+        "kind": "imagegen",
+        "file": "sources/feature-art/tasks.png",
+        "prompt": "sources/feature-art/tasks-prompt.txt",
+        "styleReference": "sources/approved-inventory-sheet.png"
+      }
+    },
+    {
+      "id": "habits",
+      "name": "习惯追踪",
+      "file": "feature-art/habits.webp",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "source": {
+        "kind": "imagegen",
+        "file": "sources/feature-art/habits.png",
+        "prompt": "sources/feature-art/habits-prompt.txt",
+        "styleReference": "sources/approved-inventory-sheet.png"
+      }
+    },
+    {
+      "id": "routines",
+      "name": "今日安排",
+      "file": "feature-art/routines.webp",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "source": {
+        "kind": "imagegen",
+        "file": "sources/feature-art/routines.png",
+        "prompt": "sources/feature-art/routines-prompt.txt",
+        "styleReference": "sources/approved-inventory-sheet.png"
+      }
+    },
+    {
+      "id": "review",
+      "name": "每日复盘",
+      "file": "items/book.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "source": {
+        "kind": "reuse",
+        "item": "book"
+      }
+    },
+    {
+      "id": "goals",
+      "name": "目标清单",
+      "file": "feature-art/goals.webp",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "source": {
+        "kind": "imagegen",
+        "file": "sources/feature-art/goals.png",
+        "prompt": "sources/feature-art/goals-prompt.txt",
+        "styleReference": "sources/approved-inventory-sheet.png"
+      }
+    },
+    {
+      "id": "projects",
+      "name": "项目工坊",
+      "file": "items/aurora-workshop.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "source": {
+        "kind": "reuse",
+        "item": "aurora-workshop"
+      }
+    },
+    {
+      "id": "strategy",
+      "name": "人生全景",
+      "file": "items/horizon-map.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "source": {
+        "kind": "reuse",
+        "item": "horizon-map"
+      }
+    },
+    {
+      "id": "notes",
+      "name": "知识库",
+      "file": "items/azure-book.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "source": {
+        "kind": "reuse",
+        "item": "azure-book"
+      }
+    },
+    {
+      "id": "analytics",
+      "name": "数据中心",
+      "file": "feature-art/analytics.webp",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "source": {
+        "kind": "imagegen",
+        "file": "sources/feature-art/analytics.png",
+        "prompt": "sources/feature-art/analytics-prompt.txt",
+        "styleReference": "sources/approved-inventory-sheet.png"
+      }
+    },
+    {
+      "id": "rewards",
+      "name": "奖励商店",
+      "file": "items/artisan-gift.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "source": {
+        "kind": "reuse",
+        "item": "artisan-gift"
+      }
+    },
+    {
+      "id": "gacha",
+      "name": "祈愿召唤",
+      "file": "items/fate.webp",
+      "width": 256,
+      "height": 256,
+      "transparent": true,
+      "source": {
+        "kind": "reuse",
+        "item": "fate"
+      }
+    },
+    {
+      "id": "inventory",
+      "name": "背包终端",
+      "file": "feature-art/inventory.webp",
+      "width": 512,
+      "height": 512,
+      "transparent": true,
+      "source": {
+        "kind": "imagegen",
+        "file": "sources/feature-art/inventory.png",
+        "prompt": "sources/feature-art/inventory-prompt.txt",
+        "styleReference": "sources/approved-inventory-sheet.png"
+      }
+    }
+  ]
+}

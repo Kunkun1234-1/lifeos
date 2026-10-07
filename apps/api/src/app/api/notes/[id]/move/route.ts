@@ -29,7 +29,7 @@ function firstValidationMessage(error: ZodError) {
 function makeGetParentId(userId: string) {
   return async (noteId: string) => {
     const row = await prisma.note.findFirst({
-      where: { id: noteId, userId },
+      where: { id: noteId, userId, deletedAt: null },
       select: { parentId: true },
     });
     return row?.parentId;
@@ -50,12 +50,14 @@ export async function POST(req: Request, { params }: Params) {
 
   const { parentId: nextParentId, position: requestedPosition } = parsed.data;
 
-  const existing = await prisma.note.findFirst({ where: { id, userId } });
+  const existing = await prisma.note.findFirst({
+    where: { id, userId, deletedAt: null },
+  });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (nextParentId) {
     const parent = await prisma.note.findFirst({
-      where: { id: nextParentId, userId, archived: false },
+      where: { id: nextParentId, userId, archived: false, deletedAt: null },
       select: { id: true },
     });
     if (!parent) {
@@ -88,6 +90,7 @@ export async function POST(req: Request, { params }: Params) {
         parentId: existing.parentId,
         id: { not: id },
         archived: false,
+        deletedAt: null,
       },
       orderBy: { position: "asc" },
       select: { id: true },
@@ -106,6 +109,7 @@ export async function POST(req: Request, { params }: Params) {
         parentId: nextParentId,
         id: { not: id },
         archived: false,
+        deletedAt: null,
       },
       orderBy: { position: "asc" },
       select: { id: true },

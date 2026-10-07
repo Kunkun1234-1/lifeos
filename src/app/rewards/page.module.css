@@ -1,4 +1,4 @@
-/* Rewards shop — aligned with inventory cream / forest green */
+/* Shop filters, purchasing information and dialogs. */
 
 .page {
   --shop-cream: #f7f7ed;
@@ -17,16 +17,9 @@
   --shop-epic: #8b6bb8;
   --shop-legend: #c9902c;
 
-  width: min(1480px, 100%);
+  width: 100%;
   margin: 0 auto;
-  padding: 12px 14px 24px;
   color: var(--shop-fg);
-}
-
-@media (min-width: 768px) {
-  .page {
-    padding: 14px 18px 28px;
-  }
 }
 
 .topBar {
@@ -203,49 +196,6 @@
   background: var(--shop-green-deep);
 }
 
-.mainRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-@media (min-width: 1100px) {
-  .mainRow {
-    grid-template-columns: minmax(0, 1fr) 300px;
-  }
-}
-
-.gridPane {
-  min-width: 0;
-  min-height: 420px;
-  padding: 4px 2px 8px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-@media (min-width: 520px) {
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 720px) {
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 900px) {
-  .grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
 .empty,
 .loading,
 .error {
@@ -278,178 +228,12 @@
   font-size: 13px;
 }
 
-.card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  aspect-ratio: 0.92;
-  min-height: 156px;
-  overflow: hidden;
-  padding: 8px 8px 10px;
-  border: 2.5px solid transparent;
-  border-radius: 14px;
-  color: inherit;
-  text-align: left;
-  background: #ffffff;
-  box-shadow:
-    0 0 0 1px rgba(213, 211, 168, 0.65),
-    0 6px 14px rgba(41, 62, 52, 0.04);
-  cursor: pointer;
-  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
-}
-
-.card::after {
-  position: absolute;
-  inset: auto 0 0;
-  height: 42%;
-  content: "";
-  pointer-events: none;
-  opacity: 0.55;
-  background: linear-gradient(180deg, transparent, var(--rarity-glow, rgba(138, 145, 140, 0.22)));
-}
-
-.card:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px rgba(185, 202, 49, 0.45),
-    0 10px 18px rgba(41, 62, 52, 0.07);
-}
-
-.cardSelected {
-  border-color: var(--shop-green);
-  box-shadow:
-    0 0 0 1px var(--shop-green),
-    0 8px 20px rgba(36, 157, 109, 0.16);
-}
-
-.cardWish {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  left: 8px;
-  display: grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  border-radius: 3px;
-  color: #fff;
-  background: #3b82c4;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.cardPrice {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  right: 8px;
-  color: var(--shop-fg-muted);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.cardVisual {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  flex: 1;
-  min-height: 88px;
-  place-items: center;
-  padding: 18px 8px 6px;
-  font-size: 36px;
-  line-height: 1;
-}
-
-.cardVisual img {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-}
-
-.cardMeta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.cardName {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--shop-fg-strong);
-  font-family: var(--font-display-cn), "Songti SC", "PingFang SC", sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cardRarity {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--rarity-color, var(--shop-common));
-}
-
-.detail {
-  display: flex;
-  flex-direction: column;
-  min-height: 420px;
-  padding: 16px 16px 14px;
-  border: 1px solid var(--shop-border);
-  border-radius: 12px;
-  background: var(--shop-paper);
-  box-shadow: 0 8px 20px rgba(41, 62, 52, 0.04);
-}
-
 .detailEmpty {
   display: grid;
   flex: 1;
   place-items: center;
   color: var(--shop-fg-muted);
   font-size: 14px;
-}
-
-.detailHead {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.detailTitle {
-  margin: 0;
-  color: var(--shop-fg-strong);
-  font-family: var(--font-display-cn), "Songti SC", "PingFang SC", sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.detailTag {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 6px;
-  margin-right: 6px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: #fff;
-  background: var(--rarity-color, var(--shop-common));
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.detailTagSoft {
-  background: #5b9ec9;
 }
 
 .detailEdit {
@@ -471,33 +255,11 @@
   border-color: #b7c49a;
 }
 
-.detailPreviewRow {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.detailThumb {
-  display: grid;
-  width: 88px;
-  height: 88px;
-  place-items: center;
-  border: 1px solid var(--shop-border);
-  border-radius: 10px;
-  background: #fff;
-  font-size: 40px;
-}
-
-.detailThumb img {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-}
-
 .detailStats {
   display: grid;
   gap: 8px;
+
+  margin-bottom: 16px;
 }
 
 .detailStat {

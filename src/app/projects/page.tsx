@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Check, Pause, Play, Hammer, Pencil, X } from "lucide-react";
+import { Plus, Trash2, Check, Pause, Play, Hammer, Pencil, X, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Label, Select } from "@/components/ui/input";
@@ -236,7 +236,7 @@ function ProjectCard({ project }: { project: ProjectDTO }) {
             )}
           </div>
           <h3 className={`mt-2 font-display text-[16px] font-bold leading-snug ${isDone ? "line-through" : "text-[var(--fg-strong)]"}`}>
-            {project.title}
+            <Link href={`/projects/${project.id}`}>{project.title}</Link>
           </h3>
           {project.deliverable && (
             <p className="mt-1 text-[12px] text-[var(--fg-muted)]">
@@ -294,6 +294,11 @@ function ProjectCard({ project }: { project: ProjectDTO }) {
       </div>
 
       <div className="mt-3 flex justify-end gap-1.5 border-t border-[var(--border)] pt-3">
+        <Button size="sm" variant="outline" asChild>
+          <Link href={`/projects/${project.id}`}>
+            <ArrowUpRight size={12} /> 概况
+          </Link>
+        </Button>
         {!isDone && !isPaused && (
           <Button
             size="sm"

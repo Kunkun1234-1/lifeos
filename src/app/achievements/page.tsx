@@ -312,7 +312,7 @@ export default function AchievementsPage() {
 
   const avatarSrc =
     user?.avatarUrl ||
-    "/life-game/dashboard-hunter-v1.png";
+    "/art-packs/legacy-lifeos/life-game/dashboard-hunter-v1.png";
 
   return (
     <div className={styles.page}>

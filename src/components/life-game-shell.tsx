@@ -78,7 +78,8 @@ const ROUTE_META = [
   { prefix: "/habits", title: "习惯养成", description: "稳定重复小行动，积累长期改变。" },
   { prefix: "/principles", title: "人生原则", description: "整理帮助你做出选择的准则。" },
   { prefix: "/decisions", title: "决策记录", description: "记录关键选择与背后的思考。" },
-  { prefix: "/events", title: "事件记录", description: "保存旅途中值得记住的时刻。" },
+  { prefix: "/events/archive", title: "历史活动", description: "查看原有活动和奖励记录。" },
+  { prefix: "/events", title: "周期任务", description: "按每日、每周、每月打卡，积累成长奖励。" },
   { prefix: "/titles", title: "称号图鉴", description: "查看已获得与待解锁的称号。" },
   { prefix: "/equipment", title: "角色装备", description: "管理影响角色状态的装备配置。" },
   { prefix: "/battle-pass", title: "旅程通行证", description: "查看阶段进度与旅程奖励。" },
@@ -185,7 +186,8 @@ export function LifeGameShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   if (
-    STANDALONE_ROUTES.some((route) => pathname.startsWith(route))
+    STANDALONE_ROUTES.some((route) => pathname.startsWith(route)) ||
+    /^\/(goals|projects)\/[^/]+$/.test(pathname)
   ) {
     return <>{children}</>;
   }
@@ -199,23 +201,13 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
   const updateUser = useUpdateUser();
   const routeMeta = ROUTE_META.find(({ prefix }) => pathname.startsWith(prefix));
   const isOverview = pathname === "/";
-  const now = new Date();
-  const hour = now.getHours();
-  const greeting = hour < 11 ? "早上好" : hour < 18 ? "下午好" : "晚上好";
-  const avatarSrc = user?.avatarUrl || "/lifeos/profile_avatar.png";
-  const rawXpProgress = user?.levelProgress ?? 0;
-  const xpProgress = Math.max(
-    0,
-    Math.min(100, rawXpProgress <= 1 ? rawXpProgress * 100 : rawXpProgress),
-  );
-  const resinProgress = resin ? Math.round((resin.current / Math.max(1, resin.max)) * 100) : 0;
+  const avatarSrc = user?.avatarUrl || "/art-packs/legacy-lifeos/lifeos/profile_avatar.png";
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [userMotto, setUserMotto] = useState(DEFAULT_USER_MOTTO);
-  const [editingMottoSource, setEditingMottoSource] = useState<"greeting" | "side" | null>(null);
+  const [editingMottoSource, setEditingMottoSource] = useState<"side" | null>(null);
   const [mottoDraft, setMottoDraft] = useState(DEFAULT_USER_MOTTO);
-  const greetingEditorRef = useRef<HTMLTextAreaElement>(null);
   const sideEditorRef = useRef<HTMLTextAreaElement>(null);
   const skipMottoBlurSaveRef = useRef(false);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -257,10 +249,6 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
   }, [user?.motto, editingMottoSource]);
 
   useEffect(() => {
-    if (editingMottoSource === "greeting") {
-      greetingEditorRef.current?.focus();
-      greetingEditorRef.current?.select();
-    }
     if (editingMottoSource === "side") {
       sideEditorRef.current?.focus();
       const el = sideEditorRef.current;
@@ -279,7 +267,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
     });
   }
 
-  function beginMottoEdit(source: "greeting" | "side") {
+  function beginMottoEdit(source: "side") {
     setMottoDraft(userMotto);
     setEditingMottoSource(source);
   }
@@ -303,17 +291,6 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
     skipMottoBlurSaveRef.current = true;
     setMottoDraft(userMotto);
     setEditingMottoSource(null);
-  }
-
-  function handleGreetingEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      saveMottoDraft();
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelMottoEdit();
-    }
   }
 
   function handleSideEditorKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -365,7 +342,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
         <div className={styles.sideQuest}>
           <Image
             className={styles.guide}
-            src="/life-game/pixel-dragon-v1.png"
+            src="/art-packs/legacy-lifeos/life-game/pixel-dragon-v1.png"
             alt="像素龙向导"
             width={168}
             height={128}
@@ -424,100 +401,42 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
 
       <header className={styles.topbar}>
         <div className={styles.greeting}>
-          <h1>
-            {isOverview
-              ? `${greeting}，${user?.name || "旅行者"}！`
-              : routeMeta?.title || "人生冒险"}
+          <h1 title={isOverview ? "总览" : routeMeta?.title || "人生冒险"}>
+            {isOverview ? "总览" : routeMeta?.title || "人生冒险"}
           </h1>
-          {isOverview ? (
-            editingMottoSource === "greeting" ? (
-              <textarea
-                ref={greetingEditorRef}
-                className={`${styles.greetingMotto} ${styles.greetingMottoEditing}`}
-                value={mottoDraft}
-                rows={2}
-                aria-label="编辑今日寄语"
-                title="编辑今日寄语，Enter 或失焦保存"
-                onChange={(event) => setMottoDraft(event.target.value)}
-                onBlur={saveMottoDraft}
-                onKeyDown={handleGreetingEditorKeyDown}
-              />
-            ) : (
-              <p
-                className={styles.greetingMotto}
-                role="textbox"
-                tabIndex={0}
-                aria-label="编辑今日寄语"
-                title="点击编辑今日寄语"
-                onClick={() => beginMottoEdit("greeting")}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    beginMottoEdit("greeting");
-                  }
-                }}
-              >
-                {userMotto}
-              </p>
-            )
-          ) : (
-            <p>
-              {routeMeta?.description || "继续书写属于你的成长旅程。"}
-            </p>
-          )}
         </div>
 
         <div className={styles.topbarTrail}>
           <div className={styles.statusArea}>
-            <div className={styles.statusCard}>
-              <div className={styles.statusTop}>
-                <Zap size={19} fill="#f2c728" color="#111a15" />
-                <span>体力</span>
-                <span className={styles.statusValue}>
-                  {resin?.current ?? 0} / {resin?.max ?? 100}
-                </span>
-              </div>
-              <div className={styles.statusTrack}>
-                <div className={styles.statusFill} style={{ width: `${resinProgress}%` }} />
-              </div>
-              <div className={styles.statusFoot}>
-                {resin?.isFull ? "体力已满" : "持续恢复中"}
-              </div>
+            <div className={styles.statusCompact} role="group" data-testid="header-resin"
+              aria-label={`体力 ${resin?.current ?? 0} / ${resin?.max ?? 100}`}
+              title={`体力 ${resin?.current ?? 0} / ${resin?.max ?? 100} · ${resin?.isFull ? "体力已满" : "持续恢复中"}`}>
+              <Zap size={17} fill="#f2c728" color="#615819" aria-hidden="true" />
+              <span>{resin?.current ?? "—"}<span className={styles.statusMaximum}> / {resin?.max ?? 100}</span></span>
             </div>
-
-            <div className={`${styles.statusCard} ${styles.statusCardWide}`}>
-              <div className={styles.statusTop}>
-                <Sparkles size={18} color="#9b8300" />
-                <span>经验值</span>
-                <span className={styles.statusValue}>Lv.{user?.level ?? 1}</span>
-              </div>
-              <div className={styles.statusTrack}>
-                <div
-                  className={`${styles.statusFill} ${styles.statusFillGreen}`}
-                  style={{ width: `${xpProgress}%` }}
-                />
-              </div>
-              <div className={styles.statusFoot}>
-                {user?.xpIntoLevel ?? 0} / {user?.xpForNext ?? 1000}
-              </div>
+            <div className={styles.statusCompact} role="group" data-testid="header-xp"
+              aria-label={`经验值 ${user?.xpIntoLevel ?? 0} / ${user?.xpForNext ?? 1000}，等级 ${user?.level ?? 1}`}
+              title={`经验值 ${user?.xpIntoLevel ?? 0} / ${user?.xpForNext ?? 1000} · Lv.${user?.level ?? 1}`}>
+              <Sparkles size={17} color="#7b8e21" aria-hidden="true" />
+              <span className={styles.statusLevel}>Lv.{user?.level ?? 1}</span>
+              <span>{user?.xpIntoLevel ?? "—"}<span className={styles.statusMaximum}> / {user?.xpForNext ?? 1000}</span></span>
             </div>
           </div>
 
           <div className={styles.utility}>
-            <Link href="/routines" className={styles.utilityLink} aria-label="日程">
+            <Link href="/routines" className={styles.utilityLink} aria-label="日程" title="日程">
               <CalendarDays size={21} />
             </Link>
-            <Link href="/events" className={styles.utilityLink} aria-label="事件">
+            <Link href="/events" className={styles.utilityLink} aria-label="周期任务" title="周期任务">
               <Bell size={21} />
             </Link>
-            <Link href="/notes" className={styles.utilityLink} aria-label="笔记">
+            <Link href="/notes" className={styles.utilityLink} aria-label="笔记" title="笔记">
               <Mail size={21} />
             </Link>
-            <Link href="/settings" className={styles.avatarLink}>
+            <Link href="/settings" className={styles.avatarLink} aria-label="账户设置" title={user?.name || "账户设置"}>
               <span className={styles.avatar}>
-                <Image src={avatarSrc} alt="" width={49} height={49} unoptimized />
+                <Image src={avatarSrc} alt="" width={30} height={30} unoptimized />
               </span>
-              <span>{user?.name || "旅行者"}</span>
             </Link>
           </div>
         </div>

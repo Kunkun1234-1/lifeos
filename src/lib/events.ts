@@ -90,7 +90,9 @@ async function computeMetric(
     case "principle_added":
       return prisma.principle.count({ where: { userId, createdAt: { gte: from, lte: to } } });
     case "note_added":
-      return prisma.note.count({ where: { userId, createdAt: { gte: from, lte: to } } });
+      return prisma.note.count({
+        where: { userId, deletedAt: null, createdAt: { gte: from, lte: to } },
+      });
     case "project_done":
       return prisma.project.count({ where: { userId, status: "done", completedAt: { gte: from, lte: to } } });
     case "goal_done":

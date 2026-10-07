@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./achievements": "./src/achievements.ts",
     "./goals": "./src/goals.ts",
+    "./milestones": "./src/milestones.ts",
+    "./periodic-tasks": "./src/periodic-tasks.ts",
     "./rewards": "./src/rewards.ts",
     "./tasks": "./src/tasks.ts"
   },

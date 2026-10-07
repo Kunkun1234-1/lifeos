@@ -1,0 +1,205 @@
+{
+  "source": "approved-inventory-sheet.png",
+  "items": [
+    {
+      "id": "gold",
+      "file": "items/gold.webp",
+      "sourceCrop": {
+        "left": 28,
+        "top": 35,
+        "width": 244,
+        "height": 203
+      }
+    },
+    {
+      "id": "gems",
+      "file": "items/gems.webp",
+      "sourceCrop": {
+        "left": 304,
+        "top": 35,
+        "width": 242,
+        "height": 203
+      }
+    },
+    {
+      "id": "fate",
+      "file": "items/fate.webp",
+      "sourceCrop": {
+        "left": 578,
+        "top": 35,
+        "width": 244,
+        "height": 203
+      }
+    },
+    {
+      "id": "freeze",
+      "file": "items/freeze.webp",
+      "sourceCrop": {
+        "left": 854,
+        "top": 35,
+        "width": 245,
+        "height": 203
+      }
+    },
+    {
+      "id": "moon-tea",
+      "file": "items/moon-tea.webp",
+      "sourceCrop": {
+        "left": 1130,
+        "top": 35,
+        "width": 249,
+        "height": 203
+      }
+    },
+    {
+      "id": "starlit-treat",
+      "file": "items/starlit-treat.webp",
+      "sourceCrop": {
+        "left": 28,
+        "top": 302,
+        "width": 244,
+        "height": 201
+      }
+    },
+    {
+      "id": "free-time-ticket",
+      "file": "items/free-time-ticket.webp",
+      "sourceCrop": {
+        "left": 304,
+        "top": 302,
+        "width": 242,
+        "height": 201
+      }
+    },
+    {
+      "id": "dream-rest",
+      "file": "items/dream-rest.webp",
+      "sourceCrop": {
+        "left": 578,
+        "top": 302,
+        "width": 244,
+        "height": 201
+      }
+    },
+    {
+      "id": "azure-book",
+      "file": "items/azure-book.webp",
+      "sourceCrop": {
+        "left": 854,
+        "top": 302,
+        "width": 245,
+        "height": 201
+      }
+    },
+    {
+      "id": "sakura-voucher",
+      "file": "items/sakura-voucher.webp",
+      "sourceCrop": {
+        "left": 1130,
+        "top": 302,
+        "width": 249,
+        "height": 201
+      }
+    },
+    {
+      "id": "cloud-healing",
+      "file": "items/cloud-healing.webp",
+      "sourceCrop": {
+        "left": 28,
+        "top": 571,
+        "width": 244,
+        "height": 195
+      }
+    },
+    {
+      "id": "crystal-tool",
+      "file": "items/crystal-tool.webp",
+      "sourceCrop": {
+        "left": 304,
+        "top": 571,
+        "width": 242,
+        "height": 195
+      }
+    },
+    {
+      "id": "horizon-map",
+      "file": "items/horizon-map.webp",
+      "sourceCrop": {
+        "left": 578,
+        "top": 571,
+        "width": 244,
+        "height": 195
+      }
+    },
+    {
+      "id": "artisan-gift",
+      "file": "items/artisan-gift.webp",
+      "sourceCrop": {
+        "left": 854,
+        "top": 571,
+        "width": 245,
+        "height": 195
+      }
+    },
+    {
+      "id": "aurora-workshop",
+      "file": "items/aurora-workshop.webp",
+      "sourceCrop": {
+        "left": 1130,
+        "top": 571,
+        "width": 249,
+        "height": 195
+      }
+    },
+    {
+      "id": "astral-pass",
+      "file": "items/astral-pass.webp",
+      "sourceCrop": {
+        "left": 28,
+        "top": 831,
+        "width": 244,
+        "height": 205
+      }
+    },
+    {
+      "id": "frame",
+      "file": "items/frame.webp",
+      "sourceCrop": {
+        "left": 304,
+        "top": 831,
+        "width": 242,
+        "height": 205
+      }
+    },
+    {
+      "id": "crown",
+      "file": "items/crown.webp",
+      "sourceCrop": {
+        "left": 578,
+        "top": 831,
+        "width": 244,
+        "height": 205
+      }
+    },
+    {
+      "id": "book",
+      "file": "items/book.webp",
+      "sourceCrop": {
+        "left": 854,
+        "top": 831,
+        "width": 245,
+        "height": 205
+      }
+    },
+    {
+      "id": "gift",
+      "file": "items/gift.webp",
+      "sourceCrop": {
+        "left": 1130,
+        "top": 831,
+        "width": 249,
+        "height": 205
+      }
+    }
+  ]
+}

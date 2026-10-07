@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { isDeepStrictEqual } from "node:util";
 import { prisma } from "@/lib/prisma";
 
 function jsonValue(value: unknown): Prisma.InputJsonValue {
@@ -22,7 +23,7 @@ export async function runAuditedAction<T>(input: {
   };
   const previous = await prisma.agentAction.findUnique({ where: key });
   if (previous) {
-    if (JSON.stringify(previous.arguments) !== JSON.stringify(jsonValue(input.arguments))) {
+    if (!isDeepStrictEqual(previous.arguments, jsonValue(input.arguments))) {
       throw new Error("This idempotency key was already used with different arguments");
     }
     if (previous.status === "succeeded" && previous.result !== null) {

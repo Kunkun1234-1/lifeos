@@ -63,8 +63,10 @@ model User {
 
   areas                   Area[]
   tasks                   Task[]
+  milestones              Milestone[]
   habits                  Habit[]
   routines                Routine[]
+  periodicTasks           PeriodicTask[]
   xpEntries               XpLedger[]
   currency                Currency?
   walletPools             WalletPool[]
@@ -166,6 +168,7 @@ model Area {
   tasks       Task[]
   habits      Habit[]
   routines    Routine[]
+  periodicTasks PeriodicTask[]
   goals       Goal[]
   projects    Project[]
   decisions   Decision[]
@@ -186,6 +189,8 @@ model Task {
   area      Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   projectId String?
   project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  milestoneId String?
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 
   title    String
   notes    String?
@@ -202,6 +207,7 @@ model Task {
 
   @@index([userId, status])
   @@index([userId, dueDate])
+  @@index([milestoneId])
 }
 
 model Habit {
@@ -282,6 +288,53 @@ model RoutineCompletion {
 
   @@unique([routineId, date])
   @@index([routineId, date])
+}
+
+enum PeriodicTaskFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model PeriodicTask {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areaId String?
+  area   Area?  @relation(fields: [areaId], references: [id], onDelete: SetNull)
+
+  title     String
+  notes     String?
+  frequency PeriodicTaskFrequency
+
+  xpReward   Int @default(5)
+  goldReward Int @default(2)
+
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  checkIns PeriodicTaskCheckIn[]
+
+  @@index([userId, frequency, archived])
+  @@index([areaId])
+}
+
+model PeriodicTaskCheckIn {
+  id     String       @id @default(cuid())
+  taskId String
+  task   PeriodicTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Snapshots keep historical reversals correct after task edits.
+  frequency   PeriodicTaskFrequency
+  periodKey   String
+  xpGranted   Int
+  goldGranted Int
+  areaId      String?
+  completedAt DateTime @default(now())
+
+  @@unique([taskId, frequency, periodKey])
+  @@index([taskId, completedAt])
 }
 
 // ============================================================
@@ -531,9 +584,35 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  milestones  Milestone[]
   tasks       Task[]
   linkedNotes Note[]
 
+  @@index([userId, status])
+}
+
+model Milestone {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title              String
+  notes              String?
+  acceptanceCriteria String?
+  status             String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  order              Int       @default(0)
+  startDate          DateTime?
+  deadline           DateTime?
+  completedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+
+  @@index([userId, projectId, order])
   @@index([userId, status])
 }
 
@@ -975,13 +1054,17 @@ model Note {
   // Free-form tags (comma-separated string for SQLite simplicity, parsed in code)
   tags String @default("")
 
-  pinned   Boolean @default(false)
-  archived Boolean @default(false)
+  pinned          Boolean   @default(false)
+  archived        Boolean   @default(false)
+  deletedAt       DateTime?
+  deletionBatchId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId, archived])
+  @@index([userId, deletedAt])
+  @@index([userId, deletionBatchId])
   @@index([userId, kind])
   @@index([userId, areaId])
   @@index([userId, projectId])

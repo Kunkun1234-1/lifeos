@@ -8,7 +8,7 @@
   --st-ink: #15231c;
   --st-muted: #65736c;
   --st-border: #d9dcc3;
-  min-height: calc(100vh - 117px);
+  min-height: calc(100vh - var(--app-header-height, 56px));
   padding: 18px 18px 28px;
   color: #18231f;
   background:

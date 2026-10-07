@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./areas": "./src/areas.ts",
     "./goals": "./src/goals.ts",
+    "./milestones": "./src/milestones.ts",
+    "./periodic-tasks": "./src/periodic-tasks.ts",
     "./tasks": "./src/tasks.ts"
   },
   "dependencies": {

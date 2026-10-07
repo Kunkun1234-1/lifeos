@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     where: {
       userId,
       archived,
+      deletedAt: null,
       ...(q
         ? {
             OR: [
@@ -33,7 +34,9 @@ export async function GET(req: Request) {
       pinned: true,
       archived: true,
       updatedAt: true,
-      _count: { select: { children: true } },
+      _count: {
+        select: { children: { where: { deletedAt: null } } },
+      },
     },
     orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
     take: 2000,

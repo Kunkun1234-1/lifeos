@@ -35,6 +35,7 @@ export async function provisionUserDefaults(userId: string): Promise<void> {
     }),
     prisma.area.count({ where: { userId } }),
     prisma.rewardItem.count({ where: { userId } }),
+    // Trashed pages still mean the knowledge base has been initialized.
     prisma.note.count({ where: { userId } }),
   ]);
 

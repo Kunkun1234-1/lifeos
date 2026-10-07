@@ -15,9 +15,11 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Plus,
+  Trash2,
   X,
 } from "lucide-react";
 import { PageTree } from "./page-tree";
+import { TrashPanel } from "./trash-panel";
 import {
   CommandPalette,
   type CommandAction,
@@ -28,6 +30,7 @@ import {
 } from "./workspace-chrome";
 import {
   useNotesTree,
+  useNotesTrash,
   useNote,
   useCreateNote,
   useUpdateNote,
@@ -50,6 +53,7 @@ const PageEditor = dynamic(
 
 type NotesWorkspaceProps = {
   initialId?: string | null;
+  initialTrash?: boolean;
 };
 
 const OPEN_TABS_KEY = "game-life-notes-open-tabs";
@@ -158,6 +162,8 @@ function EditorPaneHeader({
   onToggleLeft,
   onToggleRight,
   onOpenCommands,
+  onDelete,
+  deleting,
 }: {
   breadcrumbs: NoteTreeNodeDTO[];
   reading: boolean;
@@ -167,6 +173,8 @@ function EditorPaneHeader({
   onToggleLeft: () => void;
   onToggleRight: () => void;
   onOpenCommands: () => void;
+  onDelete?: () => void;
+  deleting: boolean;
 }) {
   return (
     <div className={styles.editorPaneHeader}>
@@ -179,6 +187,11 @@ function EditorPaneHeader({
         ))}
       </div>
       <div className={styles.editorModes}>
+        {onDelete ? (
+          <button type="button" title="移入垃圾桶" aria-label="移入垃圾桶" disabled={deleting} onClick={onDelete}>
+            <Trash2 size={16} />
+          </button>
+        ) : null}
         <button
           type="button"
           title={leftCollapsed ? "展开文件树" : "折叠文件树"}
@@ -209,14 +222,16 @@ function EditorPaneHeader({
   );
 }
 
-export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
+export function NotesWorkspace({ initialId = null, initialTrash = false }: NotesWorkspaceProps) {
   const router = useRouter();
   const [showArchived, setShowArchived] = useState(false);
+  const [showTrash, setShowTrash] = useState(initialTrash);
   const [selectedId, setSelectedId] = useState<string | null>(initialId);
   const [openTabs, setOpenTabs] = useState<string[]>(initialId ? [initialId] : []);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<NoteDTO | null>(null);
   const [saving, setSaving] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [explorerMode, setExplorerMode] = useState<ExplorerMode>("files");
   const [rightView, setRightView] = useState<RightPanelView>("links");
@@ -226,9 +241,12 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPatch = useRef<Record<string, unknown>>({});
+  const activeSaves = useRef(new Set<Promise<unknown>>());
+  const transitioningRef = useRef(false);
 
   const archived = showArchived ? ("1" as const) : ("0" as const);
   const { data: treeData, isLoading: treeLoading } = useNotesTree(archived);
+  const { data: trashedNotes } = useNotesTrash();
   const { data: note, isLoading: noteLoading } = useNote(selectedId);
   const { data: goals } = useGoals();
   const { data: projects } = useProjects();
@@ -271,16 +289,19 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
   }, [initialId, registerOpenTab]);
 
   useEffect(() => {
-    if (selectedId || treeLoading || flatNodes.length === 0) return;
+    if (showTrash || selectedId || treeLoading || flatNodes.length === 0) return;
     const firstPage = flatNodes.find((node) => node.kind !== "folder") ?? flatNodes[0];
     setSelectedId(firstPage.id);
     registerOpenTab(firstPage.id);
-  }, [selectedId, treeLoading, flatNodes, registerOpenTab]);
+  }, [showTrash, selectedId, treeLoading, flatNodes, registerOpenTab]);
 
   useEffect(() => {
     if (note) {
-      setDraft(note);
-      pendingPatch.current = {};
+      setDraft((previous) => {
+        // A refetch from an earlier save must not overwrite newer local edits.
+        const hasUnsavedChanges = activeSaves.current.size > 0 || Object.keys(pendingPatch.current).length > 0;
+        return previous?.id === note.id && hasUnsavedChanges ? previous : note;
+      });
     } else if (!selectedId) {
       setDraft(null);
     }
@@ -314,13 +335,19 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
     if (Object.keys(patch).length === 0) return;
     pendingPatch.current = {};
     setSaving(true);
+    const save = updateNote.mutateAsync({ id: selectedId, body: patch });
+    activeSaves.current.add(save);
     try {
-      await updateNote.mutateAsync({ id: selectedId, body: patch });
+      await save;
+      return true;
     } catch (err) {
+      pendingPatch.current = { ...patch, ...pendingPatch.current };
       console.error(err);
       alert(err instanceof Error ? err.message : "保存失败");
+      return false;
     } finally {
-      setSaving(false);
+      activeSaves.current.delete(save);
+      setSaving(activeSaves.current.size > 0);
     }
   }, [selectedId, updateNote]);
 
@@ -343,11 +370,13 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
 
   const selectPage = useCallback(
     (id: string) => {
+      if (transitioningRef.current) return;
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
         void flushSave();
       }
       registerOpenTab(id);
+      setShowTrash(false);
       setSelectedId(id);
       setReading(false);
       router.replace(`/notes/${id}`, { scroll: false });
@@ -357,7 +386,7 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
 
   const handleCreate = useCallback(
     async (parentId: string | null, kind: "note" | "folder" = "note") => {
-      if (createNote.isPending) return;
+      if (createNote.isPending || transitioningRef.current) return;
       setCreateError(null);
       try {
         const isFolder = kind === "folder";
@@ -379,6 +408,7 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
   );
 
   const handleMove = async (id: string, parentId: string | null, position: number) => {
+    if (transitioningRef.current) return;
     try {
       await moveNote.mutateAsync({ id, parentId, position });
     } catch (err) {
@@ -386,30 +416,74 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!draft) return;
-    const descendants = countNoteDescendants(flatNodes, draft.id);
+  const handleDelete = async (id?: string) => {
+    const target = id ? flatNodes.find((node) => node.id === id) : draft;
+    if (!target || deleteNote.isPending || (!id && showTrash) || transitioningRef.current) return;
+    const descendants = countNoteDescendants(flatNodes, target.id);
     const message =
-      descendants > 0
-        ? `确定删除「${draft.title}」及其 ${descendants} 个子页面？此操作不可撤销。`
-        : `确定删除「${draft.title}」？此操作不可撤销。`;
+      descendants > 0 || target.kind === "folder"
+        ? `将「${target.title}」及其子页面移入垃圾桶？之后可以从垃圾桶恢复。`
+        : `将「${target.title}」移入垃圾桶？之后可以从垃圾桶恢复。`;
     if (!window.confirm(message)) return;
+    transitioningRef.current = true;
+    setTransitioning(true);
     try {
-      await deleteNote.mutateAsync(draft.id);
-      const next = flatNodes.find((node) => node.id !== draft.id && node.parentId !== draft.id);
-      if (next) selectPage(next.id);
-      else {
-        setSelectedId(null);
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      await Promise.all(activeSaves.current);
+      if ((await flushSave()) === false) return;
+      const result = await deleteNote.mutateAsync(target.id);
+      const deletedIds = new Set(result.deletedIds);
+      const nextTabs = openTabs.filter((id) => !deletedIds.has(id));
+      setOpenTabs(nextTabs);
+      writeOpenTabs(nextTabs);
+      pendingPatch.current = {};
+      if (selectedId && deletedIds.has(selectedId)) {
         setDraft(null);
-        router.replace("/notes", { scroll: false });
+        const next = flatNodes.find((node) => !deletedIds.has(node.id));
+        transitioningRef.current = false;
+        if (next) selectPage(next.id);
+        else {
+          setSelectedId(null);
+          router.replace("/notes", { scroll: false });
+        }
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "删除失败");
+    } finally {
+      transitioningRef.current = false;
+      setTransitioning(false);
     }
   };
 
+  const openTrash = useCallback(async () => {
+    if (transitioningRef.current) return;
+    transitioningRef.current = true;
+    setTransitioning(true);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    try {
+      await Promise.all(activeSaves.current);
+      if ((await flushSave()) === false) return;
+      setShowTrash(true);
+      setSelectedId(null);
+      setDraft(null);
+      setRightCollapsed(true);
+      if (window.innerWidth < 820) setLeftCollapsed(true);
+      router.replace("/notes/trash", { scroll: false });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      transitioningRef.current = false;
+      setTransitioning(false);
+    }
+  }, [flushSave, router]);
+
+  const leaveTrash = () => {
+    setShowTrash(false);
+    router.replace("/notes", { scroll: false });
+  };
+
   const patchDraft = (patch: Partial<NoteDTO> & Record<string, unknown>) => {
-    if (!draft) return;
+    if (!draft || transitioningRef.current) return;
     const changedPatch = Object.fromEntries(
       Object.entries(patch).filter(
         ([key, value]) => !valuesMatch((draft as unknown as Record<string, unknown>)[key], value),
@@ -429,6 +503,7 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
   };
 
   const closeTab = (id: string) => {
+    if (transitioningRef.current) return;
     const index = openTabs.indexOf(id);
     const nextTabs = openTabs.filter((tabId) => tabId !== id);
     setOpenTabs(nextTabs);
@@ -451,6 +526,12 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
 
   const commands = useMemo<CommandAction[]>(
     () => [
+      {
+        id: "trash",
+        label: "打开垃圾桶",
+        detail: "恢复或彻底删除页面和文件夹",
+        run: () => void openTrash(),
+      },
       {
         id: "new-note",
         label: "新建页面",
@@ -489,13 +570,15 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
         id: "archive",
         label: showArchived ? "查看活动页面" : "查看归档页面",
         run: () => {
+          router.replace("/notes", { scroll: false });
           setShowArchived((value) => !value);
+          setShowTrash(false);
           setSelectedId(null);
           setDraft(null);
         },
       },
     ],
-    [handleCreate, leftCollapsed, reading, rightCollapsed, showArchived, showGraph],
+    [handleCreate, leftCollapsed, reading, rightCollapsed, showArchived, showGraph, openTrash, router],
   );
 
   const empty = !treeLoading && flatNodes.length === 0;
@@ -515,16 +598,25 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
           flatNodes={flatNodes}
           selectedId={selectedId}
           showArchived={showArchived}
+          showTrash={showTrash}
+          trashCount={trashedNotes?.length ?? 0}
+          onOpenTrash={() => void openTrash()}
           mode={explorerMode}
-          onModeChange={setExplorerMode}
+          onModeChange={(mode) => {
+            setExplorerMode(mode);
+            if (showTrash) leaveTrash();
+          }}
           onCollapse={() => setLeftCollapsed(true)}
           onSelect={selectPage}
           onCreateRoot={() => void handleCreate(null, "note")}
           onCreateFolderRoot={() => void handleCreate(null, "folder")}
           onCreateChild={(parentId) => void handleCreate(parentId, "note")}
           onCreateFolderChild={(parentId) => void handleCreate(parentId, "folder")}
+          onDelete={(id) => void handleDelete(id)}
+          deleting={deleteNote.isPending || transitioning}
           onMove={(id, parentId, position) => void handleMove(id, parentId, position)}
           onToggleArchived={() => {
+            if (showTrash) leaveTrash();
             setShowArchived((value) => !value);
             setSelectedId(null);
             setDraft(null);
@@ -551,10 +643,14 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
             onToggleLeft={() => setLeftCollapsed((value) => !value)}
             onToggleRight={() => setRightCollapsed((value) => !value)}
             onOpenCommands={() => setCommandOpen(true)}
+            onDelete={draft && !showTrash ? () => void handleDelete() : undefined}
+            deleting={deleteNote.isPending || transitioning}
           />
 
           <main className={styles.main}>
-            {empty ? (
+            {showTrash ? (
+              <TrashPanel onBack={leaveTrash} />
+            ) : empty ? (
               <div className={styles.emptyState}>
                 <div className={styles.emptyMark}>
                   <FilePlus size={26} />
@@ -606,7 +702,7 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
                   title={draft.title}
                   body={draft.body}
                   reading={reading}
-                  disabled={draft.archived}
+                  disabled={draft.archived || transitioning}
                   onTitleChange={(title) => patchDraft({ title })}
                   onBodyChange={(body) => patchDraft({ body })}
                 />
@@ -621,7 +717,7 @@ export function NotesWorkspace({ initialId = null }: NotesWorkspaceProps) {
         </section>
 
         <RightSidebar
-          note={draft}
+          note={showTrash ? null : draft}
           flatNodes={flatNodes}
           goals={goals ?? []}
           projects={projects ?? []}

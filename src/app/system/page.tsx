@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -19,13 +20,18 @@ import {
   Gift,
   GitBranch,
   Hammer,
+  LayoutGrid,
   Library,
+  List,
+  Search,
   ScrollText,
   Sparkles,
   Target,
   Trophy,
 } from "lucide-react";
+import { FEATURE_ART } from "@/lib/art-assets";
 import { cn } from "@/lib/utils";
+import styles from "./page.module.css";
 
 type SystemModule = {
   href: string;
@@ -35,6 +41,7 @@ type SystemModule = {
   group: string;
   icon: LucideIcon;
   tone: string;
+  art?: string;
 };
 
 const MAIN_MODULES: SystemModule[] = [
@@ -46,6 +53,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "执行",
     icon: CheckSquare,
     tone: "#d9b963",
+    art: FEATURE_ART.tasks,
   },
   {
     href: "/habits",
@@ -55,6 +63,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "执行",
     icon: Flame,
     tone: "#c9725e",
+    art: FEATURE_ART.habits,
   },
   {
     href: "/routines",
@@ -64,6 +73,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "执行",
     icon: CalendarDays,
     tone: "#76b6d3",
+    art: FEATURE_ART.routines,
   },
   {
     href: "/review",
@@ -73,6 +83,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "执行",
     icon: BookOpen,
     tone: "#b9d58a",
+    art: FEATURE_ART.review,
   },
   {
     href: "/goals",
@@ -82,6 +93,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "战略",
     icon: Target,
     tone: "#e2c878",
+    art: FEATURE_ART.goals,
   },
   {
     href: "/projects",
@@ -91,6 +103,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "战略",
     icon: Hammer,
     tone: "#d3a06f",
+    art: FEATURE_ART.projects,
   },
   {
     href: "/strategy",
@@ -100,6 +113,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "战略",
     icon: GitBranch,
     tone: "#8ac6b1",
+    art: FEATURE_ART.strategy,
   },
   {
     href: "/notes",
@@ -109,6 +123,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "知识",
     icon: Library,
     tone: "#cbb7ef",
+    art: FEATURE_ART.notes,
   },
   {
     href: "/analytics",
@@ -118,6 +133,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "洞察",
     icon: Activity,
     tone: "#79c1ef",
+    art: FEATURE_ART.analytics,
   },
   {
     href: "/rewards",
@@ -127,6 +143,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "奖励",
     icon: Gift,
     tone: "#e1bd67",
+    art: FEATURE_ART.rewards,
   },
   {
     href: "/gacha",
@@ -136,6 +153,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "奖励",
     icon: Sparkles,
     tone: "#d9a3e8",
+    art: FEATURE_ART.gacha,
   },
   {
     href: "/inventory",
@@ -145,6 +163,7 @@ const MAIN_MODULES: SystemModule[] = [
     group: "奖励",
     icon: Backpack,
     tone: "#d4a94d",
+    art: FEATURE_ART.inventory,
   },
 ];
 
@@ -178,9 +197,9 @@ const QUICK_MODULES: SystemModule[] = [
   },
   {
     href: "/events",
-    cn: "活动",
-    en: "Events",
-    desc: "限时事件",
+    cn: "周期任务",
+    en: "Periodic Tasks",
+    desc: "每日、每周、每月打卡",
     group: "奖励",
     icon: CalendarHeart,
     tone: "#d88a8a",
@@ -215,155 +234,132 @@ const QUICK_MODULES: SystemModule[] = [
 ];
 
 export default function SystemPage() {
-  const [activeModule, setActiveModule] = useState<SystemModule>(MAIN_MODULES[0]);
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const query = search.trim().toLocaleLowerCase();
+  const matches = (item: SystemModule) =>
+    `${item.cn} ${item.en} ${item.desc} ${item.group}`
+      .toLocaleLowerCase()
+      .includes(query);
+  const modules = MAIN_MODULES.filter(matches);
+  const quickModules = QUICK_MODULES.filter(matches);
 
   return (
-    <div className="relative mx-auto min-h-[calc(100vh-82px)] max-w-[1800px] px-4 py-3 md:px-8">
-      <section className="system-terminal-shell grid min-h-[calc(100vh-106px)] grid-cols-1 gap-4 p-3">
-        <div className="flex min-w-0 flex-col gap-4">
-          <header className="flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between">
+    <div className={styles.page}>
+      <section className={styles.catalog} aria-labelledby="system-catalog-title">
+        <div className={styles.catalogHead}>
+          <div className={styles.catalogIntro}>
+            <span className={styles.catalogMark} aria-hidden="true">
+              <LayoutGrid size={29} strokeWidth={2} />
+            </span>
             <div>
-              <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center text-[#249d6d]">
-                  <CompassMark />
-                </span>
-                <div>
-                  <h1 className="font-display text-[26px] font-bold tracking-[0.16em] text-[#15231c] md:text-[30px]">
-                    全部功能
-                  </h1>
-                  <div className="font-display-en text-[10px] tracking-[0.35em] text-[#748078]">
-                    All Features
-                  </div>
-                </div>
-              </div>
-              <p className="mt-2 max-w-2xl font-display text-[12px] leading-6 text-[#65736c]">
-                将任务、日程、战略、知识、奖励和数据收束到同一个终端视图。选择任意模块进入对应系统。
-              </p>
+              <h2 id="system-catalog-title">全部功能</h2>
+              <p>在这里找到任务、知识、成长和奖励等全部模块，选择你想进入的功能，开始今天的成长之旅。</p>
             </div>
-
-            <div className="flex items-center gap-2 self-start border border-[#9db887] bg-[#d7e5c2]/85 px-3 py-2 font-display-en text-[10px] tracking-[0.22em] text-[#2f4a3b] md:self-auto">
-              <span className="h-2 w-2 rounded-full bg-[#249d6d] shadow-[0_0_10px_rgba(36,157,109,0.45)]" />
-              System Online
-            </div>
-          </header>
-
-          <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-            {MAIN_MODULES.map((item) => (
-              <ModuleCard
-                key={item.href}
-                item={item}
-                active={activeModule.href === item.href}
-                onActivate={() => setActiveModule(item)}
+          </div>
+          <div className={styles.controls}>
+            <label className={styles.searchField}>
+              <Search size={19} aria-hidden="true" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="搜索功能模块…"
+                aria-label="搜索功能模块"
               />
+            </label>
+            <div className={styles.viewSwitch} role="group" aria-label="显示方式">
+              <button
+                type="button"
+                className={cn(styles.viewButton, view === "grid" && styles.viewButtonActive)}
+                aria-label="网格视图"
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                type="button"
+                className={cn(styles.viewButton, view === "list" && styles.viewButtonActive)}
+                aria-label="列表视图"
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                <List size={19} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {modules.length > 0 ? (
+          <div className={cn(styles.moduleGrid, view === "list" && styles.moduleList)}>
+            {modules.map((item) => (
+              <ModuleCard key={item.href} item={item} list={view === "list"} />
             ))}
           </div>
+        ) : null}
 
-          <footer className="system-quickdock">
-            <div className="hidden min-w-[150px] border-r border-[#b7c9a0] pr-5 md:block">
-              <div className="font-display text-[16px] font-bold tracking-[0.14em] text-[#15231c]">
-                快捷入口
-              </div>
-              <div className="font-display-en text-[9px] tracking-[0.24em] text-[#5f7166]">
-                Quick Access
-              </div>
+        {quickModules.length > 0 ? (
+          <section className={styles.moreSection} aria-labelledby="more-features-title">
+            <div className={styles.moreHead}>
+              <h3 id="more-features-title">更多功能</h3>
+              <span>继续探索你的成长工具</span>
             </div>
-
-            <div className="grid flex-1 grid-cols-4 gap-2 sm:grid-cols-7">
-              {QUICK_MODULES.map((item) => {
+            <div className={styles.moreGrid}>
+              {quickModules.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onMouseEnter={() => setActiveModule(item)}
-                    onFocus={() => setActiveModule(item)}
-                    className="group flex min-w-0 flex-col items-center gap-2 border border-transparent px-2 py-2 text-center transition hover:border-[#8faf6a] hover:bg-[#cfe3b8] focus:outline-none focus-visible:border-[#249d6d]"
-                  >
-                    <Icon
-                      size={24}
-                      className="text-[#31433a] transition group-hover:-translate-y-0.5 group-hover:text-[#096149]"
-                      strokeWidth={1.7}
-                    />
-                    <span className="w-full truncate font-display text-[12px] text-[#3d5246]">
-                      {item.cn}
+                  <Link key={item.href} href={item.href} className={styles.moreCard}>
+                    <span className={styles.moreIcon} style={{ color: item.tone }}>
+                      <Icon size={20} strokeWidth={1.9} aria-hidden="true" />
                     </span>
+                    <span className={styles.moreCopy}>
+                      <strong>{item.cn}</strong>
+                      <small>{item.desc}</small>
+                    </span>
+                    <ChevronRight size={16} className={styles.moreArrow} aria-hidden="true" />
                   </Link>
                 );
               })}
             </div>
+          </section>
+        ) : null}
 
-            <div className="hidden w-[260px] border-l border-[#b7c9a0] pl-5 xl:block">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate font-display text-[14px] font-bold text-[#15231c]">
-                    {activeModule.cn}
-                  </div>
-                  <div className="truncate text-[12px] text-[#4f6357]">
-                    {activeModule.desc}
-                  </div>
-                </div>
-                <Link
-                  href={activeModule.href}
-                  className="grid h-9 w-9 shrink-0 place-items-center border border-[#8faf6a] bg-[#cfe3b8] text-[#096149] transition hover:border-[#249d6d] hover:bg-[#b9d6a4]"
-                  title={`进入${activeModule.cn}`}
-                >
-                  <ChevronRight size={17} />
-                </Link>
-              </div>
-            </div>
-          </footer>
-        </div>
+        {modules.length === 0 && quickModules.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p>没有找到相关功能。</p>
+            <button type="button" onClick={() => setSearch("")}>清除搜索</button>
+          </div>
+        ) : null}
       </section>
     </div>
   );
 }
 
-function ModuleCard({
-  item,
-  active,
-  onActivate,
-}: {
-  item: SystemModule;
-  active: boolean;
-  onActivate: () => void;
-}) {
+function ModuleCard({ item, list }: { item: SystemModule; list: boolean }) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
-      onMouseEnter={onActivate}
-      onFocus={onActivate}
-      className={cn(
-        "system-module-card group min-h-[128px] p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#249d6d]/50 md:min-h-[138px] xl:min-h-[150px]",
-        active && "is-active",
-      )}
+      className={cn(styles.moduleCard, list && styles.moduleCardList)}
       style={{ "--module-tone": item.tone } as CSSProperties}
     >
-      <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-        <div className="system-module-orbit">
-          <Icon size={36} strokeWidth={1.45} />
-        </div>
-        <div className="mt-3 font-display text-[17px] font-bold tracking-[0.1em] text-[#15231c] md:text-[19px]">
-          {item.cn}
-        </div>
-        <div className="mt-1 font-display-en text-[9px] tracking-[0.24em] text-[#748078]">
-          {item.en}
-        </div>
-        <p className="mt-1.5 line-clamp-2 text-[11px] leading-5 text-[#65736c]">
-          {item.desc}
-        </p>
-      </div>
+      {item.art ? (
+        <Image
+          src={item.art}
+          alt=""
+          width={128}
+          height={128}
+          className={styles.moduleArt}
+        />
+      ) : null}
+      <span className={styles.moduleIcon} aria-hidden="true"><Icon size={25} strokeWidth={1.9} /></span>
+      <span className={styles.moduleCopy}>
+        <strong>{item.cn}</strong>
+        <span className={styles.moduleEnglish}>{item.en}</span>
+        <span className={styles.moduleDescription}>{item.desc}</span>
+      </span>
+      <span className={styles.moduleArrow} aria-hidden="true"><ChevronRight size={21} strokeWidth={2.1} /></span>
     </Link>
-  );
-}
-
-function CompassMark() {
-  return (
-    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-      <path d="M17 1.8l3.7 11.5L32.2 17l-11.5 3.7L17 32.2l-3.7-11.5L1.8 17l11.5-3.7L17 1.8z" stroke="currentColor" strokeWidth="1.1" />
-      <path d="M17 8.4v17.2M8.4 17h17.2" stroke="currentColor" strokeWidth="0.8" opacity="0.55" />
-      <circle cx="17" cy="17" r="12.2" stroke="currentColor" strokeWidth="0.8" opacity="0.5" />
-      <circle cx="17" cy="17" r="2" fill="currentColor" />
-    </svg>
   );
 }

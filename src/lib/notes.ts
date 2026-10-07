@@ -20,6 +20,7 @@ type DBNote = {
   tags: string;
   pinned: boolean;
   archived: boolean;
+  deletedAt?: Date | null;
   areaId: string | null;
   area: { id: string; name: string; icon: string; color: string } | null;
   projectId: string | null;
@@ -118,6 +119,7 @@ export function serializeNote(n: DBNote): NoteDTO {
     tags: tagsFromString(n.tags),
     pinned: n.pinned,
     archived: n.archived,
+    deletedAt: n.deletedAt?.toISOString() ?? null,
     areaId: n.areaId,
     area: n.area,
     projectId: n.projectId,
@@ -243,4 +245,93 @@ export function countNoteDescendants(
     if (kids) stack.push(...kids);
   }
   return count;
+}
+
+export type NoteTrashNode = {
+  id: string;
+  parentId: string | null;
+  deletedAt: Date | null;
+  deletionBatchId: string | null;
+};
+
+export type NoteRestorePlan = {
+  restoredIds: string[];
+  detachRootIds: string[];
+};
+
+/** Return the root and every physical descendant, once, in parent-first order. */
+export function collectNoteSubtreeIds(
+  nodes: Pick<NoteTrashNode, "id" | "parentId">[],
+  rootId: string
+): string[] {
+  const byId = new Set(nodes.map((node) => node.id));
+  if (!byId.has(rootId)) return [];
+
+  const childrenOf = new Map<string, string[]>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    const children = childrenOf.get(node.parentId) ?? [];
+    children.push(node.id);
+    childrenOf.set(node.parentId, children);
+  }
+
+  const result: string[] = [];
+  const seen = new Set<string>();
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+    queue.push(...(childrenOf.get(id) ?? []));
+  }
+  return result;
+}
+
+/** Select only currently live rows so an older trash batch is never overwritten. */
+export function planNoteSoftDelete(nodes: NoteTrashNode[], rootId: string): string[] {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  return collectNoteSubtreeIds(nodes, rootId).filter((id) => {
+    const node = byId.get(id);
+    return node?.deletedAt === null;
+  });
+}
+
+/**
+ * Restore the selected subtree within one deletion batch. Its restored roots are
+ * detached only when their original parent remains deleted, so valid tree links
+ * and sibling order survive without resurrecting ancestors or sibling branches.
+ */
+export function planNoteRestore(nodes: NoteTrashNode[], selectedId: string): NoteRestorePlan {
+  const selected = nodes.find((node) => node.id === selectedId);
+  if (!selected?.deletedAt) return { restoredIds: [], detachRootIds: [] };
+
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const restoredIds = collectNoteSubtreeIds(nodes, selectedId).filter((id) => {
+    const node = byId.get(id);
+    if (!node?.deletedAt) return false;
+    return selected.deletionBatchId
+      ? node.deletionBatchId === selected.deletionBatchId
+      : node.id === selected.id;
+  });
+  const restoredSet = new Set(restoredIds);
+  const detachRootIds = restoredIds.filter((id) => {
+    const node = byId.get(id);
+    if (!node?.parentId || restoredSet.has(node.parentId)) return false;
+    const parent = byId.get(node.parentId);
+    return !parent || parent.deletedAt !== null;
+  });
+
+  return { restoredIds, detachRootIds };
+}
+
+/** Permanent removal is valid only when the entire physical subtree is trashed. */
+export function planNotePermanentDelete(nodes: NoteTrashNode[], rootId: string): string[] {
+  const ids = collectNoteSubtreeIds(nodes, rootId);
+  if (ids.length === 0) return [];
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  if (ids.some((id) => byId.get(id)?.deletedAt === null)) {
+    throw new Error("ACTIVE_NOTE_IN_SUBTREE");
+  }
+  return ids;
 }

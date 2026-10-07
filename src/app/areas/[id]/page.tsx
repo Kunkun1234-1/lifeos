@@ -401,7 +401,7 @@ function getAreaMeta(area: AreaDTO) {
     en: area.name,
     label: "自定义领域",
     focus: "当前领域下的目标、项目、任务与行为记录",
-    art: "/lifeos/module_academics.png",
+    art: "/art-packs/legacy-lifeos/lifeos/module_academics.png",
     accentVar: "var(--gold)",
   };
 }

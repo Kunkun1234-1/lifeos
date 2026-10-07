@@ -4,7 +4,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,7 +29,15 @@ import type {
   InventoryRewardInstanceDTO,
   TitleDTO,
 } from "@/lib/types";
+import {
+  isArtPackItemUrl,
+  ITEM_ART,
+  normalizeBuiltInItemArtUrl,
+} from "@/lib/art-assets";
+import { normalizeGachaImageUrl } from "@/lib/gacha-assets";
 import { cn } from "@/lib/utils";
+import { ItemDetailHero, ItemTile, rewardGalleryRarity } from "@/components/item-gallery";
+import gallery from "@/components/item-gallery.module.css";
 import styles from "./page.module.css";
 
 type UiCategory = "all" | "resource" | "item" | "reward" | "collect";
@@ -72,13 +79,13 @@ const TABS: Array<{ key: UiCategory; label: string }> = [
 
 const RARITY_META: Record<
   DisplayRarity,
-  { label: string; color: string; glow: string }
+  { label: string }
 > = {
-  common: { label: "普通", color: "#8a918c", glow: "rgba(138, 145, 140, 0.28)" },
-  good: { label: "优良", color: "#249d6d", glow: "rgba(36, 157, 109, 0.28)" },
-  rare: { label: "稀有", color: "#3b82c4", glow: "rgba(59, 130, 196, 0.3)" },
-  epic: { label: "史诗", color: "#8b6bb8", glow: "rgba(139, 107, 184, 0.3)" },
-  legendary: { label: "传说", color: "#c9902c", glow: "rgba(201, 144, 44, 0.3)" },
+  common: { label: "普通" },
+  good: { label: "优良" },
+  rare: { label: "稀有" },
+  epic: { label: "史诗" },
+  legendary: { label: "传说" },
 };
 
 const REWARD_STATUS_LABEL: Record<InventoryRewardInstanceDTO["status"], string> = {
@@ -121,27 +128,18 @@ function mapTitleTier(tier: string): DisplayRarity {
 function thematicIcon(kind: InventoryItem["kind"]) {
   switch (kind) {
     case "resource":
-      return "/life-game/items/fantasy-gold.webp";
+      return ITEM_ART.gold;
     case "reward":
-      return "/life-game/items/fantasy-gift.webp";
+      return ITEM_ART.gift;
     case "equipment":
-      return "/life-game/items/fantasy-frame.webp";
+      return ITEM_ART.frame;
     case "title":
-      return "/life-game/items/fantasy-crown.webp";
+      return ITEM_ART.crown;
     case "achievement":
-      return "/life-game/items/fantasy-book.webp";
+      return ITEM_ART.book;
     default:
       return null;
   }
-}
-
-function isThematicAsset(src: string | null | undefined) {
-  if (!src) return false;
-  return (
-    src.startsWith("/life-game/") ||
-    src.startsWith("/gacha/items/") ||
-    src.endsWith(".svg")
-  );
 }
 
 type InventoryData = NonNullable<ReturnType<typeof useInventory>["data"]>;
@@ -150,9 +148,13 @@ function resolveItemImage(
   kind: InventoryItem["kind"],
   imageSrc: string | null | undefined,
   resourceKey?: "gold" | "gems" | "fate" | "freeze",
+  rewardName?: string,
 ) {
-  if (resourceKey) return `/life-game/items/fantasy-${resourceKey}.webp`;
-  if (isThematicAsset(imageSrc)) return imageSrc!;
+  if (resourceKey) return ITEM_ART[resourceKey];
+  const normalized = kind === "reward"
+    ? normalizeGachaImageUrl(imageSrc, rewardName)
+    : normalizeBuiltInItemArtUrl(imageSrc);
+  if (normalized) return normalized;
   return thematicIcon(kind) ?? null;
 }
 
@@ -285,7 +287,7 @@ function buildItems(data: InventoryData): InventoryItem[] {
       weight: Math.max(1, Math.round((reward.weight || 10) / 10)),
       equipped: false,
       usable,
-      imageSrc: resolveItemImage("reward", reward.imageUrl),
+      imageSrc: resolveItemImage("reward", reward.imageUrl, undefined, reward.name),
       emoji: reward.emoji || "🎁",
       effects: [
         row.status === "pending_fulfillment"
@@ -556,8 +558,8 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.topBar}>
+    <div className={cn(styles.page, gallery.page)}>
+      <div className={cn(styles.topBar, gallery.topBar)}>
         <div className={styles.tabs} role="tablist" aria-label="物品分类">
           {TABS.map((tab) => (
             <button
@@ -576,7 +578,7 @@ export default function InventoryPage() {
           ))}
         </div>
 
-        <div className={styles.filterStrip}>
+        <div className={cn(styles.filterStrip, gallery.filterStrip)}>
           <div className={styles.filterLeft}>
             <input
               type="search"
@@ -613,7 +615,7 @@ export default function InventoryPage() {
           </div>
 
           <div className={styles.filterRight}>
-            <span className={styles.capacity}>
+            <span className={cn(styles.capacity, gallery.summary)}>
               显示 {filtered.length} 组 · 总计{" "}
               <strong>
                 {usedSlots}
@@ -636,9 +638,9 @@ export default function InventoryPage() {
         <div className={styles.error}>{(error as Error).message}</div>
       ) : (
         <>
-          <div className={styles.mainRow}>
-            <section className={styles.gridPane}>
-              <div className={styles.grid}>
+          <div className={gallery.mainRow}>
+            <section className={gallery.gridPane} aria-label="背包物品">
+              <div className={gallery.grid}>
                 {isLoading ? (
                   <div className={styles.loading}>加载中…</div>
                 ) : filtered.length === 0 ? (
@@ -832,37 +834,18 @@ function ItemCard({
 }) {
   const rarity = RARITY_META[item.rarity];
   return (
-    <button
-      type="button"
+    <ItemTile
+      name={item.name}
+      subtitle={item.reward ? REWARD_STATUS_LABEL[item.reward.status] : rarity.label}
+      rarity={item.reward ? rewardGalleryRarity(item.reward.reward.tier) : item.rarity}
+      selected={selected}
+      amount={`×${formatQty(item.quantity)}`}
+      amountLabel={`数量 ${formatQty(item.quantity)}`}
+      badge={showEquipMark ? "E" : item.reward ? REWARD_STATUS_LABEL[item.reward.status] : undefined}
       onClick={onClick}
-      className={cn(styles.card, selected && styles.cardSelected)}
-      style={
-        {
-          "--rarity-color": rarity.color,
-          "--rarity-glow": rarity.glow,
-        } as CSSProperties
-      }
     >
-      {showEquipMark && (
-        <span
-          className={styles.cardEquip}
-          title={item.equipped ? "已装备" : "在快捷栏中"}
-        >
-          E
-        </span>
-      )}
-      <span className={styles.cardQty}>x{formatQty(item.quantity)}</span>
-      <div className={styles.cardVisual}>
-        <ItemVisual item={item} size={96} />
-      </div>
-      <div className={styles.cardMeta}>
-        <span className={styles.cardName}>{item.name}</span>
-        <span className={styles.cardRarity}>
-          {rarity.label}
-          {item.reward && ` · ${REWARD_STATUS_LABEL[item.reward.status]}`}
-        </span>
-      </div>
-    </button>
+      <ItemVisual item={item} size={96} />
+    </ItemTile>
   );
 }
 
@@ -893,7 +876,7 @@ function DetailPanel({
 
   if (!item) {
     return (
-      <aside className={styles.detail}>
+      <aside className={gallery.detail} aria-label="物品详情">
         <div className={styles.detailEmpty}>选择一个物品查看详情。</div>
       </aside>
     );
@@ -943,31 +926,26 @@ function DetailPanel({
       : "放入快捷栏";
 
   return (
-    <aside className={styles.detail}>
-      <div className={styles.detailHead}>
-        <div>
-          <h2 className={styles.detailTitle}>{item.name}</h2>
-          <span
-            className={styles.detailRarityTag}
-            style={{ "--rarity-color": rarity.color } as CSSProperties}
+    <aside className={gallery.detail} aria-label="物品详情">
+      <ItemDetailHero
+        title={item.name}
+        subtitle={`${item.typeLabel} · ${rarity.label}${item.reward ? ` · ${REWARD_STATUS_LABEL[item.reward.status]}` : ""}`}
+        rarity={item.reward ? rewardGalleryRarity(item.reward.reward.tier) : item.rarity}
+        action={
+          <button
+            type="button"
+            className={styles.detailLock}
+            title={locked ? "解锁操作" : "锁定操作"}
+            aria-label={locked ? "解锁操作" : "锁定操作"}
+            onClick={onToggleLock}
           >
-            {rarity.label}
-          </span>
-        </div>
-        <button
-          type="button"
-          className={styles.detailLock}
-          title={locked ? "解锁操作" : "锁定操作"}
-          onClick={onToggleLock}
-        >
-          <Lock size={14} />
-        </button>
-      </div>
-
-      <div className={styles.detailPreviewRow}>
-        <div className={styles.detailThumb}>
-          <ItemVisual item={item} size={88} />
-        </div>
+            <Lock size={14} />
+          </button>
+        }
+      >
+        <ItemVisual item={item} size={160} />
+      </ItemDetailHero>
+      <div className={gallery.detailBody}>
         <div className={styles.detailStats}>
           <div className={styles.detailStat}>
             <span className={styles.detailStatLabel}>
@@ -990,85 +968,85 @@ function DetailPanel({
             <span className={styles.detailStatValue}>{item.weight}</span>
           </div>
         </div>
-      </div>
 
-      <p className={styles.detailDesc}>{item.description}</p>
+        <p className={styles.detailDesc}>{item.description}</p>
 
-      <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>道具效果</h3>
-        <ul className={styles.effectList}>
-          {item.effects.map((effect) => (
-            <li key={effect}>{effect}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>
-          属性加成
-          {isRealEquip ? <span>（装备后生效）</span> : null}
-        </h3>
-        <div className={styles.attrGrid}>
-          {item.attrs.map((attr) => (
-            <div key={`${attr.label}-${attr.value}`} className={styles.attrItem}>
-              <span
-                className={cn(
-                  styles.attrDot,
-                  attr.tone === "green" && styles.attrDotAlt,
-                )}
-              />
-              {attr.label} {attr.value}
-            </div>
-          ))}
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>道具效果</h3>
+          <ul className={styles.effectList}>
+            {item.effects.map((effect) => (
+              <li key={effect}>{effect}</li>
+            ))}
+          </ul>
         </div>
-      </div>
 
-      <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>获取途径</h3>
-        <p className={styles.obtainText}>{item.obtain}</p>
-      </div>
-
-      {item.kind === "reward" &&
-        item.reward?.status === "available" &&
-        !locked && (
-          <div className={styles.section}>
-            <button
-              type="button"
-              className={styles.btnSort}
-              style={{ width: "100%", height: 34 }}
-              onClick={() => item.reward && onRewardAction(item.reward, "discard")}
-            >
-              <Trash2 size={13} style={{ display: "inline", marginRight: 6 }} />
-              丢弃此奖品
-            </button>
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            属性加成
+            {isRealEquip ? <span>（装备后生效）</span> : null}
+          </h3>
+          <div className={styles.attrGrid}>
+            {item.attrs.map((attr) => (
+              <div key={`${attr.label}-${attr.value}`} className={styles.attrItem}>
+                <span
+                  className={cn(
+                    styles.attrDot,
+                    attr.tone === "green" && styles.attrDotAlt,
+                  )}
+                />
+                {attr.label} {attr.value}
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
-      <div className={styles.detailActions}>
-        <button
-          type="button"
-          className={styles.btnUse}
-          disabled={useDisabled}
-          onClick={handleUse}
-        >
-          使用
-        </button>
-        <button
-          type="button"
-          className={styles.btnEquip}
-          disabled={locked}
-          onClick={handleEquip}
-        >
-          {equipBusy ? "…" : equipLabel}
-        </button>
-        <button
-          type="button"
-          className={styles.btnSort}
-          disabled={locked}
-          onClick={onSort}
-        >
-          整理
-        </button>
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>获取途径</h3>
+          <p className={styles.obtainText}>{item.obtain}</p>
+        </div>
+
+        {item.kind === "reward" &&
+          item.reward?.status === "available" &&
+          !locked && (
+            <div className={styles.section}>
+              <button
+                type="button"
+                className={styles.btnSort}
+                style={{ width: "100%", height: 34 }}
+                onClick={() => item.reward && onRewardAction(item.reward, "discard")}
+              >
+                <Trash2 size={13} style={{ display: "inline", marginRight: 6 }} />
+                丢弃此奖品
+              </button>
+            </div>
+          )}
+
+        <div className={styles.detailActions}>
+          <button
+            type="button"
+            className={styles.btnUse}
+            disabled={useDisabled}
+            onClick={handleUse}
+          >
+            使用
+          </button>
+          <button
+            type="button"
+            className={styles.btnEquip}
+            disabled={locked}
+            onClick={handleEquip}
+          >
+            {equipBusy ? "…" : equipLabel}
+          </button>
+          <button
+            type="button"
+            className={styles.btnSort}
+            disabled={locked}
+            onClick={onSort}
+          >
+            整理
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -1077,6 +1055,7 @@ function DetailPanel({
 function ItemVisual({ item, size }: { item: InventoryItem; size: number }) {
   const src = item.imageSrc || thematicIcon(item.kind);
   if (src) {
+    const isHandpainted = isArtPackItemUrl(src);
     return (
       <Image
         src={src}
@@ -1084,8 +1063,13 @@ function ItemVisual({ item, size }: { item: InventoryItem; size: number }) {
         width={size}
         height={size}
         unoptimized
-        className={src.includes("/fantasy-") ? undefined : styles.itemPixel}
-        style={{ width: size, height: size, objectFit: "contain" }}
+        className={isHandpainted ? undefined : styles.itemPixel}
+        style={{
+          width: size,
+          height: size,
+          objectFit: "contain",
+          imageRendering: isHandpainted ? "auto" : undefined,
+        }}
       />
     );
   }

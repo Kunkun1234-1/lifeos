@@ -121,7 +121,7 @@ export function HeroScene() {
   return (
     <section className="group relative h-[520px] min-h-[520px] overflow-hidden rounded-sm border border-white/30 shadow-[0_30px_70px_-40px_rgba(5,18,36,0.85)] xl:h-full xl:min-h-[460px] 2xl:min-h-[640px]">
       <Image
-        src="/lifeos/background-wallpaper.png"
+        src="/art-packs/legacy-lifeos/lifeos/background-wallpaper.png"
         alt="Hero scene"
         fill
         className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.025]"

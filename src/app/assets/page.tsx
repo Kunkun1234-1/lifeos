@@ -255,7 +255,7 @@ export default function AssetsPage() {
           <div className={styles.profileArtWrap}>
             <Image
               className={styles.profileArt}
-              src="/life-game/profile-panel-v2.png"
+              src="/art-packs/legacy-lifeos/life-game/profile-panel-v2.png"
               alt="角色立绘"
               fill
               sizes="260px"

@@ -31,6 +31,33 @@ export async function POST(req: Request) {
   const body = await req.json();
   const data = ProjectCreateSchema.parse(body);
 
+  const [area, goal] = await Promise.all([
+    data.areaId
+      ? prisma.area.findFirst({
+          where: { id: data.areaId, userId, archived: false },
+          select: { id: true },
+        })
+      : Promise.resolve({ id: "none" }),
+    data.goalId
+      ? prisma.goal.findFirst({
+          where: { id: data.goalId, userId, status: { not: "archived" } },
+          select: { id: true },
+        })
+      : Promise.resolve({ id: "none" }),
+  ]);
+  if (data.areaId && !area) {
+    return NextResponse.json(
+      { error: "Area not found or not yours" },
+      { status: 400 },
+    );
+  }
+  if (data.goalId && !goal) {
+    return NextResponse.json(
+      { error: "Goal not found or not yours" },
+      { status: 400 },
+    );
+  }
+
   const project = await prisma.project.create({
     data: {
       userId,

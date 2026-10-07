@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { AreaSelect } from "@/components/area-select";
 import { ProjectSelect } from "@/components/project-select";
+import { MilestoneSelect } from "@/components/milestone-select";
 import {
   useAreas,
   useCompleteTask,
@@ -150,6 +151,7 @@ function taskTags(task: TaskDTO): Array<{ label: string; tone: string }> {
   const tags: Array<{ label: string; tone: string }> = [];
   if (task.projectId) tags.push({ label: "主线", tone: "orange" });
   else if (task.status !== "DONE") tags.push({ label: "支线", tone: "green" });
+  if (task.milestone) tags.push({ label: task.milestone.title, tone: "blue" });
   if (task.area) {
     tags.push({
       label: areaDisplayName(task.area.name),
@@ -1429,6 +1431,7 @@ function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavin
   const [notes, setNotes] = useState(task?.notes ?? "");
   const [areaId, setAreaId] = useState<string | null>(task?.areaId ?? null);
   const [projectId, setProjectId] = useState<string | null>(task?.projectId ?? null);
+  const [milestoneId, setMilestoneId] = useState<string | null>(task?.milestoneId ?? null);
   const [priority, setPriority] = useState(
     task?.priority ?? defaultTaskPriorityNumber(),
   );
@@ -1444,12 +1447,13 @@ function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavin
       notes !== (task?.notes ?? "") ||
       areaId !== (task?.areaId ?? null) ||
       projectId !== (task?.projectId ?? null) ||
+      milestoneId !== (task?.milestoneId ?? null) ||
       priority !== (task?.priority ?? defaultTaskPriorityNumber()) ||
       dueDate !== (task?.dueDate ? toYMD(new Date(task.dueDate)) : "") ||
       xpReward !== (task?.xpReward ?? 10) ||
       goldReward !== (task?.goldReward ?? 5),
     );
-  }, [title, notes, areaId, projectId, priority, dueDate, xpReward, goldReward, task, onDirtyChange]);
+  }, [title, notes, areaId, projectId, milestoneId, priority, dueDate, xpReward, goldReward, task, onDirtyChange]);
 
   const create = useCreateTask();
   const update = useUpdateTask();
@@ -1467,6 +1471,7 @@ function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavin
       notes: notes.trim() || null,
       areaId,
       projectId,
+      milestoneId,
       priority,
       dueDate: dueDate
         ? task?.dueDate && dueDate === toYMD(new Date(task.dueDate))
@@ -1514,7 +1519,11 @@ function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavin
             <div className={styles.moreSettingsBody}>
             <label>
               所属项目（主线任务）
-              <ProjectSelect value={projectId} onChange={setProjectId} />
+              <ProjectSelect value={projectId} onChange={(id) => { setProjectId(id); setMilestoneId(null); }} />
+            </label>
+            <label>
+              所属里程碑
+              <MilestoneSelect projectId={projectId} value={milestoneId} onChange={setMilestoneId} />
             </label>
             <div className={styles.formRow}>
             <label>

@@ -1,5 +1,5 @@
 .dashboard {
-  min-height: calc(100vh - 117px);
+  min-height: calc(100vh - var(--app-header-height, 56px));
   padding: 20px 22px 20px 24px;
   background:
     linear-gradient(160deg, transparent 72%, rgba(217, 238, 56, 0.17) 72.2% 76%, transparent 76.2%),

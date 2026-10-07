@@ -68,7 +68,7 @@ export async function getAchievementMetrics(
     prisma.principle.count({ where: { userId, archived: false } }),
     prisma.decision.count({ where: { userId } }),
     prisma.decision.count({ where: { userId, status: "reviewed" } }),
-    prisma.note.count({ where: { userId, archived: false } }),
+    prisma.note.count({ where: { userId, archived: false, deletedAt: null } }),
   ]);
 
   const { level } = deriveLevel(totalXp);

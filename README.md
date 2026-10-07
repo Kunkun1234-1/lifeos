@@ -213,6 +213,14 @@ npm run db:deploy
 
 MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `AgentAction` 数据表；首次部署 MCP 前必须先应用迁移。
 
+### 知识库垃圾桶
+
+页面和文件夹的删除操作会把整个子树移入垃圾桶。入口位于知识库文件树底部，也可以直接打开 `/notes/trash`；支持搜索、恢复和经过确认的彻底删除。恢复会保留正文、层级、关联和归档状态；父页面仍在垃圾桶时恢复到根目录，此前单独删除的子页面不会被连带恢复。
+
+上线此功能前需应用 `20261007120000_note_trash` 迁移，再发布前后端。已被旧版彻底删除的数据无法通过本次功能找回。
+
+验证命令：`npm run test:note-trash`；`npm run smoke:notes` 会在已配置的测试数据库中验证删除、恢复、账号隔离和永久删除，运行前请确认测试环境地址。
+
 ## Vercel 自动部署
 
 两个 Vercel 项目都连接此 Git 仓库的 `main` 分支。向 `main` push 后会分别构建 Web 与 API，无需手动上传文件。
@@ -224,7 +232,7 @@ MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `A
 3. commit 并 push `main`。
 4. 等待 `lifeos` 与 `lifeos-api` 两个 Vercel Production Deployment 成功。
 5. 检查 `/health`、两个 OAuth metadata 和 `/login`。
-6. 重新连接 ChatGPT MCP，确认能发现 93 个工具。
+6. 重新连接 ChatGPT MCP，确认能发现 108 个工具。
 
 ## 常见故障
 
@@ -236,3 +244,25 @@ MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `A
 - AI 工具 503：API 项目未配置 `DEEPSEEK_API_KEY`。
 - 上传在 Vercel 失败：未连接 Vercel Blob 或缺少 `BLOB_READ_WRITE_TOKEN`。
 - ChatGPT 无法发现 MCP：API Deployment Protection 阻止公网访问，或 MCP URL 不是精确的 HTTPS `/mcp` 地址。
+
+### 四层任务规划与思维导图
+
+目标列表采用整张可点击的卡片，进入 `/goals/[id]` 后直接显示全屏规划地图；项目卡片进入 `/projects/[id]` 采用同样的画布。React Flow + Dagre 展示“目标 → 项目 → 里程碑 → 任务”，点击节点打开详情，节点上的添加和删除按钮管理分支；分支按钮控制展开。目标、项目和任务的编辑及 KR 更新在详情抽屉完成。手机也默认进入地图，可手动切换到同数据的层级列表；任务计划页仍可以选择所属里程碑。
+
+里程碑以验收条件描述阶段成果，由用户显式标记完成。任务完成沿用原奖励接口，不会自动完成里程碑、项目或目标。旧任务保留在“待归类任务”中；删除里程碑保留任务并解除里程碑关联。
+
+发布前需应用 `20261007150000_milestone_hierarchy` 迁移，再发布前后端。API/MCP 新增里程碑 CRUD、目标树和项目树读取；所有归属变更验证当前账号及项目一致性。
+
+验证：`npm run test:planning`；`npm run smoke:planning` 要求显式传入本机临时 PostgreSQL 的 `DATABASE_URL`，脚本拒绝远程数据库。可使用 `PLANNING_SMOKE_BASE_URL` 与 `API_JWT_SECRET` 复用已经启动的本机测试 API；否则脚本自行启动测试服务并清理随机测试账号。
+
+`npm run smoke:planning-mcp` 在显式指定的本机数据库与 MCP 测试服务上验证里程碑工具、树读取、相同请求重放和不同参数冲突。运行时需提供测试服务对应的 `MCP_OAUTH_SECRET`，不会读取现有 `.env` 凭据。
+
+### 周期任务打卡
+
+`/events` 现在提供每日、每周、每月任务，左侧切换周期、右侧打卡。每个任务每周期完成一次；周期按账号时区计算，周一开始新周、每月一号开始新月份。历史周期可查看，当前周期可撤销打卡；撤销按打卡时保存的奖励数额回退。归档任务保留已有记录。原活动页面保留在 `/events/archive`，习惯和日程不迁移。
+
+发布前先应用 `20261007170000_periodic_tasks` 数据库迁移，再发布前后端。新接口位于 `/api/periodic-tasks`，提供模板管理、周期列表和显式完成状态的 `/[id]/check-in`。写操作使用事务与唯一约束防止重复奖励，所有归属验证当前账号。
+
+`npm run test:periodic-tasks` 验证周期日期规则；`npm run smoke:periodic-tasks` 仅在显式指定的本地测试数据库和服务上验证账号隔离、打卡并发、奖励回退与历史保存。
+
+每日任务支持“日视图 / 周视图”切换。周视图将同一批每日任务按周一至周日展开，今天可以直接打卡或撤销，其他日期仅查看；上一周、下一周和回到本周用于回顾。`GET /api/periodic-tasks/week` 一次读取该周记录，无需新增迁移。

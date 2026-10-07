@@ -4,6 +4,7 @@
   min-height: 100vh;
   overflow-x: clip;
   --sidebar-width: 238px;
+  --app-header-height: 56px;
   --bg: #f7f7ed;
   --bg-page: #f7f7ed;
   --bg-raised: #fbfbf1;
@@ -52,7 +53,7 @@
   border-right: 2px solid var(--accent);
   background:
     linear-gradient(180deg, rgba(2, 18, 15, 0.28), rgba(2, 28, 22, 0.12) 42%, rgba(2, 22, 18, 0.34)),
-    url("/life-game/sidebar-bg-v2.png") center / cover no-repeat,
+    url("/art-packs/legacy-lifeos/life-game/sidebar-bg-v2.png") center / cover no-repeat,
     var(--bg-panel-ink);
   box-shadow: 10px 0 28px color-mix(in srgb, var(--bg-panel-ink) 55%, transparent);
   transition: width 200ms ease;
@@ -328,43 +329,17 @@
   inset: 0 0 auto var(--sidebar-width);
   z-index: 40;
   display: flex;
-  height: 117px;
+  height: var(--app-header-height);
   align-items: center;
   justify-content: space-between;
-  gap: 28px;
-  padding: 0 31px 0 57px;
+  gap: 16px;
+  padding: 0 24px;
   border-bottom: 1px solid #d8dac0;
   background:
     radial-gradient(circle at 88% 20%, rgba(219, 239, 53, 0.18), transparent 16rem),
     rgba(251, 251, 243, 0.95);
   backdrop-filter: blur(15px);
   transition: left 200ms ease;
-}
-
-.topbar::before,
-.topbar::after {
-  position: absolute;
-  z-index: 0;
-  content: "";
-  pointer-events: none;
-  background: #65c7a5;
-}
-
-.topbar::before {
-  left: 64px;
-  top: 76px;
-  width: 11px;
-  height: 11px;
-  box-shadow: 22px 0 #65c7a5, 11px 11px #65c7a5, 0 22px #65c7a5, 22px 22px #65c7a5;
-  opacity: 0.48;
-}
-
-.topbar::after {
-  right: 24px;
-  bottom: -8px;
-  width: 8px;
-  height: 8px;
-  box-shadow: -8px 8px #65c7a5, 8px -8px #65c7a5;
 }
 
 .greeting,
@@ -378,130 +353,40 @@
 .greeting {
   min-width: 0;
   flex: 1 1 auto;
-  max-width: 460px;
-  padding-right: 20px;
+  padding-right: 8px;
 }
 
 .topbarTrail {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   margin-left: auto;
 }
 
 .greeting h1 {
   margin: 0;
-  color: #101613;
-  font-size: 28px;
-  font-weight: 950;
-  line-height: 1.2;
-  letter-spacing: 0.05em;
-}
-
-.greeting p {
-  margin: 10px 0 0;
-  color: #5b645f;
-  font-size: 13px;
-}
-
-.greetingMotto {
-  display: block;
-  width: 100%;
-  max-width: 420px;
-  margin: 10px 0 0;
-  padding: 2px 4px;
-  margin-left: -4px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: #5b645f;
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-line;
-  outline: none;
-  cursor: text;
-  resize: none;
-  transition: border-color 160ms ease, background 160ms ease;
-}
-
-.greetingMotto:hover,
-.greetingMotto:focus-visible {
-  border-color: rgba(158, 183, 100, 0.55);
-  background: rgba(255, 255, 250, 0.72);
-}
-
-.greetingMottoEditing {
-  border-color: #9eb764;
-  background: rgba(255, 255, 250, 0.92);
-}
-
-.statusArea {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 12px;
-}
-
-.statusCard {
-  width: 178px;
-  padding: 11px 12px 10px;
-  border: 1px solid #d6d4ae;
-  border-radius: 6px;
-  background: rgba(255, 255, 250, 0.86);
-}
-
-.statusCardWide {
-  width: 211px;
-}
-
-.statusTop {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #202822;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.statusValue {
-  margin-left: auto;
-}
-
-.statusTrack {
-  height: 6px;
-  margin: 8px 0 5px 29px;
   overflow: hidden;
-  border-radius: 999px;
-  background: #dddcc6;
+  color: #15231c;
+  font-size: 20px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.statusFill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #ffba1f, #f4d12f);
-}
-
-.statusFillGreen {
-  background: linear-gradient(90deg, #d7e62e, #0d5745);
-}
-
-.statusFoot {
-  margin-left: 29px;
-  color: #69706b;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
-  text-align: right;
-}
+.statusArea { display: flex; align-items: center; gap: 16px; }
+.statusCompact { display: inline-flex; align-items: center; gap: 6px; color: #34423b; font-family: var(--font-geist-mono), monospace; font-size: 12px; font-weight: 750; white-space: nowrap; }
+.statusCompact svg { flex: none; }
+.statusMaximum { color: #7a857b; font-size: 11px; font-weight: 500; }
+.statusLevel { color: #65763e; font-size: 10px; }
 
 .utility {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 14px;
-  padding-left: 16px;
+  gap: 10px;
+  padding-left: 12px;
   border-left: 1px solid #d8dac0;
 }
 
@@ -530,8 +415,8 @@
 }
 
 .avatar {
-  width: 49px;
-  height: 49px;
+  width: 30px;
+  height: 30px;
   overflow: hidden;
   border: 2px solid #d4e433;
   border-radius: 50%;
@@ -548,7 +433,7 @@
 .main {
   min-height: 100vh;
   margin-left: var(--sidebar-width);
-  padding-top: 117px;
+  padding-top: var(--app-header-height);
   transition: margin-left 200ms ease;
 }
 
@@ -608,20 +493,12 @@
     gap: 8px;
   }
 
-  .statusCard {
-    width: 150px;
-  }
-
-  .statusCardWide {
-    width: 168px;
-  }
-
   .greeting {
     max-width: none;
   }
 
   .greeting h1 {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .utility {
@@ -661,12 +538,8 @@
 
   .topbar {
     left: 0;
-    height: 86px;
+    height: var(--app-header-height);
     padding: 0 20px;
-  }
-
-  .topbar::before {
-    display: none;
   }
 
   .greeting {
@@ -674,18 +547,13 @@
   }
 
   .greeting h1 {
-    font-size: 21px;
+    font-size: 20px;
   }
 
-  .greeting p,
-  .greetingMotto,
-  .statusArea {
-    display: none;
-  }
 
   .main {
     margin-left: 0;
-    padding-top: 86px;
+    padding-top: var(--app-header-height);
     padding-bottom: 82px;
   }
 
@@ -815,8 +683,9 @@
 
 @media (max-width: 620px) {
   .topbar {
-    height: 72px;
-    padding: 0 14px;
+    height: var(--app-header-height);
+    padding: 0 10px;
+    gap: 8px;
   }
 
   .greeting h1 {
@@ -824,21 +693,26 @@
   }
 
   .utility {
-    gap: 10px;
+    gap: 7px;
+    padding-left: 8px;
   }
 
-  .utilityLink:nth-child(-n + 2),
-  .avatarLink span {
+  .topbarTrail, .statusArea { gap: 8px; }
+  .statusCompact { gap: 4px; font-size: 11px; }
+  .statusMaximum { display: none; }
+  .statusCompact svg { width: 14px; height: 14px; }
+
+  .utilityLink:nth-child(-n + 2) {
     display: none;
   }
 
   .avatar {
-    width: 39px;
-    height: 39px;
+    width: 28px;
+    height: 28px;
   }
 
   .main {
-    padding-top: 72px;
+    padding-top: var(--app-header-height);
     padding-bottom: 82px;
   }
 }

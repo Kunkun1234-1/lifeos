@@ -9,11 +9,18 @@ import type {
   TaskDTO,
   HabitDTO,
   RoutineDTO,
+  PeriodicTaskFrequency,
+  PeriodicTaskDTO,
+  PeriodicTasksSnapshotDTO,
+  DailyTaskWeekSnapshotDTO,
   CommissionsTodayDTO,
   ReviewDTO,
   RewardResult,
   GoalDTO,
   ProjectDTO,
+  MilestoneDTO,
+  GoalTreeDTO,
+  ProjectTreeDTO,
   RewardItemDTO,
   AchievementDTO,
   GachaState,
@@ -43,10 +50,15 @@ export const qk = {
   tasks: (status?: string) => ["tasks", { status }] as const,
   habits: ["habits"] as const,
   routines: ["routines"] as const,
+  periodicTasks: (frequency: PeriodicTaskFrequency, date?: string) =>
+    ["periodic-tasks", { frequency, date }] as const,
   commissions: ["commissions", "today"] as const,
   reviews: (kind?: string) => ["reviews", { kind }] as const,
   goals: ["goals"] as const,
   projects: (status?: string) => ["projects", { status }] as const,
+  goalTree: (id: string) => ["planning-tree", "goal", id] as const,
+  projectTree: (id: string) => ["planning-tree", "project", id] as const,
+  milestones: (projectId: string) => ["milestones", projectId] as const,
   rewards: ["rewards"] as const,
   achievements: ["achievements"] as const,
   gacha: ["gacha"] as const,
@@ -58,6 +70,7 @@ export const qk = {
   resin: ["resin"] as const,
   notes: (filters?: Record<string, string | undefined>) => ["notes", filters ?? {}] as const,
   notesTree: (archived?: "1" | "0") => ["notes", "tree", archived ?? "0"] as const,
+  notesTrash: ["notes", "trash"] as const,
   note: (id: string) => ["notes", "detail", id] as const,
   events: ["events"] as const,
   equipment: ["equipment"] as const,
@@ -73,6 +86,13 @@ type QueryOptions = {
 
 function invalidateDashboard(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: qk.dashboard });
+}
+
+function invalidatePlanning(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["planning-tree"] });
+  qc.invalidateQueries({ queryKey: ["milestones"] });
+  qc.invalidateQueries({ queryKey: ["projects"] });
+  qc.invalidateQueries({ queryKey: qk.goals });
 }
 
 function invalidateWallet(qc: ReturnType<typeof useQueryClient>) {
@@ -168,6 +188,7 @@ export function useCreateTask() {
         backend: true,
       }),
     onSuccess: () => {
+      invalidatePlanning(qc);
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.commissions });
       invalidateDashboard(qc);
@@ -218,6 +239,7 @@ export function useCompleteTask() {
       });
     },
     onSettled: () => {
+      invalidatePlanning(qc);
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.user });
       qc.invalidateQueries({ queryKey: qk.areas });
@@ -233,6 +255,7 @@ export function useDeleteTask() {
     mutationFn: (id: string) =>
       api(`/api/tasks/${id}`, { method: "DELETE", backend: true }),
     onSuccess: () => {
+      invalidatePlanning(qc);
       qc.invalidateQueries({ queryKey: ["tasks"] });
       invalidateDashboard(qc);
     },
@@ -249,10 +272,88 @@ export function useUpdateTask() {
         backend: true,
       }),
     onSuccess: () => {
+      invalidatePlanning(qc);
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: qk.commissions });
       invalidateDashboard(qc);
     },
+  });
+}
+
+export function usePeriodicTasks(frequency: PeriodicTaskFrequency, date?: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.periodicTasks(frequency, date),
+    queryFn: () => {
+      const params = new URLSearchParams({ frequency });
+      if (date) params.set("date", date);
+      return api<PeriodicTasksSnapshotDTO>(`/api/periodic-tasks?${params}`, { backend: true });
+    },
+    // Refresh across period boundaries, including when this page stays open.
+    refetchInterval: 60_000,
+    enabled,
+  });
+}
+
+export function useDailyTaskWeek(date?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["periodic-tasks", "daily-week", { date }],
+    queryFn: () => api<DailyTaskWeekSnapshotDTO>(
+      `/api/periodic-tasks/week${date ? `?${new URLSearchParams({ date })}` : ""}`,
+      { backend: true },
+    ),
+    enabled,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useCreatePeriodicTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<PeriodicTaskDTO>("/api/periodic-tasks", { method: "POST", json: body, backend: true }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["periodic-tasks"] }),
+  });
+}
+
+export function useUpdatePeriodicTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<PeriodicTaskDTO>(`/api/periodic-tasks/${id}`, { method: "PATCH", json: body, backend: true }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["periodic-tasks"] }),
+  });
+}
+
+export function useArchivePeriodicTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/periodic-tasks/${id}`, { method: "DELETE", backend: true }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["periodic-tasks"] }),
+  });
+}
+
+export function useCheckInPeriodicTask() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((s) => s.push);
+  return useMutation({
+    mutationFn: ({ id, completed, periodKey }: { id: string; completed: boolean; periodKey?: string }) =>
+      api<{ task: PeriodicTaskDTO; reward: RewardResult | null; already: boolean }>(
+        `/api/periodic-tasks/${id}/check-in`,
+        { method: "POST", json: { completed, periodKey }, backend: true },
+      ),
+    onSuccess: ({ reward, task }) => {
+      if (reward && (reward.xpGranted || reward.goldGranted)) {
+        push({ xp: reward.xpGranted, gold: reward.goldGranted, gems: 0, fate: 0,
+          areaKey: reward.areaKey, label: task.completed ? "周期任务打卡" : "撤销周期打卡" });
+      }
+      qc.invalidateQueries({ queryKey: ["periodic-tasks"] });
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.areas });
+      qc.invalidateQueries({ queryKey: qk.achievements });
+      qc.invalidateQueries({ queryKey: qk.events });
+      invalidateDashboard(qc);
+    },
+    onError: () => qc.invalidateQueries({ queryKey: ["periodic-tasks"] }),
   });
 }
 
@@ -611,6 +712,59 @@ export const useProjects = (status?: string) =>
     queryFn: () => api<ProjectDTO[]>(`/api/projects${status ? `?status=${status}` : ""}`),
   });
 
+export const useGoalTree = (id: string) =>
+  useQuery({
+    queryKey: qk.goalTree(id),
+    queryFn: () => api<GoalTreeDTO>(`/api/goals/${id}/tree`),
+    enabled: Boolean(id),
+  });
+
+export const useProjectTree = (id: string) =>
+  useQuery({
+    queryKey: qk.projectTree(id),
+    queryFn: () => api<ProjectTreeDTO>(`/api/projects/${id}/tree`),
+    enabled: Boolean(id),
+  });
+
+export const useMilestones = (projectId: string) =>
+  useQuery({
+    queryKey: qk.milestones(projectId),
+    queryFn: () => api<MilestoneDTO[]>(`/api/milestones?projectId=${encodeURIComponent(projectId)}`),
+    enabled: Boolean(projectId),
+  });
+
+export function useCreateMilestone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      api<MilestoneDTO>("/api/milestones", { method: "POST", json: body }),
+    onSuccess: () => invalidatePlanning(qc),
+  });
+}
+
+export function useUpdateMilestone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api<MilestoneDTO>(`/api/milestones/${id}`, { method: "PATCH", json: body }),
+    onSuccess: () => {
+      invalidatePlanning(qc);
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+export function useDeleteMilestone() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/milestones/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      invalidatePlanning(qc);
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
 export const useRewards = () =>
   useQuery({ queryKey: qk.rewards, queryFn: () => api<RewardItemDTO[]>("/api/rewards") });
 
@@ -795,7 +949,9 @@ export function useCreateGoal() {
   return useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       api<GoalDTO>("/api/goals", { method: "POST", json: body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
+    onSuccess: () => {
+      invalidatePlanning(qc);
+    },
   });
 }
 
@@ -809,6 +965,7 @@ export function useUpdateGoal() {
         json: body,
       }),
     onSuccess: (data) => {
+      invalidatePlanning(qc);
       if (data.reward) {
         push({
           xp: data.reward.xpGranted,
@@ -831,7 +988,9 @@ export function useDeleteGoal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/goals/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
+    onSuccess: () => {
+      invalidatePlanning(qc);
+    },
   });
 }
 
@@ -840,7 +999,9 @@ export function useUpdateKR() {
   return useMutation({
     mutationFn: ({ goalId, krId, body }: { goalId: string; krId: string; body: Record<string, unknown> }) =>
       api(`/api/goals/${goalId}/kr/${krId}`, { method: "PATCH", json: body }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.goals }),
+    onSuccess: () => {
+      invalidatePlanning(qc);
+    },
   });
 }
 
@@ -850,6 +1011,7 @@ export function useCreateProject() {
     mutationFn: (body: Record<string, unknown>) =>
       api<ProjectDTO>("/api/projects", { method: "POST", json: body }),
     onSuccess: () => {
+      invalidatePlanning(qc);
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: qk.goals });
     },
@@ -866,6 +1028,7 @@ export function useUpdateProject() {
         json: body,
       }),
     onSuccess: (data) => {
+      invalidatePlanning(qc);
       if (data.reward) {
         push({
           xp: data.reward.xpGranted,
@@ -889,7 +1052,10 @@ export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/projects/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+    onSuccess: () => {
+      invalidatePlanning(qc);
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
 }
 
@@ -1311,6 +1477,12 @@ export const useNote = (id: string | null | undefined) =>
     enabled: Boolean(id),
   });
 
+export const useNotesTrash = () =>
+  useQuery({
+    queryKey: qk.notesTrash,
+    queryFn: () => api<NoteDTO[]>("/api/notes/trash"),
+  });
+
 export function useCreateNote() {
   const qc = useQueryClient();
   const push = useRewardsStore((s) => s.push);
@@ -1372,10 +1544,44 @@ export function useDeleteNote() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      api<{ ok: true; deletedSubtreeSize: number }>(`/api/notes/${id}`, {
+      api<{ ok: true; deletedIds: string[]; deletedSubtreeSize: number }>(`/api/notes/${id}`, {
         method: "DELETE",
       }),
-    onSuccess: () => invalidateNotes(qc),
+    onSuccess: (data) => {
+      for (const id of data.deletedIds) qc.removeQueries({ queryKey: qk.note(id) });
+      invalidateNotes(qc);
+      invalidateDashboard(qc);
+    },
+  });
+}
+
+export function useRestoreNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<{ note: NoteDTO; restoredIds: string[] }>(`/api/notes/${id}/restore`, {
+        method: "POST",
+      }),
+    onSuccess: (data) => {
+      qc.setQueryData(qk.note(data.note.id), data.note);
+      invalidateNotes(qc);
+      invalidateDashboard(qc);
+    },
+  });
+}
+
+export function usePermanentlyDeleteNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<{ ok: true; deletedIds: string[]; deletedSubtreeSize: number }>(
+        `/api/notes/${id}?permanent=1`,
+        { method: "DELETE" },
+      ),
+    onSuccess: (data) => {
+      for (const id of data.deletedIds) qc.removeQueries({ queryKey: qk.note(id) });
+      invalidateNotes(qc);
+    },
   });
 }
 

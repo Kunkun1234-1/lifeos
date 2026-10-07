@@ -355,9 +355,9 @@ Apple App Review Guidelines 要求购买随机虚拟物品前披露各类物品�
 
 ### 6.2 初版原创背景
 
-![祈愿星象观测台背景](../public/gacha/backgrounds/wish-observatory-v1.png)
+![祈愿星象观测台背景](../public/art-packs/legacy-lifeos/gacha/backgrounds/wish-observatory-v1.png)
 
-项目路径：`public/gacha/backgrounds/wish-observatory-v1.png`
+项目路径：`public/art-packs/legacy-lifeos/gacha/backgrounds/wish-observatory-v1.png`
 原始尺寸：`1672 × 941`，PNG，约 2.1 MB
 生成方式：OpenAI 内置 image generation
 用途：祈愿页桌面端主背景；左侧预留暗部信息区，中右侧为视觉焦点。

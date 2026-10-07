@@ -6,6 +6,7 @@ import {
   currentFiveStarRate,
   rollGachaTier,
 } from "../src/lib/gacha-rules";
+import { ITEM_ART } from "../src/lib/art-assets";
 import { normalizeGachaImageUrl } from "../src/lib/gacha-assets";
 import { RewardItemSchema } from "../src/lib/validators";
 
@@ -66,7 +67,7 @@ assert.equal(
 );
 assert.equal(
   normalizeGachaImageUrl("/legacy/custom.png", "月露茶券"),
-  "/gacha/items/material-moon-tea.png",
+  ITEM_ART["moon-tea"],
   "default rewards must prefer the curated material library",
 );
 assert.equal(

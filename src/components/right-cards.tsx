@@ -191,7 +191,7 @@ export function AssetsCard() {
       <Link href="/assets" className="group mt-3 block">
         <div className="relative aspect-[2.35/1] overflow-hidden rounded-sm border border-[var(--gold)]/40 bg-[#dfeaf5] xl:aspect-[2.5/1] 2xl:aspect-[2.2/1]">
           <Image
-            src="/gacha/items/artisan-box.png"
+            src="/art-packs/anime-rpg-v1/items/artisan-gift.webp"
             alt="星辉宝箱资产"
             fill
             className="object-contain object-left transition-transform duration-500 group-hover:scale-[1.06]"

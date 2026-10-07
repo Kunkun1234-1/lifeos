@@ -4,10 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Check,
-  ClipboardList,
-  Edit3,
-  FolderKanban,
+  ArrowUpRight,
   Plus,
   Sparkles,
   Target,
@@ -20,17 +17,14 @@ import { AreaSelect } from "@/components/area-select";
 import {
   useGoals,
   useCreateGoal,
-  useUpdateGoal,
-  useDeleteGoal,
-  useUpdateKR,
   useUser,
 } from "@/hooks/queries";
-import type { GoalDTO, GoalType, KeyResultDTO } from "@/lib/types";
+import type { GoalDTO, GoalType } from "@/lib/types";
 import styles from "./page.module.css";
 
 type StatusFilter = "active" | "done" | "all";
 type CategoryFilter = "all" | "main" | "none" | string;
-type PanelAction = "create" | "add-kr" | null;
+type PanelAction = "create" | null;
 
 const STATUS_LABEL: Record<GoalDTO["status"], string> = {
   active: "进行中",
@@ -51,7 +45,6 @@ const TIPS = [
   "领域分布过于偏科时，不妨从较弱领域补一个小目标，平衡人生属性。",
 ];
 
-const AREA_COLORS = ["#249d6d", "#c9a227", "#5b9ec9", "#8a9a3a", "#d4784a", "#6b8f71"];
 const EMPTY_GOALS: GoalDTO[] = [];
 
 const TIMEFRAME_PRESETS = (() => {
@@ -75,8 +68,6 @@ export default function GoalsPage() {
   const list = goals ?? EMPTY_GOALS;
   const stats = useMemo(() => deriveGoalStats(list), [list]);
   const areas = useMemo(() => collectAreas(list), [list]);
-  const milestones = useMemo(() => buildMilestones(list), [list]);
-  const areaDist = useMemo(() => buildAreaDistribution(list), [list]);
   const mainCount = useMemo(
     () => list.filter((goal) => goal.type === "main").length,
     [list],
@@ -127,7 +118,7 @@ export default function GoalsPage() {
           <div className={styles.profileArtWrap}>
             <Image
               className={styles.profileArt}
-              src="/life-game/profile-panel-v2.png"
+              src="/art-packs/legacy-lifeos/life-game/profile-panel-v2.png"
               alt="角色立绘"
               fill
               sizes="260px"
@@ -281,39 +272,23 @@ export default function GoalsPage() {
             </button>
           </div>
 
-          <section className={styles.actions} aria-label="快捷操作">
+          <section className={styles.actions} aria-label="目标操作">
             <button
               type="button"
               className={styles.actionBtn}
               data-kind="create"
               data-active={action === "create"}
+              data-testid="new-goal-trigger"
               onClick={() => openCreate("create")}
             >
               <Plus size={16} />
               新建目标
             </button>
-            <button
-              type="button"
-              className={styles.actionBtn}
-              data-kind="kr"
-              data-active={action === "add-kr"}
-              onClick={() => openCreate("add-kr")}
-            >
-              <Target size={16} />
-              添加关键结果
-            </button>
-            <Link href="/review" className={styles.actionBtn} data-kind="review">
-              <ClipboardList size={16} />
-              回顾进度
-            </Link>
           </section>
 
           {action ? (
             <section className={styles.actionPanel}>
-              <NewGoalForm
-                mode={action}
-                onDone={() => setAction(null)}
-              />
+              <NewGoalForm onDone={() => setAction(null)} />
             </section>
           ) : null}
 
@@ -337,7 +312,7 @@ export default function GoalsPage() {
                 </button>
               </div>
             ) : (
-              <div className={styles.goalGrid}>
+              <div className={styles.goalGrid} data-testid="goal-grid">
                 {filtered.map((goal) => (
                   <GoalCard key={goal.id} goal={goal} />
                 ))}
@@ -346,104 +321,10 @@ export default function GoalsPage() {
           </article>
         </div>
 
-        <aside className={styles.rightRail} aria-label="目标洞察">
-          <article className={styles.panel}>
-            <div className={styles.panelHead}>
-              <h2 className={styles.panelTitle}>近期里程碑</h2>
-            </div>
-            {milestones.length === 0 ? (
-              <div className={styles.empty}>暂无即将到期的目标</div>
-            ) : (
-              <div className={styles.milestoneList}>
-                {milestones.map((item) => (
-                  <div key={item.id} className={styles.milestoneItem}>
-                    <div className={styles.milestoneTop}>
-                      <span className={styles.milestoneName}>{item.title}</span>
-                      <span
-                        className={styles.milestoneDate}
-                        data-soon={item.daysLeft <= 14}
-                      >
-                        {item.dateLabel}
-                      </span>
-                    </div>
-                    <div className={styles.milestoneSub}>{item.subtitle}</div>
-                    <div className={styles.milestoneTrack}>
-                      <div
-                        className={styles.milestoneFill}
-                        style={{ width: `${item.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
-
-          <article className={styles.panel}>
-            <div className={styles.panelHead}>
-              <h2 className={styles.panelTitle}>领域分布</h2>
-            </div>
-            {areaDist.length === 0 ? (
-              <div className={styles.empty}>还没有带领域的目标</div>
-            ) : (
-              <div className={styles.usageList}>
-                {areaDist.map((item) => (
-                  <div key={item.key} className={styles.usageRow}>
-                    <div className={styles.usageTop}>
-                      <span className={styles.usageName}>{item.label}</span>
-                      <span className={styles.usagePct}>
-                        {item.count} · {item.pct.toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className={styles.usageTrack}>
-                      <div
-                        className={styles.usageFill}
-                        style={{
-                          width: `${item.pct}%`,
-                          background: item.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
-
-          <article className={styles.panel}>
-            <div className={styles.panelHead}>
-              <h2 className={styles.panelTitle}>快捷入口</h2>
-            </div>
-            <div className={styles.quickLinks}>
-              <Link href="/projects" className={styles.quickLink}>
-                <span>
-                  <FolderKanban size={14} style={{ display: "inline", marginRight: 6 }} />
-                  项目管理
-                </span>
-                <span className={styles.quickHint}>关联交付 ›</span>
-              </Link>
-              <Link href="/review" className={styles.quickLink}>
-                <span>
-                  <ClipboardList size={14} style={{ display: "inline", marginRight: 6 }} />
-                  复盘回顾
-                </span>
-                <span className={styles.quickHint}>周/季复盘 ›</span>
-              </Link>
-              <Link href="/strategy" className={styles.quickLink}>
-                <span>
-                  <Target size={14} style={{ display: "inline", marginRight: 6 }} />
-                  战略地图
-                </span>
-                <span className={styles.quickHint}>愿景对齐 ›</span>
-              </Link>
-            </div>
-          </article>
-        </aside>
-
         <aside className={styles.tip}>
           <Image
             className={styles.tipMascot}
-            src="/life-game/pixel-dragon-v1.png"
+            src="/art-packs/legacy-lifeos/life-game/pixel-dragon-v1.png"
             alt=""
             width={56}
             height={48}
@@ -459,13 +340,7 @@ export default function GoalsPage() {
   );
 }
 
-function NewGoalForm({
-  mode,
-  onDone,
-}: {
-  mode: Exclude<PanelAction, null>;
-  onDone: () => void;
-}) {
+function NewGoalForm({ onDone }: { onDone: () => void }) {
   const create = useCreateGoal();
   const [objective, setObjective] = useState("");
   const [notes, setNotes] = useState("");
@@ -475,8 +350,6 @@ function NewGoalForm({
   const [krs, setKrs] = useState<{ description: string; target: number; unit: string }[]>([
     { description: "", target: 1, unit: "次" },
   ]);
-
-  const isKrFocus = mode === "add-kr";
 
   const submit = async () => {
     if (!objective.trim()) return;
@@ -488,7 +361,6 @@ function NewGoalForm({
         unit: k.unit,
         current: 0,
       }));
-    if (isKrFocus && validKRs.length === 0) return;
     await create.mutateAsync({
       objective: objective.trim(),
       notes: notes.trim() || null,
@@ -504,13 +376,9 @@ function NewGoalForm({
     <div className={styles.formShell}>
       <div className={styles.formHead}>
         <div>
-          <h2 className={styles.formTitle}>
-            {isKrFocus ? "新建目标并添加关键结果" : "新建目标"}
-          </h2>
+          <h2 className={styles.formTitle}>新建目标</h2>
           <p className={styles.formDetail}>
-            {isKrFocus
-              ? "现有 API 仅支持创建时写入 KR；将一并创建 Objective。"
-              : "Objective + Key Results · 季度/年度长程目标"}
+            Objective + Key Results · 季度/年度长程目标
           </p>
         </div>
         <button type="button" className={styles.iconBtn} onClick={onDone} title="关闭">
@@ -630,9 +498,7 @@ function NewGoalForm({
           <Button
             onClick={submit}
             disabled={
-              create.isPending ||
-              !objective.trim() ||
-              (isKrFocus && !krs.some((k) => k.description.trim()))
+              create.isPending || !objective.trim()
             }
           >
             {create.isPending ? "保存中…" : "创建目标"}
@@ -644,25 +510,20 @@ function NewGoalForm({
 }
 
 function GoalCard({ goal }: { goal: GoalDTO }) {
-  const update = useUpdateGoal();
-  const remove = useDeleteGoal();
-  const updateKR = useUpdateKR();
-  const [editing, setEditing] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-
   const totalProgress = goalProgress(goal);
   const isDone = goal.status === "done";
-
-  if (editing) {
-    return (
-      <div className={styles.goalCard}>
-        <GoalEditForm goal={goal} onDone={() => setEditing(false)} />
-      </div>
-    );
-  }
+  const completedKrs = goal.keyResults.filter(
+    (result) => result.target > 0 && result.current >= result.target,
+  ).length;
 
   return (
-    <div className={styles.goalCard} data-done={isDone}>
+    <Link
+      href={`/goals/${goal.id}`}
+      className={styles.goalCard}
+      data-done={isDone}
+      data-testid={`goal-card-${goal.id}`}
+      aria-label={`打开目标：${goal.objective}`}
+    >
       <div className={styles.goalTop}>
         <div className={styles.goalBadges}>
           {goal.type === "main" ? (
@@ -680,307 +541,34 @@ function GoalCard({ goal }: { goal: GoalDTO }) {
             {STATUS_LABEL[goal.status]}
           </span>
         </div>
-        <div className={styles.goalActions}>
-          {!isDone ? (
-            <button
-              type="button"
-              className={`${styles.iconBtn} ${styles.iconBtnPrimary}`}
-              title="标记完成"
-              onClick={() => update.mutate({ id: goal.id, body: { status: "done" } })}
-              disabled={update.isPending}
-            >
-              <Check size={14} />
-            </button>
-          ) : null}
-          {!isDone ? (
-            <button
-              type="button"
-              className={styles.iconBtn}
-              title="编辑"
-              onClick={() => setEditing(true)}
-            >
-              <Edit3 size={14} />
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className={styles.iconBtn}
-            title="删除"
-            onClick={() => {
-              if (confirm("删除这个目标？")) remove.mutate(goal.id);
-            }}
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+        <ArrowUpRight className={styles.goalArrow} size={18} aria-hidden />
       </div>
 
-      <h3 className={styles.goalObjective} data-done={isDone}>
-        {goal.objective}
-      </h3>
+      <h3 className={styles.goalObjective}>{goal.objective}</h3>
+      <p className={styles.goalDescription}>
+        {goal.notes?.trim() || "打开规划地图，继续拆解项目与里程碑。"}
+      </p>
 
       <div className={styles.progressBlock}>
         <div className={styles.progressTop}>
-          <span className={styles.progressLabel}>整体进度</span>
+          <span className={styles.progressLabel}>
+            关键结果 {completedKrs}/{goal.keyResults.length}
+          </span>
           <span className={styles.progressValue}>{totalProgress}%</span>
         </div>
-        <div className={styles.progressTrack}>
+        <div
+          className={styles.progressTrack}
+          role="progressbar"
+          aria-label={`${goal.objective}关键结果进度`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={totalProgress}
+        >
           <div className={styles.progressFill} style={{ width: `${totalProgress}%` }} />
         </div>
       </div>
-
-      {goal.keyResults.length > 0 ? (
-        <div className={styles.krSummary}>
-          {goal.keyResults.slice(0, 3).map((kr, i) => (
-            <span key={kr.id} className={styles.krPill}>
-              <span className={styles.krPillName}>
-                KR{i + 1} {kr.description}
-              </span>
-              <span className={styles.krPillVal}>
-                {kr.current}/{kr.target}
-                {kr.unit ? ` ${kr.unit}` : ""}
-              </span>
-            </span>
-          ))}
-          {goal.keyResults.length > 3 ? (
-            <span className={styles.krPill}>+{goal.keyResults.length - 3}</span>
-          ) : null}
-        </div>
-      ) : (
-        <div className={styles.metricHint} style={{ marginTop: 10 }}>
-          尚未设置关键结果
-        </div>
-      )}
-
-      <button
-        type="button"
-        className={styles.tabBtn}
-        style={{ marginTop: 10 }}
-        onClick={() => setExpanded((v) => !v)}
-      >
-        {expanded ? "收起关键结果" : "展开更新进度"}
-      </button>
-
-      {expanded ? (
-        <ul className={styles.krList}>
-          {goal.keyResults.map((kr, i) => (
-            <KRRow
-              key={kr.id}
-              kr={kr}
-              label={`KR${i + 1}`}
-              onUpdate={(current) =>
-                updateKR.mutate({ goalId: goal.id, krId: kr.id, body: { current } })
-              }
-              disabled={isDone}
-            />
-          ))}
-        </ul>
-      ) : null}
-
-      {!isDone ? (
-        <div className={styles.confidenceRow}>
-          <span>信心</span>
-          <input
-            type="range"
-            min={1}
-            max={10}
-            value={goal.confidence}
-            onChange={(e) =>
-              update.mutate({
-                id: goal.id,
-                body: { confidence: Number(e.target.value) },
-              })
-            }
-          />
-          <span className={styles.confidenceVal}>{goal.confidence}/10</span>
-        </div>
-      ) : null}
-
-      {goal.projects.length > 0 ? (
-        <div className={styles.linkedProjects}>
-          <div className={styles.linkedLabel}>关联项目 · {goal.projects.length}</div>
-          <div className={styles.linkedList}>
-            {goal.projects.map((p) => (
-              <Link key={p.id} href="/projects" className={styles.linkedLink}>
-                {p.title}
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function KRRow({
-  kr,
-  label,
-  onUpdate,
-  disabled,
-}: {
-  kr: KeyResultDTO;
-  label: string;
-  onUpdate: (current: number) => void;
-  disabled?: boolean;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(kr.current);
-  const progress = kr.target > 0 ? Math.min(100, (kr.current / kr.target) * 100) : 0;
-
-  return (
-    <li className={styles.krRow}>
-      <div className={styles.krRowTop}>
-        <span className={styles.krLabel}>{label}</span>
-        <span className={styles.krDesc}>{kr.description}</span>
-        <div className={styles.krMeta}>
-          {editing ? (
-            <>
-              <Input
-                type="number"
-                min={0}
-                max={kr.target}
-                value={val}
-                onChange={(e) => setVal(Number(e.target.value))}
-                className="w-16 text-xs"
-              />
-              <button
-                type="button"
-                className={`${styles.iconBtn} ${styles.iconBtnPrimary}`}
-                onClick={() => {
-                  onUpdate(val);
-                  setEditing(false);
-                }}
-              >
-                <Check size={12} />
-              </button>
-            </>
-          ) : (
-            <>
-              <span className={styles.krNums}>
-                {kr.current}/{kr.target} {kr.unit ?? ""}
-              </span>
-              {!disabled ? (
-                <button
-                  type="button"
-                  className={styles.iconBtn}
-                  onClick={() => setEditing(true)}
-                  title="更新进度"
-                >
-                  <Edit3 size={12} />
-                </button>
-              ) : null}
-            </>
-          )}
-        </div>
-      </div>
-      <div className={styles.krTrack}>
-        <div className={styles.krFill} style={{ width: `${progress}%` }} />
-      </div>
-    </li>
-  );
-}
-
-function GoalEditForm({ goal, onDone }: { goal: GoalDTO; onDone: () => void }) {
-  const update = useUpdateGoal();
-  const [objective, setObjective] = useState(goal.objective);
-  const [notes, setNotes] = useState(goal.notes ?? "");
-  const [goalType, setGoalType] = useState<GoalType>(
-    goal.type === "main" || goal.type === "milestone" || goal.type === "okr"
-      ? goal.type
-      : "okr",
-  );
-  const [areaId, setAreaId] = useState<string | null>(goal.areaId ?? null);
-  const [timeframe, setTimeframe] = useState(goal.timeframe);
-  const [confidence, setConfidence] = useState(goal.confidence ?? 5);
-
-  const timeframeOptions = TIMEFRAME_PRESETS.includes(timeframe)
-    ? TIMEFRAME_PRESETS
-    : [timeframe, ...TIMEFRAME_PRESETS];
-
-  const submit = async () => {
-    if (!objective.trim()) return;
-    await update.mutateAsync({
-      id: goal.id,
-      body: {
-        objective: objective.trim(),
-        notes: notes.trim() || null,
-        type: goalType,
-        areaId,
-        timeframe,
-        confidence,
-      },
-    });
-    onDone();
-  };
-
-  return (
-    <div className={styles.formShell}>
-      <div className={styles.formHead}>
-        <div>
-          <h2 className={styles.formTitle}>编辑目标</h2>
-          <p className={styles.formDetail}>KR 进度在卡片内展开更新</p>
-        </div>
-        <button type="button" className={styles.iconBtn} onClick={onDone} title="取消">
-          <X size={14} />
-        </button>
-      </div>
-      <div className={styles.formGrid}>
-        <div className={styles.field}>
-          <Label>目标陈述</Label>
-          <Input value={objective} onChange={(e) => setObjective(e.target.value)} autoFocus />
-        </div>
-        <div className={styles.formRow2}>
-          <div className={styles.field}>
-            <Label>目标分类</Label>
-            <Select
-              value={goalType}
-              onChange={(e) => setGoalType(e.target.value as GoalType)}
-            >
-              <option value="main">主线目标</option>
-              <option value="okr">季度 / 年度 OKR</option>
-              <option value="milestone">里程碑</option>
-            </Select>
-          </div>
-          <div className={styles.field}>
-            <Label>人生领域</Label>
-            <AreaSelect value={areaId} onChange={setAreaId} />
-          </div>
-        </div>
-        <div className={styles.field}>
-          <Label>时间框</Label>
-          <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
-            {timeframeOptions.map((tf) => (
-              <option key={tf} value={tf}>
-                {tf}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className={styles.field}>
-          <Label>备注</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-        </div>
-        <div className={styles.field}>
-          <Label>信心 (1-10)：{confidence}</Label>
-          <Input
-            type="range"
-            min={1}
-            max={10}
-            value={confidence}
-            onChange={(e) => setConfidence(Number(e.target.value))}
-          />
-        </div>
-        <p className={styles.formNote}>KR 请在卡片里点「展开更新进度」编辑当前值。</p>
-        <div className={styles.formFooter}>
-          <Button variant="ghost" onClick={onDone}>
-            取消
-          </Button>
-          <Button onClick={submit} disabled={update.isPending || !objective.trim()}>
-            {update.isPending ? "保存中…" : "保存"}
-          </Button>
-        </div>
-      </div>
-    </div>
+      <span className={styles.goalCta}>进入规划地图</span>
+    </Link>
   );
 }
 
@@ -1061,65 +649,4 @@ function collectAreas(goals: GoalDTO[]) {
     }
   }
   return [...map.values()];
-}
-
-function buildMilestones(goals: GoalDTO[]) {
-  const now = Date.now();
-  return goals
-    .filter((g) => g.status === "active" && g.endDate)
-    .map((g) => {
-      const end = new Date(g.endDate);
-      const daysLeft = Math.ceil((end.getTime() - now) / (1000 * 60 * 60 * 24));
-      const incompleteKr = g.keyResults.find((kr) => kr.current < kr.target);
-      return {
-        id: g.id,
-        title: g.objective,
-        subtitle: incompleteKr
-          ? `待推进 · ${incompleteKr.description}`
-          : g.keyResults.length > 0
-            ? "关键结果已满进度"
-            : "暂无关键结果",
-        dateLabel: formatShortDate(g.endDate),
-        daysLeft,
-        progress: goalProgress(g),
-      };
-    })
-    .sort((a, b) => a.daysLeft - b.daysLeft)
-    .slice(0, 5);
-}
-
-function buildAreaDistribution(goals: GoalDTO[]) {
-  const counts = new Map<string, { label: string; count: number }>();
-  const mainGoals = goals.filter((goal) => goal.type === "main");
-  if (mainGoals.length > 0) {
-    counts.set("main", { label: "主线", count: mainGoals.length });
-  }
-  for (const goal of goals) {
-    if (goal.type === "main") continue;
-    const key = goal.area?.id ?? "none";
-    const label = goal.area ? `${goal.area.icon} ${goal.area.name}` : "未分类";
-    const prev = counts.get(key);
-    counts.set(key, { label, count: (prev?.count ?? 0) + 1 });
-  }
-  const total = Math.max(1, goals.length);
-  return [...counts.entries()]
-    .map(([key, value], index) => ({
-      key,
-      label: value.label,
-      count: value.count,
-      pct: (value.count / total) * 100,
-      color:
-        key === "main" ? "#c9a227" : AREA_COLORS[index % AREA_COLORS.length],
-    }))
-    .sort((a, b) => {
-      if (a.key === "main") return -1;
-      if (b.key === "main") return 1;
-      return b.count - a.count;
-    });
-}
-
-function formatShortDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return `${date.getMonth() + 1}/${date.getDate()}`;
 }

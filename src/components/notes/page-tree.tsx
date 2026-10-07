@@ -13,16 +13,21 @@ import {
   PanelLeftClose,
   Search,
   ChevronsUp,
+  Trash2,
 } from "lucide-react";
 import type { NoteTreeNodeDTO } from "@/lib/types";
-import { countNoteDescendants } from "@/lib/notes";
 import styles from "./notes-workspace.module.css";
+
+type DropTarget = { id: string | null; placement: "inside" | "before" };
 
 type PageTreeProps = {
   forest: NoteTreeNodeDTO[];
   flatNodes: NoteTreeNodeDTO[];
   selectedId: string | null;
   showArchived: boolean;
+  showTrash: boolean;
+  trashCount: number;
+  onOpenTrash: () => void;
   mode: "files" | "search";
   onModeChange: (mode: "files" | "search") => void;
   onCollapse: () => void;
@@ -31,6 +36,8 @@ type PageTreeProps = {
   onCreateFolderRoot: () => void;
   onCreateChild: (parentId: string) => void;
   onCreateFolderChild: (parentId: string) => void;
+  onDelete: (id: string) => void;
+  deleting: boolean;
   onMove: (id: string, parentId: string | null, position: number) => void;
   onToggleArchived: () => void;
   query: string;
@@ -63,7 +70,14 @@ function TreeNode({
   onSelect,
   onCreateChild,
   onCreateFolderChild,
+  onDelete,
+  deleting,
   onDragStart,
+  onDragEnd,
+  draggedId,
+  dropTarget,
+  onDragOver,
+  onDragLeave,
   onDropOn,
   onDropBefore,
 }: {
@@ -75,7 +89,14 @@ function TreeNode({
   onSelect: (id: string) => void;
   onCreateChild: (parentId: string) => void;
   onCreateFolderChild: (parentId: string) => void;
+  onDelete: (id: string) => void;
+  deleting: boolean;
   onDragStart: (id: string) => void;
+  onDragEnd: () => void;
+  draggedId: string | null;
+  dropTarget: DropTarget | null;
+  onDragOver: (id: string, placement: DropTarget["placement"]) => boolean;
+  onDragLeave: (id: string) => void;
   onDropOn: (targetId: string, draggedId: string) => void;
   onDropBefore: (targetId: string, draggedId: string) => void;
 }) {
@@ -85,31 +106,55 @@ function TreeNode({
   const isFolder = node.kind === "folder";
   const defaultTitle = isFolder ? "未命名文件夹" : "未命名页面";
   const hasCustomIcon = Boolean(node.icon && node.icon !== "📁" && node.icon !== "📄");
+  const dropInside = dropTarget?.id === node.id && dropTarget.placement === "inside";
+  const dropBefore = dropTarget?.id === node.id && dropTarget.placement === "before";
+  const rowClassName = [
+    styles.treeRow,
+    active ? styles.treeRowActive : "",
+    draggedId === node.id ? styles.treeRowDragging : "",
+    dropInside ? styles.treeRowDropInside : "",
+    dropBefore ? styles.treeRowDropBefore : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <div className={styles.treeNode}>
       <div
-        className={`${styles.treeRow}${active ? ` ${styles.treeRowActive}` : ""}`}
+        className={rowClassName}
+        data-note-id={node.id}
+        data-drop-placement={dropInside ? "inside" : dropBefore ? "before" : undefined}
         style={{ paddingLeft: 8 + depth * 14 }}
-        draggable
+        draggable={!deleting}
         onDragStart={(e) => {
           e.dataTransfer.setData("application/x-note-id", node.id);
           e.dataTransfer.effectAllowed = "move";
           onDragStart(node.id);
         }}
+        onDragEnd={onDragEnd}
         onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
+          e.stopPropagation();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const placement = e.clientY < rect.top + rect.height * 0.35 ? "before" : "inside";
+          if (onDragOver(node.id, placement)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          } else {
+            e.dataTransfer.dropEffect = "none";
+          }
+        }}
+        onDragLeave={(e) => {
+          if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) return;
+          onDragLeave(node.id);
         }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          const draggedId = e.dataTransfer.getData("application/x-note-id");
-          if (!draggedId || draggedId === node.id) return;
+          const sourceId = e.dataTransfer.getData("application/x-note-id") || draggedId;
+          onDragEnd();
+          if (!sourceId || sourceId === node.id) return;
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           const before = e.clientY < rect.top + rect.height * 0.35;
-          if (before) onDropBefore(node.id, draggedId);
-          else onDropOn(node.id, draggedId);
+          if (before) onDropBefore(node.id, sourceId);
+          else onDropOn(node.id, sourceId);
         }}
       >
         <button
@@ -150,6 +195,7 @@ function TreeNode({
             {node.pinned ? <em className={styles.pinMark}>★</em> : null}
           </span>
         </button>
+        {dropInside ? <span className={styles.treeDropHint}>移入</span> : null}
         <button
           type="button"
           className={styles.treeAddChild}
@@ -172,6 +218,19 @@ function TreeNode({
         >
           <FilePlus size={13} />
         </button>
+        <button
+          type="button"
+          className={`${styles.treeAddChild} ${styles.treeDelete}`}
+          title="移入垃圾桶"
+          aria-label={`将 ${node.title || defaultTitle} 移入垃圾桶`}
+          disabled={deleting}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(node.id);
+          }}
+        >
+          <Trash2 size={13} />
+        </button>
       </div>
       {isOpen &&
         (node.children ?? []).map((child) => (
@@ -185,7 +244,14 @@ function TreeNode({
             onSelect={onSelect}
             onCreateChild={onCreateChild}
             onCreateFolderChild={onCreateFolderChild}
+            onDelete={onDelete}
+            deleting={deleting}
             onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            draggedId={draggedId}
+            dropTarget={dropTarget}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
             onDropOn={onDropOn}
             onDropBefore={onDropBefore}
           />
@@ -199,6 +265,9 @@ export function PageTree({
   flatNodes,
   selectedId,
   showArchived,
+  showTrash,
+  trashCount,
+  onOpenTrash,
   mode,
   onModeChange,
   onCollapse,
@@ -207,12 +276,17 @@ export function PageTree({
   onCreateFolderRoot,
   onCreateChild,
   onCreateFolderChild,
+  onDelete,
+  deleting,
   onMove,
   onToggleArchived,
   query,
   onQueryChange,
 }: PageTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const byId = useMemo(() => new Map(flatNodes.map((node) => [node.id, node])), [flatNodes]);
   const visible = useMemo(
     () => (mode === "search" ? filterForest(forest, query) : forest),
     [forest, mode, query],
@@ -238,7 +312,40 @@ export function PageTree({
     setExpanded((prev) => new Set(prev).add(id));
   };
 
+  const endDrag = () => {
+    setDraggedId(null);
+    setDropTarget(null);
+  };
+
+  const canMoveTo = (sourceId: string, parentId: string | null) => {
+    if (deleting || !byId.has(sourceId)) return false;
+    const seen = new Set<string>();
+    let current = parentId;
+    while (current) {
+      if (current === sourceId || seen.has(current)) return false;
+      seen.add(current);
+      current = byId.get(current)?.parentId ?? null;
+    }
+    return true;
+  };
+
+  const highlightDrop = (id: string | null, placement: DropTarget["placement"]) => {
+    const target = id ? byId.get(id) : null;
+    const parentId = placement === "before" ? target?.parentId ?? null : id;
+    if (!draggedId || id === draggedId || (id && !target) || !canMoveTo(draggedId, parentId)) {
+      setDropTarget(null);
+      return false;
+    }
+    setDropTarget((previous) => previous?.id === id && previous.placement === placement ? previous : { id, placement });
+    return true;
+  };
+
+  const clearDrop = (id: string | null) => {
+    setDropTarget((previous) => previous?.id === id ? null : previous);
+  };
+
   const handleDropOn = (targetId: string, draggedId: string) => {
+    if (!byId.has(targetId) || !canMoveTo(draggedId, targetId)) return;
     const siblings = flatNodes.filter(
       (n) => n.parentId === targetId && n.id !== draggedId,
     );
@@ -247,18 +354,8 @@ export function PageTree({
   };
 
   const handleDropBefore = (targetId: string, draggedId: string) => {
-    const target = flatNodes.find((n) => n.id === targetId);
-    if (!target) return;
-    const desc = countNoteDescendants(flatNodes, draggedId);
-    let walk: string | null | undefined = targetId;
-    const seen = new Set<string>();
-    while (walk) {
-      if (walk === draggedId) return;
-      if (seen.has(walk)) break;
-      seen.add(walk);
-      walk = flatNodes.find((n) => n.id === walk)?.parentId;
-    }
-    void desc;
+    const target = byId.get(targetId);
+    if (!target || targetId === draggedId || !canMoveTo(draggedId, target.parentId)) return;
     onMove(draggedId, target.parentId, target.position);
   };
 
@@ -275,7 +372,7 @@ export function PageTree({
           <button
             type="button"
             title="文件"
-            className={mode === "files" ? styles.treeActionOn : undefined}
+            className={mode === "files" && !showTrash ? styles.treeActionOn : undefined}
             onClick={() => onModeChange("files")}
           >
             <Files size={16} />
@@ -283,7 +380,7 @@ export function PageTree({
           <button
             type="button"
             title="搜索"
-            className={mode === "search" ? styles.treeActionOn : undefined}
+            className={mode === "search" && !showTrash ? styles.treeActionOn : undefined}
             onClick={() => onModeChange("search")}
           >
             <Search size={16} />
@@ -326,16 +423,29 @@ export function PageTree({
       </div>
 
       <div
-        className={styles.treeList}
-        onDragOver={(e) => e.preventDefault()}
+        className={`${styles.treeList}${dropTarget?.id === null ? ` ${styles.treeListDropActive}` : ""}`}
+        data-drop-placement={dropTarget?.id === null ? "root" : undefined}
+        onDragOver={(e) => {
+          if (highlightDrop(null, "inside")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          } else {
+            e.dataTransfer.dropEffect = "none";
+          }
+        }}
+        onDragLeave={(e) => {
+          if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) return;
+          clearDrop(null);
+        }}
         onDrop={(e) => {
           e.preventDefault();
-          const draggedId = e.dataTransfer.getData("application/x-note-id");
-          if (!draggedId) return;
+          const sourceId = e.dataTransfer.getData("application/x-note-id") || draggedId;
+          endDrag();
+          if (!sourceId || !canMoveTo(sourceId, null)) return;
           const roots = flatNodes.filter(
-            (n) => n.parentId === null && n.id !== draggedId,
+            (n) => n.parentId === null && n.id !== sourceId,
           );
-          onMove(draggedId, null, roots.length);
+          onMove(sourceId, null, roots.length);
         }}
       >
         {visible.length === 0 ? (
@@ -360,13 +470,34 @@ export function PageTree({
                 ensureExpanded(parentId);
                 onCreateFolderChild(parentId);
               }}
-              onDragStart={() => undefined}
+              onDelete={onDelete}
+              deleting={deleting}
+              onDragStart={(id) => {
+                setDraggedId(id);
+                setDropTarget(null);
+              }}
+              onDragEnd={endDrag}
+              draggedId={draggedId}
+              dropTarget={dropTarget}
+              onDragOver={highlightDrop}
+              onDragLeave={clearDrop}
               onDropOn={handleDropOn}
               onDropBefore={handleDropBefore}
             />
           ))
         )}
+        {dropTarget?.id === null ? <div className={styles.treeRootDropHint}>移动到知识库根目录</div> : null}
       </div>
+      <button
+        type="button"
+        className={`${styles.trashEntry}${showTrash ? ` ${styles.treeActionOn}` : ""}`}
+        aria-pressed={showTrash}
+        onClick={onOpenTrash}
+      >
+        <Trash2 size={16} />
+        <span>垃圾桶</span>
+        {trashCount > 0 ? <small>{trashCount}</small> : null}
+      </button>
     </aside>
   );
 }

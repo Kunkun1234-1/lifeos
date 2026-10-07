@@ -1,4 +1,4 @@
-/* Inventory — 1:1 rice-paper cream + deep green / gold (Life Game shell) */
+/* Inventory filters, item information and shortcut controls. */
 
 .page {
   --inv-cream: #f7f7ed;
@@ -21,16 +21,9 @@
   --inv-common: #8a918c;
   --inv-legend: #c9902c;
 
-  width: min(1480px, 100%);
+  width: 100%;
   margin: 0 auto;
-  padding: 12px 14px 24px;
   color: var(--inv-fg);
-}
-
-@media (min-width: 768px) {
-  .page {
-    padding: 14px 18px 28px;
-  }
 }
 
 /* ── Top: tabs + filter ── */
@@ -207,34 +200,6 @@
   background: var(--inv-green-deep);
 }
 
-/* ── Main: grid + detail ── */
-.mainRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-@media (min-width: 1100px) {
-  .mainRow {
-    grid-template-columns: minmax(0, 1fr) 292px;
-  }
-}
-
-.gridPane {
-  min-width: 0;
-  max-height: min(58vh, 580px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 4px 2px 8px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 136px), 1fr));
-  gap: 12px;
-}
-
 .empty,
 .loading,
 .error {
@@ -254,143 +219,8 @@
   background: rgba(197, 85, 74, 0.06);
 }
 
-/* Item card */
-.card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  height: 176px;
-  overflow: hidden;
-  padding: 8px 8px 10px;
-  border: 2.5px solid transparent;
-  border-radius: 14px;
-  color: inherit;
-  text-align: left;
-  background: #ffffff;
-  box-shadow:
-    0 0 0 1px rgba(213, 211, 168, 0.65),
-    0 6px 14px rgba(41, 62, 52, 0.04);
-  cursor: pointer;
-  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
-}
-
-.card::after {
-  position: absolute;
-  inset: auto 0 0;
-  height: 42%;
-  content: "";
-  pointer-events: none;
-  opacity: 0.55;
-  background: linear-gradient(180deg, transparent, var(--rarity-glow, rgba(138, 145, 140, 0.22)));
-}
-
-.card:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px rgba(185, 202, 49, 0.45),
-    0 10px 18px rgba(41, 62, 52, 0.07);
-}
-
-.cardSelected {
-  border-color: var(--inv-green);
-  box-shadow:
-    0 0 0 1px var(--inv-green),
-    0 8px 20px rgba(36, 157, 109, 0.16);
-}
-
-.cardQty {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  right: 8px;
-  color: var(--inv-fg-muted);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.cardEquip {
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  left: 8px;
-  display: grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  border-radius: 3px;
-  color: #fff;
-  background: var(--inv-green);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.cardVisual {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  flex: 1;
-  min-height: 112px;
-  place-items: center;
-  padding: 14px 4px 2px;
-  font-size: 36px;
-  line-height: 1;
-}
-
-.cardVisual img {
-  width: 96px;
-  height: 96px;
-  object-fit: contain;
-}
-
 .itemPixel {
   image-rendering: pixelated;
-}
-
-.cardMeta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.cardName {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--inv-fg-strong);
-  font-family: var(--font-display-cn), "Songti SC", "PingFang SC", sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cardRarity {
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--rarity-color, var(--inv-common));
-}
-
-/* Detail panel */
-.detail {
-  display: flex;
-  flex-direction: column;
-  min-height: 420px;
-  padding: 16px 16px 14px;
-  border: 1px solid var(--inv-border);
-  border-radius: 12px;
-  background: var(--inv-paper);
-  box-shadow: 0 8px 20px rgba(41, 62, 52, 0.04);
 }
 
 .detailEmpty {
@@ -399,35 +229,6 @@
   place-items: center;
   color: var(--inv-fg-muted);
   font-size: 14px;
-}
-
-.detailHead {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.detailTitle {
-  margin: 0;
-  color: var(--inv-fg-strong);
-  font-family: var(--font-display-cn), "Songti SC", "PingFang SC", sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.detailRarityTag {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 6px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: #fff;
-  background: var(--rarity-color, var(--inv-common));
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.4;
 }
 
 .detailLock {
@@ -449,33 +250,6 @@
   border-color: var(--inv-green);
 }
 
-.detailPreviewRow {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.detailThumb {
-  display: grid;
-  width: 112px;
-  height: 112px;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid var(--inv-border);
-  border-radius: 10px;
-  background:
-    linear-gradient(180deg, #fff, var(--inv-cream));
-  font-size: 48px;
-}
-
-.detailThumb img {
-  width: 88px;
-  height: 88px;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
 .detailStats {
   display: flex;
   flex-direction: column;
@@ -484,6 +258,8 @@
   min-width: 0;
   font-size: 13px;
   color: var(--inv-fg);
+
+  margin-bottom: 16px;
 }
 
 .detailStat {
@@ -506,7 +282,6 @@
   margin: 0 0 14px;
   color: var(--inv-fg-muted);
   font-size: 13px;
-  font-style: italic;
   line-height: 1.65;
 }
 

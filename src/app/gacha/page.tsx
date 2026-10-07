@@ -174,7 +174,7 @@ export default function GachaPage() {
   return (
     <div className="relative min-h-[calc(100vh-82px)] overflow-hidden bg-[#052a22] text-white">
       <Image
-        src="/gacha/backgrounds/wish-banner-v2.png"
+        src="/art-packs/legacy-lifeos/gacha/backgrounds/wish-banner-v2.png"
         alt="雪境星海中的祈愿角色"
         fill
         priority
@@ -890,11 +890,17 @@ function RollingOverlay({
 
 function getWishVideoSrc(tier: RewardItemDTO["tier"], count: 1 | 10) {
   if (count === 10) {
-    return tier === "legendary" ? "/gacha/videos/ten-gold.mp4" : "/gacha/videos/ten-purple.mp4";
+    return tier === "legendary"
+      ? "/art-packs/legacy-lifeos/gacha/videos/ten-gold.mp4"
+      : "/art-packs/legacy-lifeos/gacha/videos/ten-purple.mp4";
   }
-  if (tier === "legendary") return "/gacha/videos/single-gold.mp4";
-  if (tier === "rare" || tier === "epic") return "/gacha/videos/single-purple.mp4";
-  return "/gacha/videos/single-blue.mp4";
+  if (tier === "legendary") {
+    return "/art-packs/legacy-lifeos/gacha/videos/single-gold.mp4";
+  }
+  if (tier === "rare" || tier === "epic") {
+    return "/art-packs/legacy-lifeos/gacha/videos/single-purple.mp4";
+  }
+  return "/art-packs/legacy-lifeos/gacha/videos/single-blue.mp4";
 }
 
 function SequentialRevealOverlay({

@@ -1,0 +1,35 @@
+请依据输入截图重新设计 Game Life 背包物品美术预览。输入图片是必须严格遵循的画风参考，不是要复刻的界面。仔细看原截图中紫色卡片上的书、卷轴、羽毛、花和工具：它们是二次元游戏小图标，简练、轻盈、略有棱角的手绘赛璐璐风格。请匹配这种简化程度和画法。上一版失败于过度奢华的金饰、油亮写实的金属、摄影式体积感、繁复花纹；这次应当彻底去掉这些倾向。
+
+Use case: stylized-concept.
+Deliverable: ONE landscape preview sheet with exactly 20 redesigned inventory icons, five columns and four rows. Each centered small icon occupies only 55-62% of its square tile, generous breathing room, gentle consistent three-quarter viewpoint. Flat muted dusky purple tile backgrounds like the purple item cards in the reference screenshot. Narrow clean gaps, no ornate borders. A small unobtrusive cream Chinese label underneath each icon, no stars, no quantities, no menus, no heading.
+
+CRITICAL ART DIRECTION: faithfully match the illustrated inventory items in the reference, especially the books, thin scrolls, small charms. Professional anime RPG UI icon painting. Compact clean silhouettes, sparse fine charcoal contour lines, broad flat color planes, two or three crisp cel-shaded value groups, subtle hand-painted transitions and a little surface grain. Delicate but NOT over-engineered. Slightly angular stylized forms. Clearly 2D illustrations at first glance. Soft matte leather, paper, cloth, ceramic; tiny gold fittings only where useful, gold is not the dominant material. Colorful local colors with controlled saturation. Limited mild gem highlights, no dramatic spotlights. Items should look natural and collectible, with imperfect charming hand-drawn details, not symmetric jewelry catalogs. Clear readable designs at 96px. Original objects following the style, not copying existing screenshot objects.
+AVOID: glossy high-polish gold, baroque ornamental carvings, every object ringed in gold, photorealism, 3D render, pseudo-realistic product art, thick plastic outlines, enamel toy appearance, heavy rounded volumes, cinematic lighting, luminous fog, over-sharpened microdetails, large sparkles, elaborate presentation frames. Do NOT use the generic AI fantasy luxury aesthetic.
+
+Exact order left-to-right, top-to-bottom:
+Row 1:
+金币: two or three simple matte warm-gold coins, one modest stamped sun symbol, stylized flat bevels.
+宝石: a slender angular cluster of lilac and ice-blue crystals with a few broad painted facets, minimal shine.
+命运点: small blue-violet magical orb with a pale yellow star inside, thin ivory crescent accent, simple shape.
+冻结券: thin folded ice-blue paper talisman, one white snowflake stamped on it, small dark-blue ribbon.
+月露茶券: small cream-and-jade tea voucher folded once, a tiny moon seal and slim jade cord, paper dominant.
+Row 2:
+星糖点心: small violet-and-cream star-shaped pastry with a single pale yellow sugar star, not an elaborate cake.
+风之空白券: lightweight pale blue ticket with a white feather, minimal green ribbon, gently diagonal.
+安眠烛: slender pale violet candle with a tiny sleepy blue flame in a SIMPLE small bronze crescent holder, no flowers.
+蔚蓝书契: slim dark cobalt leather book, one simple pale gold motif, two tiny corner fittings and blue bookmark, no giant gemstone.
+樱宴席券: coral red rectangular paper voucher, small cream sakura stamp, slim red tassel, like a clean painted game quest item.
+Row 3:
+云息疗愈: simple pale aqua cloud-shaped glass charm with a little swirling white mist, understated green cord, no elaborate jewelry mounting.
+灵感晶笔: slim pointed cyan crystal pen, dark indigo handle, one simple teal feather and tiny brass fitting, lightweight elegant angled silhouette.
+远野地图: small slightly unfurled parchment map with broad green landscape shapes and muted blue river, small red wax seal, no oversized compass.
+匠心礼匣: small dark navy rectangular keepsake box with a simple jade cloth ribbon and a modest brass catch, matte painted forms.
+极光工坊: simple indigo roll-up tool pouch, two slender crystal tools peeking out and one tiny teal gear, no giant machinery or bulky case.
+Row 4:
+星海通行证: slim deep blue travel booklet with one simple cream constellation motif and narrow teal bookmark, no gold-encrusted celestial plate.
+装饰相框: small restrained pale-gold-and-teal frame, clean curved corners, empty opening, no baroque carvings.
+荣誉冠冕: modest dark-blue-and-antique-gold circlet with three small points and ONE tiny cyan jewel, slender silhouette.
+成就之书: slim moss-green bound journal with one muted gold star insignia and red-brown bookmark, aged matte leather.
+神秘礼物: compact violet paper-wrapped gift with ivory cloth bow, one little teal wax seal, restrained simple cheerful shape.
+
+Overall priority: reference screenshot's concise, airy, hand-painted anime RPG item art, NOT the previous luxurious realistic style. The drawing style must be convincing even without cards or labels.

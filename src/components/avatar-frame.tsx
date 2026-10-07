@@ -19,7 +19,7 @@ const DEFAULT_STYLE: AvatarFrameStyle = {
  * Used in TopNav and /equipment preview.
  */
 export function AvatarFrame({
-  src = "/lifeos/profile_avatar.png",
+  src = "/art-packs/legacy-lifeos/lifeos/profile_avatar.png",
   size = 36,
   style,
   alt = "avatar",
