@@ -228,9 +228,9 @@ MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `A
 发布顺序：
 
 1. 本地运行类型检查、构建和 smoke tests。
-2. 有 Prisma 迁移时执行 `npm run db:deploy`。
-3. commit 并 push `main`。
-4. 等待 `lifeos` 与 `lifeos-api` 两个 Vercel Production Deployment 成功。
+2. commit 并 push `main`。
+3. API 正式构建会先自动执行 `prisma migrate deploy`，成功后才构建并发布 API；本地手动发布也可执行 `npm run db:deploy`。
+4. 等待 `lifeos` 与 `lifeos-api` 两个 Vercel Production Deployment 成功。两个项目并行构建，迁移保证先于 API 发布，Web 可能先完成；本次迁移均为兼容旧数据的增量变更。
 5. 检查 `/health`、两个 OAuth metadata 和 `/login`。
 6. 重新连接 ChatGPT MCP，确认能发现 108 个工具。
 
@@ -266,3 +266,5 @@ MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `A
 `npm run test:periodic-tasks` 验证周期日期规则；`npm run smoke:periodic-tasks` 仅在显式指定的本地测试数据库和服务上验证账号隔离、打卡并发、奖励回退与历史保存。
 
 每日任务支持“日视图 / 周视图”切换。周视图将同一批每日任务按周一至周日展开，今天可以直接打卡或撤销，其他日期仅查看；上一周、下一周和回到本周用于回顾。`GET /api/periodic-tasks/week` 一次读取该周记录，无需新增迁移。
+
+API 的 Vercel 构建入口为 `scripts/vercel-build-api.mjs`：仅 `VERCEL_ENV=production` 自动应用已提交的数据库迁移；迁移失败立即停止构建。预览与本地构建不会触发线上迁移。
