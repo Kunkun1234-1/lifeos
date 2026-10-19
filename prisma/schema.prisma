@@ -194,7 +194,8 @@ model Task {
 
   title    String
   notes    String?
-  status   String    @default("TODO") // TODO | IN_PROGRESS | DONE | CANCELED
+  status   String    @default("TODO") // TODO | IN_PROGRESS | REVIEW | DONE | CANCELED
+  boardPosition Int  @default(0)
   priority Int       @default(2) // 1=high, 2=normal, 3=low
   dueDate  DateTime?
 
@@ -202,10 +203,11 @@ model Task {
   goldReward Int @default(5)
 
   completedAt DateTime?
+  rewardClaimedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([userId, status])
+  @@index([userId, status, boardPosition])
   @@index([userId, dueDate])
   @@index([milestoneId])
 }

@@ -107,3 +107,15 @@
 - Show the page name, stamina icon and amount, experience icon and level/amount, utility icons and a small avatar in one row. Remove the subtitle, status cards and progress bars; retain complete status descriptions as accessible labels and hover titles.
 - On phones, hide capacity denominators and the less essential utility shortcuts to keep both status amounts visible without wrapping. The account avatar remains accessible.
 - The overview header uses 总览; the existing sidebar motto editor remains available. Full-screen goal/project maps retain their current layout.
+
+### Task planning week and project boards (2026-10-19)
+- `/tasks` adds 项目视图 alongside the existing task/calendar views. Each project has its own four columns: 计划 / 正在进行 / 验收 / 结束. Task cards move within these columns; projects remain independent groups.
+- Week view occupies the full workspace with seven ordered days, a collapsible filter panel above and supporting today/upcoming cards below. Use the available vertical space for readable multi-line task cards instead of truncating at four tasks.
+- Date headers open daily agendas; individual cards open task details. Keep the seven-day board horizontally scrollable within its labelled region on smaller screens.
+- Task cards preserve detail navigation, deadline/progress context, empty drop targets and a keyboard/touch alternative to dragging. Failed saves restore the prior state and explain the failure. Task stage and order persist on the server; a finished task can return to another stage without earning repeated rewards.
+- A project's tasks stay with that project during drag. Completing a task does not automatically accept its project or milestone.
+- Reuse the existing cream/green theme and fonts. Validate desktop/mobile, task dragging across stages and within columns, reload persistence, and failure recovery against an isolated local database.
+
+### Project navigation placement (2026-10-19)
+- The main sidebar places 项目工坊 (`/projects`) directly after 人生目标. 成就系统 remains available from 全部功能 instead of occupying a main sidebar slot.
+- Project routes activate 项目工坊; achievement routes activate 全部功能. The mobile bottom bar keeps 总览 / 任务计划 / 日程规划 / 知识库; the 更多 menu follows the main sidebar order.

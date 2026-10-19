@@ -55,7 +55,7 @@ export default function StrategyPage() {
     const activeGoals = goals.filter((g) => g.status === "active");
     const mainGoals = goals.filter((g) => g.type === "main" && g.status === "active");
     const activeProjects = projects.filter((p) => p.status === "active" || p.status === "idea");
-    const openTasks = tasks.filter((t) => t.status === "TODO" || t.status === "IN_PROGRESS");
+    const openTasks = tasks.filter((t) => t.status === "TODO" || t.status === "IN_PROGRESS" || t.status === "REVIEW");
     const doneTasks = tasks.filter((t) => t.status === "DONE");
     const avgGoalProgress =
       activeGoals.length > 0
@@ -461,7 +461,7 @@ function AreaTreeNode({
 }) {
   const [open, setOpen] = useState(true);
   const orphanProjects = projects.filter((p) => !p.goalId);
-  const openTasks = tasks.filter((t) => t.status === "TODO" || t.status === "IN_PROGRESS");
+  const openTasks = tasks.filter((t) => t.status === "TODO" || t.status === "IN_PROGRESS" || t.status === "REVIEW");
   const activeGoals = goals.filter((g) => g.status === "active");
 
   return (

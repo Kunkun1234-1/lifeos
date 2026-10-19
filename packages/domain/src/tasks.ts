@@ -14,6 +14,7 @@ const TASK_INCLUDE = {
 export class TaskNotFoundError extends Error {}
 export class TaskAlreadyCompleteError extends Error {}
 export class TaskLinkError extends Error {}
+export class TaskCompletionRequiredError extends Error {}
 
 export async function listTasks(
   db: PrismaClient,
@@ -35,6 +36,7 @@ export async function listTasks(
     include: TASK_INCLUDE,
     orderBy: [
       { status: "asc" },
+      { boardPosition: "asc" },
       { dueDate: "asc" },
       { priority: "asc" },
       { createdAt: "desc" },
@@ -75,6 +77,9 @@ export async function updateTask(
 ) {
   const existing = await db.task.findFirst({ where: { id: taskId, userId } });
   if (!existing) throw new TaskNotFoundError("Task not found");
+  if (data.status === "DONE" && existing.status !== "DONE") {
+    throw new TaskCompletionRequiredError("Use the task completion endpoint to finish a task");
+  }
   const links = await resolveTaskLinks(db, userId, data, existing);
 
   return db.task.update({
@@ -93,11 +98,7 @@ export async function updateTask(
           : undefined,
       status: data.status,
       completedAt:
-        data.status === "DONE"
-          ? existing.completedAt ?? new Date()
-          : data.status
-            ? null
-            : undefined,
+        data.status && data.status !== "DONE" ? null : undefined,
       xpReward: data.xpReward,
       goldReward: data.goldReward,
     },
@@ -123,22 +124,29 @@ export async function completeTask(
     const task = await tx.task.findFirst({ where: { id: taskId, userId } });
     if (!task) throw new TaskNotFoundError("Task not found");
 
+    const completedAt = new Date();
     const transitioned = await tx.task.updateMany({
       where: { id: taskId, userId, status: { not: "DONE" } },
-      data: { status: "DONE", completedAt: new Date() },
+      data: { status: "DONE", completedAt },
     });
     if (transitioned.count === 0) {
       throw new TaskAlreadyCompleteError("Task is already complete");
     }
 
-    const reward = await grantRewardInTransaction(tx, {
-      userId,
-      xp: task.xpReward,
-      gold: task.goldReward,
-      source: "task",
-      sourceId: task.id,
-      areaId: task.areaId,
+    const rewardClaim = await tx.task.updateMany({
+      where: { id: taskId, userId, rewardClaimedAt: null },
+      data: { rewardClaimedAt: completedAt },
     });
+    const reward = rewardClaim.count === 1
+      ? await grantRewardInTransaction(tx, {
+          userId,
+          xp: task.xpReward,
+          gold: task.goldReward,
+          source: "task",
+          sourceId: task.id,
+          areaId: task.areaId,
+        })
+      : { xpGranted: 0, goldGranted: 0, gemsGranted: 0, fateGranted: 0, areaKey: null, currency: null };
     const updated = await tx.task.findUniqueOrThrow({
       where: { id: taskId },
       include: TASK_INCLUDE,

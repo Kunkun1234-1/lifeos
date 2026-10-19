@@ -4,6 +4,7 @@ import { getCurrentUserId } from "@/lib/user";
 import { TaskUpdateSchema } from "@/lib/validators";
 import {
   deleteTask,
+  TaskCompletionRequiredError,
   TaskLinkError,
   TaskNotFoundError,
   updateTask,
@@ -25,6 +26,9 @@ export async function PATCH(req: Request, { params }: Params) {
     }
     if (error instanceof TaskLinkError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof TaskCompletionRequiredError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     throw error;
   }

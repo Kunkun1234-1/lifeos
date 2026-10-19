@@ -177,6 +177,21 @@ export const ProjectCreateSchema = z.object({
 
 export const ProjectUpdateSchema = ProjectCreateSchema.partial();
 
+export const ProjectTaskBoardOrderSchema = z.object({
+  projectId: z.string().min(1),
+  movedTaskId: z.string().min(1),
+  movedStatus: z.enum(["TODO", "IN_PROGRESS", "REVIEW", "DONE"]),
+  tasks: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        position: z.number().int().min(0),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
 // ---------- Reward ----------
 const RewardItemBaseSchema = z.object({
   name: z.string().min(1).max(100),

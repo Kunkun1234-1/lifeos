@@ -25,7 +25,7 @@ import {
   LayoutGrid,
   Library,
   Mail,
-  Medal,
+  Hammer,
   MoreHorizontal,
   Settings,
   Sparkles,
@@ -44,21 +44,18 @@ const NAV_ITEMS = [
   { href: "/tasks", label: "任务计划", icon: CheckSquare2 },
   { href: "/routines", label: "日程规划", icon: CalendarDays },
   { href: "/goals", label: "人生目标", icon: Flag },
+  { href: "/projects", label: "项目工坊", icon: Hammer },
   { href: "/review", label: "成长反思", icon: BookOpen },
   { href: "/notes", label: "知识库", icon: Library },
   { href: "/system", label: "全部功能", icon: LayoutGrid },
   { href: "/inventory", label: "物品背包", icon: Backpack },
-  { href: "/achievements", label: "成就系统", icon: Medal },
   { href: "/assets", label: "财务资产", icon: CircleDollarSign },
   { href: "/settings", label: "系统设置", icon: Settings },
 ] as const;
 
-const MOBILE_NAV_ITEMS = [
-  NAV_ITEMS[0],
-  NAV_ITEMS[1],
-  NAV_ITEMS[2],
-  NAV_ITEMS[5],
-] as const;
+const MOBILE_NAV_ITEMS = NAV_ITEMS.filter(({ href }) =>
+  href === "/" || href === "/tasks" || href === "/routines" || href === "/notes",
+);
 
 const ROUTE_META = [
   { prefix: "/tasks", title: "任务计划", description: "整理今日任务，把每一步转化为成长进度。" },
@@ -70,7 +67,7 @@ const ROUTE_META = [
   { prefix: "/assets", title: "财务资产", description: "查看资产分布与近期变化。" },
   { prefix: "/settings", title: "系统设置", description: "调整属于你的冒险体验。" },
   { prefix: "/analytics", title: "成长分析", description: "从数据中观察长期成长趋势。" },
-  { prefix: "/projects", title: "项目管理", description: "推进重要项目，串联任务与阶段成果。" },
+  { prefix: "/projects", title: "项目工坊", description: "推进重要项目，串联任务与阶段成果。" },
   { prefix: "/rewards", title: "奖励商店", description: "用积累的成果兑换旅途奖励。" },
   { prefix: "/gacha", title: "祈愿", description: "开启一次属于你的旅途邂逅。" },
   { prefix: "/system", title: "全部功能", description: "在这里找到任务、知识、成长和奖励等全部模块。" },
@@ -90,7 +87,7 @@ const ROUTE_META = [
 const STANDALONE_ROUTES = ["/login", "/onboarding"];
 const SYSTEM_CHILD_ROUTES = [
   "/habits",
-  "/projects",
+  "/achievements",
   "/strategy",
   "/analytics",
   "/rewards",

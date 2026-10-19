@@ -712,6 +712,37 @@ export const useProjects = (status?: string) =>
     queryFn: () => api<ProjectDTO[]>(`/api/projects${status ? `?status=${status}` : ""}`),
   });
 
+export type ProjectTaskBoardMove = {
+  projectId: string;
+  movedTaskId: string;
+  movedStatus: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+  tasks: Array<{ id: string; position: number }>;
+};
+
+export function useMoveProjectTask() {
+  const qc = useQueryClient();
+  const push = useRewardsStore((state) => state.push);
+  return useMutation({
+    mutationFn: (body: ProjectTaskBoardMove) =>
+      api<{ tasks: TaskDTO[]; reward: RewardResult | null }>("/api/tasks/board-move", {
+        method: "PATCH",
+        json: body,
+      }),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      invalidatePlanning(qc);
+      if (result.reward) {
+        push({ xp: result.reward.xpGranted, gold: result.reward.goldGranted, gems: 0, fate: 0, areaKey: result.reward.areaKey, label: "Task done" });
+        invalidateWallet(qc);
+      }
+      qc.invalidateQueries({ queryKey: qk.user });
+      qc.invalidateQueries({ queryKey: qk.areas });
+      qc.invalidateQueries({ queryKey: qk.commissions });
+      invalidateDashboard(qc);
+    },
+  });
+}
+
 export const useGoalTree = (id: string) =>
   useQuery({
     queryKey: qk.goalTree(id),

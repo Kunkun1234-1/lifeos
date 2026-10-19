@@ -29,17 +29,18 @@ import {
 import { addDaysYMD, endOfWeekYMD, startOfWeekYMD, todayYMD, toYMD } from "@/lib/date";
 import { defaultTaskPriorityNumber } from "@/lib/settings-prefs";
 import { AREA_META, type AreaName } from "@/lib/area-meta";
-import type { TaskDTO } from "@/lib/types";
+import type { TaskDTO, ProjectDTO } from "@/lib/types";
 import styles from "./page.module.css";
+import { ProjectBoard } from "./project-board";
 import { decodeNotes, routineMatchesDate } from "@/app/routines/schedule-model";
 
-type ViewTab = "mine" | "schedule" | "week" | "month";
+type ViewTab = "mine" | "schedule" | "week" | "month" | "projects";
 /** 任务类型：主线=挂项目；支线=一次性无项目；日/周循环归 Routines */
 type TypeId = "all" | "main" | "side" | "done";
 type AreaFilter = "all" | "none" | string; // area id
 
 type PriorityFilter = Set<number>; // 1 high, 2 mid, 3 low; empty = all
-type StatusFilter = "all" | "TODO" | "IN_PROGRESS" | "DONE" | "CANCELED";
+type StatusFilter = "all" | "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "CANCELED";
 type DueFilter = "all" | "today" | "week" | "overdue" | "none";
 type CompletedGroupKey = "today" | "week" | "month" | "earlier";
 
@@ -50,6 +51,7 @@ const VIEW_TABS: Array<{ id: ViewTab; label: string }> = [
   { id: "schedule", label: "日程视图" },
   { id: "week", label: "周视图" },
   { id: "month", label: "月视图" },
+  { id: "projects", label: "项目视图" },
 ];
 
 const TYPE_CATEGORIES: Array<{ id: TypeId; label: string; icon: string }> = [
@@ -96,6 +98,7 @@ function isOverdue(task: TaskDTO, today = todayYMD()) {
 
 function progressOf(task: TaskDTO) {
   if (task.status === "DONE") return 100;
+  if (task.status === "REVIEW") return 85;
   if (task.status === "IN_PROGRESS") return 55;
   if (task.status === "CANCELED") return 0;
   return 0;
@@ -104,7 +107,7 @@ function progressOf(task: TaskDTO) {
 function matchesType(task: TaskDTO, type: TypeId) {
   switch (type) {
     case "all":
-      return task.status === "TODO" || task.status === "IN_PROGRESS";
+      return task.status === "TODO" || task.status === "IN_PROGRESS" || task.status === "REVIEW";
     case "main":
       return Boolean(task.projectId) && task.status !== "DONE" && task.status !== "CANCELED";
     case "side":
@@ -246,6 +249,7 @@ export default function TasksPage() {
   const [dueFilter, setDueFilter] = useState<DueFilter>("all");
   const [cursorDate, setCursorDate] = useState(() => todayYMD());
   const [creating, setCreating] = useState(false);
+  const [creatingProject, setCreatingProject] = useState<ProjectDTO | null>(null);
   const [editing, setEditing] = useState<TaskDTO | null>(null);
   const [bulk, setBulk] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -281,7 +285,7 @@ export default function TasksPage() {
       const belongsToCurrentCollection =
         typeId === "done"
           ? t.status === "DONE"
-          : t.status === "TODO" || t.status === "IN_PROGRESS";
+          : t.status === "TODO" || t.status === "IN_PROGRESS" || t.status === "REVIEW";
       if (!belongsToCurrentCollection) continue;
       map.all += 1;
       if (!t.areaId) map.none += 1;
@@ -292,7 +296,7 @@ export default function TasksPage() {
 
   const overview = useMemo(() => {
     const active = tasks.filter((t) => t.status !== "CANCELED");
-    const inProgress = active.filter((t) => t.status === "IN_PROGRESS").length;
+    const inProgress = active.filter((t) => t.status === "IN_PROGRESS" || t.status === "REVIEW").length;
     const todo = active.filter((t) => t.status === "TODO").length;
     const overdue = active.filter((t) => isOverdue(t, today)).length;
 
@@ -541,7 +545,7 @@ export default function TasksPage() {
   };
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-view={view}>
       <div className={styles.toolbar}>
         <div className={styles.viewTabs}>
           {VIEW_TABS.map((tab) => (
@@ -555,7 +559,7 @@ export default function TasksPage() {
             </button>
           ))}
         </div>
-        <div className={styles.toolbarActions}>
+        {view !== "projects" ? <div className={styles.toolbarActions}>
           <button type="button" className={styles.btnPrimary} onClick={() => setCreating(true)}>
             <Plus size={14} /> 添加任务
           </button>
@@ -574,11 +578,11 @@ export default function TasksPage() {
               完成选中 ({selected.size})
             </button>
           ) : null}
-        </div>
+        </div> : null}
       </div>
 
       <div className={styles.layout}>
-        <aside className={`${styles.panel} ${styles.leftPanel}`} data-open={filtersOpen}>
+        {view !== "projects" ? <aside className={`${styles.panel} ${styles.leftPanel}`} data-open={filtersOpen}>
           <button type="button" className={styles.mobileFilterToggle} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
             筛选任务 {filtersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -693,6 +697,7 @@ export default function TasksPage() {
                 <option value="all">全部状态</option>
                 <option value="TODO">待开始</option>
                 <option value="IN_PROGRESS">进行中</option>
+                <option value="REVIEW">待验收</option>
                 <option value="DONE">已完成</option>
                 <option value="CANCELED">已取消</option>
               </select>
@@ -709,7 +714,7 @@ export default function TasksPage() {
             </label>
           </div>
           </div>
-        </aside>
+        </aside> : null}
 
         <main className={styles.center}>
           {view === "mine" ? (
@@ -737,7 +742,7 @@ export default function TasksPage() {
                 <Ring value={overview.weekRate} label="本周完成度" color="#5b9ec9" />
               </div>
             </section>
-          ) : (
+          ) : view !== "projects" ? (
             <section className={`${styles.panel} ${styles.viewBar}`}>
               <div className={styles.viewBarNav}>
                 <button
@@ -786,7 +791,9 @@ export default function TasksPage() {
                 回到今天
               </button>
             </section>
-          )}
+          ) : null}
+
+          {view === "projects" ? <ProjectBoard onEditTask={setEditing} onCreateTask={(project) => { setCreatingProject(project); setCreating(true); }} /> : null}
 
           {view === "mine" ? (
             <section className={`${styles.panel} ${styles.listPanel}`}>
@@ -796,6 +803,8 @@ export default function TasksPage() {
                     ? "已完成任务"
                     : statusFilter === "IN_PROGRESS"
                       ? "进行中的任务"
+                      : statusFilter === "REVIEW"
+                        ? "待验收任务"
                       : statusFilter === "TODO"
                         ? "待开始任务"
                         : statusFilter === "CANCELED"
@@ -964,46 +973,44 @@ export default function TasksPage() {
           ) : null}
 
           {view === "week" ? (
-            <section className={`${styles.panel} ${styles.listPanel}`}>
+            <section className={`${styles.panel} ${styles.listPanel} ${styles.weekPanel}`}>
               <div className={styles.listHead}>
-                <h2 className={styles.listTitle}>{viewTitle}</h2>
-                <div className={styles.listMeta}>{listTasks.length} 项分布在本周</div>
+                <div>
+                  <h2 className={styles.listTitle}>本周任务</h2>
+                  <p className={styles.weekHint}>点击任务查看详情，点击日期查看当日日程</p>
+                </div>
+                <div className={styles.listMeta}>{listTasks.length} 项 · 周一至周日</div>
               </div>
-              <div className={styles.weekGrid}>
-                {weekDays.map((day) => {
-                  const dayTasks = tasksByDay.get(day) ?? [];
-                  const isToday = day === today;
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      className={isToday ? styles.weekColToday : styles.weekCol}
-                      onClick={() => {
-                        setCursorDate(day);
-                        setView("schedule");
-                      }}
-                    >
-                      <div className={styles.weekColHead}>
-                        <span>{WEEKDAY_LABELS[new Date(day + "T12:00:00").getDay()]}</span>
-                        <strong>{day.slice(8)}</strong>
-                      </div>
-                      <div className={styles.weekColBody}>
-                        {dayTasks.length === 0 ? (
-                          <span className={styles.weekEmpty}>—</span>
-                        ) : (
-                          dayTasks.slice(0, 4).map((t) => (
-                            <span key={t.id} className={styles.weekChip} data-done={t.status === "DONE"}>
-                              {t.title}
-                            </span>
-                          ))
-                        )}
-                        {dayTasks.length > 4 ? (
-                          <span className={styles.weekMore}>+{dayTasks.length - 4}</span>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className={styles.weekScroll} role="region" aria-label="本周七天任务" tabIndex={0}>
+                <div className={styles.weekGrid}>
+                  {weekDays.map((day) => {
+                    const dayTasks = tasksByDay.get(day) ?? [];
+                    const isToday = day === today;
+                    return (
+                      <section key={day} className={isToday ? styles.weekColToday : styles.weekCol} aria-label={`${day}的任务`}>
+                        <button type="button" className={styles.weekColHead} onClick={() => {
+                          setCursorDate(day);
+                          setView("schedule");
+                        }} aria-label={`查看${day}日程`}>
+                          <span>周{WEEKDAY_LABELS[new Date(day + "T12:00:00").getDay()]}{isToday ? " · 今天" : ""}</span>
+                          <strong>{Number(day.slice(8))}</strong>
+                          <small>{dayTasks.length} 项任务</small>
+                        </button>
+                        <div className={styles.weekColBody}>
+                          {dayTasks.map((task) => (
+                            <button key={task.id} type="button" className={styles.weekChip} data-done={task.status === "DONE"} data-priority={task.priority} onClick={() => setEditing(task)}>
+                              <span className={styles.weekTaskMeta}>{taskDueTime(task) ?? "当日截止"}<span>{priorityLabel(task.priority)}优先</span></span>
+                              <strong>{task.title}</strong>
+                              {task.project ? <small>{task.project.title}</small> : null}
+                              <span className={styles.weekTaskStatus}>{task.status === "DONE" ? "✓ 已完成" : task.status === "IN_PROGRESS" ? "◉ 进行中" : task.status === "REVIEW" ? "◎ 待验收" : task.status === "CANCELED" ? "已取消" : "○ 待开始"}</span>
+                            </button>
+                          ))}
+                          {dayTasks.length === 0 ? <div className={styles.weekEmpty}>暂无到期任务</div> : null}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
               </div>
             </section>
           ) : null}
@@ -1062,7 +1069,7 @@ export default function TasksPage() {
           ) : null}
         </main>
 
-        <aside className={styles.rightStack}>
+        {view !== "projects" ? <aside className={styles.rightStack}>
           <section className={`${styles.panel} ${styles.rightCard}`}>
             <h2 className={styles.sectionTitle}>今日待办</h2>
             <ul className={styles.timeline}>
@@ -1119,11 +1126,11 @@ export default function TasksPage() {
               ))}
             </div>
           </section>
-        </aside>
+        </aside> : null}
       </div>
 
       {creating ? (
-        <TaskModal title="添加任务" desc="先写下任务，其他设置可以稍后补充。" onClose={() => setCreating(false)} />
+        <TaskModal title="添加任务" desc={creatingProject ? `添加到「${creatingProject.title}」的计划中。` : "先写下任务，其他设置可以稍后补充。"} initialProjectId={creatingProject?.id} initialAreaId={creatingProject?.areaId} onClose={() => { setCreating(false); setCreatingProject(null); }} />
       ) : null}
 
       {editing ? (
@@ -1366,11 +1373,15 @@ function TaskModal({
   title,
   desc,
   task,
+  initialProjectId,
+  initialAreaId,
   onClose,
 }: {
   title: string;
   desc: string;
   task?: TaskDTO;
+  initialProjectId?: string;
+  initialAreaId?: string | null;
   onClose: () => void;
 }) {
   const [dirty, setDirty] = useState(false);
@@ -1398,6 +1409,8 @@ function TaskModal({
           </div>
           <TaskForm
             task={task}
+            initialProjectId={initialProjectId}
+            initialAreaId={initialAreaId}
             saving={saving}
             onDone={onClose}
             onRequestClose={requestClose}
@@ -1419,8 +1432,10 @@ function TaskModal({
   );
 }
 
-function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavingChange }: {
+function TaskForm({ task, initialProjectId, initialAreaId, saving, onDone, onRequestClose, onDirtyChange, onSavingChange }: {
   task?: TaskDTO;
+  initialProjectId?: string;
+  initialAreaId?: string | null;
   saving: boolean;
   onDone: () => void;
   onRequestClose: () => void;
@@ -1429,8 +1444,8 @@ function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavin
 }) {
   const [title, setTitle] = useState(task?.title ?? "");
   const [notes, setNotes] = useState(task?.notes ?? "");
-  const [areaId, setAreaId] = useState<string | null>(task?.areaId ?? null);
-  const [projectId, setProjectId] = useState<string | null>(task?.projectId ?? null);
+  const [areaId, setAreaId] = useState<string | null>(task?.areaId ?? initialAreaId ?? null);
+  const [projectId, setProjectId] = useState<string | null>(task?.projectId ?? initialProjectId ?? null);
   const [milestoneId, setMilestoneId] = useState<string | null>(task?.milestoneId ?? null);
   const [priority, setPriority] = useState(
     task?.priority ?? defaultTaskPriorityNumber(),
@@ -1445,15 +1460,15 @@ function TaskForm({ task, saving, onDone, onRequestClose, onDirtyChange, onSavin
     onDirtyChange(
       title !== (task?.title ?? "") ||
       notes !== (task?.notes ?? "") ||
-      areaId !== (task?.areaId ?? null) ||
-      projectId !== (task?.projectId ?? null) ||
+      areaId !== (task?.areaId ?? initialAreaId ?? null) ||
+      projectId !== (task?.projectId ?? initialProjectId ?? null) ||
       milestoneId !== (task?.milestoneId ?? null) ||
       priority !== (task?.priority ?? defaultTaskPriorityNumber()) ||
       dueDate !== (task?.dueDate ? toYMD(new Date(task.dueDate)) : "") ||
       xpReward !== (task?.xpReward ?? 10) ||
       goldReward !== (task?.goldReward ?? 5),
     );
-  }, [title, notes, areaId, projectId, milestoneId, priority, dueDate, xpReward, goldReward, task, onDirtyChange]);
+  }, [title, notes, areaId, projectId, milestoneId, priority, dueDate, xpReward, goldReward, task, initialProjectId, initialAreaId, onDirtyChange]);
 
   const create = useCreateTask();
   const update = useUpdateTask();

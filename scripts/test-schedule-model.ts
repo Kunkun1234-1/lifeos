@@ -81,6 +81,7 @@ const task: TaskDTO = {
   title: "检查日程页",
   notes: null,
   status: "TODO",
+  boardPosition: 0,
   priority: 2,
   dueDate: "2026-07-11T00:00:00.000Z",
   xpReward: 10,
@@ -92,6 +93,7 @@ const task: TaskDTO = {
   milestoneId: null,
   milestone: null,
   completedAt: null,
+  rewardClaimedAt: null,
   createdAt: "2026-07-10T00:00:00.000Z",
 };
 

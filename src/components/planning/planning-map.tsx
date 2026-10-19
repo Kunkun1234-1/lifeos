@@ -66,6 +66,7 @@ function statusLabel(status?: string) {
     idea: "构想",
     TODO: "待开始",
     IN_PROGRESS: "进行中",
+    REVIEW: "验收中",
     DONE: "已完成",
     CANCELED: "已取消",
     UNASSIGNED: "待归类",

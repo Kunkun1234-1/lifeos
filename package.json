@@ -43,6 +43,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "test:planning": "tsx scripts/test-planning-model.ts",
+    "test:project-board": "tsx scripts/test-project-board-model.ts",
     "smoke:planning": "node scripts/smoke-planning.mjs",
     "smoke:planning-mcp": "node scripts/smoke-planning-mcp.mjs",
     "test:periodic-tasks": "tsx scripts/test-periodic-tasks.ts",

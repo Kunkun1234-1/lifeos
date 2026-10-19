@@ -5,7 +5,7 @@ import type { GoalDTO, MilestoneDTO, ProjectDTO, ProjectTreeDTO, TaskDTO } from 
 const project: ProjectDTO = { id: "p1", title: "交付实验报告", deliverable: null, notes: null, status: "active", startDate: null, deadline: null, completedAt: null, xpReward: 100, goldReward: 40, gemsReward: 1, areaId: null, area: null, goalId: "g1", goal: { id: "g1", objective: "具备研究能力" }, taskCount: 3, taskDoneCount: 1 };
 const milestone: MilestoneDTO = { id: "m1", projectId: "p1", title: "基线可复现", notes: null, acceptanceCriteria: "提供脚本和结果", status: "IN_PROGRESS", order: 2, startDate: null, deadline: null, completedAt: null, createdAt: "2026-10-07T00:00:00.000Z", updatedAt: "2026-10-07T00:00:00.000Z" };
 function task(id: string, milestoneId: string | null, status: TaskDTO["status"]): TaskDTO {
-  return { id, title: id, notes: null, status, priority: 2, dueDate: null, xpReward: 10, goldReward: 5, areaId: null, area: null, projectId: "p1", project: { id: "p1", title: project.title, status: "active" }, milestoneId, milestone: milestoneId ? { id: milestoneId, title: milestone.title } : null, completedAt: null, createdAt: "2026-10-07T00:00:00.000Z" };
+  return { id, title: id, notes: null, status, boardPosition: 0, priority: 2, dueDate: null, xpReward: 10, goldReward: 5, areaId: null, area: null, projectId: "p1", project: { id: "p1", title: project.title, status: "active" }, milestoneId, milestone: milestoneId ? { id: milestoneId, title: milestone.title } : null, completedAt: null, rewardClaimedAt: null, createdAt: "2026-10-07T00:00:00.000Z" };
 }
 const tree: ProjectTreeDTO = { project, milestones: [milestone], tasks: [task("t1", "m1", "DONE"), task("t2", "m1", "TODO"), task("legacy", null, "TODO")] };
 const items = itemsFromProjectTree(tree);

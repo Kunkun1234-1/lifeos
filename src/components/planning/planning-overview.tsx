@@ -482,7 +482,7 @@ function TaskEditor({ task, milestones }: { task: TaskDTO; milestones: Milestone
       {status === "DONE" ? (
         <div className={styles.completedState}><Check size={15} /> 已完成 · 奖励已结算</div>
       ) : (
-        <Field label="状态"><Select value={status} onChange={(event) => setStatus(event.target.value as TaskDTO["status"])}><option value="TODO">待开始</option><option value="IN_PROGRESS">进行中</option><option value="CANCELED">已取消</option></Select></Field>
+        <Field label="状态"><Select value={status} onChange={(event) => setStatus(event.target.value as TaskDTO["status"])}><option value="TODO">待开始</option><option value="IN_PROGRESS">进行中</option><option value="REVIEW">验收中</option><option value="CANCELED">已取消</option></Select></Field>
       )}
       {completeError ? <p className={styles.formError} role="alert">{completeError}</p> : null}
       {status !== "DONE" ? (
@@ -664,5 +664,5 @@ function kindText(kind: PlanningItem["kind"]) {
 }
 
 function statusText(status?: string) {
-  return ({ active: "进行中", done: "已完成", paused: "暂停", archived: "归档", idea: "构想", TODO: "待开始", IN_PROGRESS: "进行中", DONE: "已完成", CANCELED: "已取消", UNASSIGNED: "待归类" } as Record<string, string>)[status ?? ""] ?? "未设置";
+  return ({ active: "进行中", done: "已完成", paused: "暂停", archived: "归档", idea: "构想", TODO: "待开始", IN_PROGRESS: "进行中", REVIEW: "验收中", DONE: "已完成", CANCELED: "已取消", UNASSIGNED: "待归类" } as Record<string, string>)[status ?? ""] ?? "未设置";
 }

@@ -16,7 +16,7 @@ const Body = z.object({
   })).max(40),
   tasks: z.array(z.object({
     title: z.string().max(200),
-    status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELED"]),
+    status: z.enum(["TODO", "IN_PROGRESS", "REVIEW", "DONE", "CANCELED"]),
     priority: z.number().int().min(0).max(10),
     dueDate: z.string().max(40).nullable(),
     area: z.string().max(80).nullable(),

@@ -9,6 +9,7 @@ import {
 export const TaskStatusSchema = z.enum([
   "TODO",
   "IN_PROGRESS",
+  "REVIEW",
   "DONE",
   "CANCELED",
 ]);
@@ -38,11 +39,13 @@ export const TaskResponseSchema = z.object({
   title: z.string(),
   notes: z.string().nullable(),
   status: TaskStatusSchema.or(z.string()),
+  boardPosition: z.number().int(),
   priority: z.number().int(),
   dueDate: NullableDateTimeSchema,
   xpReward: z.number().int(),
   goldReward: z.number().int(),
   completedAt: NullableDateTimeSchema,
+  rewardClaimedAt: NullableDateTimeSchema,
   createdAt: z.union([z.string().datetime(), z.date()]),
   updatedAt: z.union([z.string().datetime(), z.date()]),
   area: AreaSummarySchema.nullable(),

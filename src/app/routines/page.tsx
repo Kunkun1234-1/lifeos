@@ -187,7 +187,7 @@ function buildCalEvents(routines: RoutineDTO[], tasks: TaskDTO[], rangeDates: st
       kind: "task",
       task,
       completed: task.status === "DONE",
-      status: task.status === "DONE" ? "done" : task.status === "IN_PROGRESS" ? "active" : "todo",
+      status: task.status === "DONE" ? "done" : task.status === "IN_PROGRESS" || task.status === "REVIEW" ? "active" : "todo",
     });
   }
 

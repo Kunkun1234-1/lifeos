@@ -55,7 +55,8 @@ export type TaskDTO = {
   id: string;
   title: string;
   notes: string | null;
-  status: "TODO" | "IN_PROGRESS" | "DONE" | "CANCELED";
+  status: "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "CANCELED";
+  boardPosition: number;
   priority: number;
   dueDate: string | null;
   xpReward: number;
@@ -67,6 +68,7 @@ export type TaskDTO = {
   milestoneId: string | null;
   milestone: { id: string; title: string } | null;
   completedAt: string | null;
+  rewardClaimedAt: string | null;
   createdAt: string;
 };
 

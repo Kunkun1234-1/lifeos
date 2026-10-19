@@ -1,0 +1,45 @@
+.boardSection { display: grid; gap: 12px; min-width: 0; }
+.toolbar { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.toolbar h2 { margin: 0; font-size: 18px; color: #15231c; }
+.toolbar p { margin: 3px 0 0; font-size: 11px; color: #748078; }
+.toolbar label { display: grid; gap: 4px; font-size: 10px; font-weight: 900; color: #65736c; }
+.toolbar select, .statusSelect select { min-height: 32px; border: 1px solid #d9dcc3; border-radius: 8px; background: #fffef8; padding: 0 8px; color: #263a31; }
+.error { padding: 9px 11px; border: 1px solid #e7b7b0; border-radius: 9px; background: #fff2f0; color: #a03f35; font-size: 11px; font-weight: 800; }
+.error button { margin-left: 8px; border: 0; background: transparent; color: inherit; font-weight: 900; text-decoration: underline; cursor: pointer; }
+.projectList { display: grid; gap: 14px; }
+.projectGroup { overflow: hidden; border: 1px solid #d9dcc3; border-radius: 14px; background: #fffef9; box-shadow: 0 8px 20px rgba(41,62,52,.05); }
+.projectHeader { display: flex; align-items: center; gap: 9px; padding: 11px 13px; border-bottom: 1px solid #e3e5d4; background: #f8f8ed; }
+.collapse { display: grid; width: 28px; height: 28px; place-items: center; border: 0; background: transparent; color: #526159; cursor: pointer; }
+.projectTitle { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.projectTitle a { color: #17271f; font-size: 14px; font-weight: 950; text-decoration: none; }
+.projectTitle span { color: #7b877f; font-size: 10px; font-weight: 700; }
+.addTask, .details { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 9px; border: 1px solid #cfd5ba; border-radius: 8px; background: #fffef8; color: #315044; font-size: 10px; font-weight: 900; text-decoration: none; cursor: pointer; }
+.addTask { border-color: rgba(9,97,73,.25); background: #249d6d; color: white; }
+.columns { display: grid; grid-template-columns: repeat(4,minmax(250px,1fr)); gap: 10px; padding: 11px; overflow-x: auto; }
+.columns:focus-visible { outline: 2px solid #249d6d; outline-offset: -3px; }
+.column { min-height: 220px; padding: 9px; border: 1px solid #dfe3ce; border-radius: 11px; background: #f8f9ef; }
+.column[data-active=true] { border-color: #249d6d; background: #edf8ef; }
+.column > header { display: flex; justify-content: space-between; align-items: center; padding: 1px 2px 8px; font-size: 11px; color: #31433a; }
+.column > header span { display: grid; min-width: 19px; height: 19px; place-items: center; border-radius: 99px; background: #e7edda; font-size: 9px; }
+.cards { display: grid; align-content: start; gap: 7px; }
+.emptyColumn { display: grid; min-height: 112px; place-items: center; border: 1px dashed #cad1b5; border-radius: 9px; color: #8a958e; font-size: 10px; font-weight: 800; }
+.card { position: relative; padding: 9px; border: 1px solid #dfe3ce; border-radius: 10px; background: #fff; cursor: grab; }
+.card[data-dragging=true] { opacity: .4; }
+.card[data-target=before]::before, .card[data-target=after]::after { content: ""; position: absolute; right: 3px; left: 3px; height: 3px; border-radius: 9px; background: #249d6d; }
+.card[data-target=before]::before { top: -5px; }
+.card[data-target=after]::after { bottom: -5px; }
+.cardTop { display: flex; align-items: flex-start; gap: 5px; color: #98a29b; }
+.cardTop button { padding: 0; border: 0; background: transparent; color: #17271f; font-size: 13px; font-weight: 900; line-height: 1.35; text-align: left; cursor: pointer; }
+.meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 7px; color: #7b877f; font-size: 11px; }
+.statusSelect { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-top: 8px; padding-top: 7px; border-top: 1px solid #eceede; color: #69766f; font-size: 10px; font-weight: 800; }
+.statusSelect select { min-height: 27px; font-size: 10px; }
+.state { display: grid; min-height: 140px; place-items: center; color: #748078; font-size: 12px; font-weight: 800; }
+.saving { min-height: 14px; margin: 0; color: #65736c; font-size: 10px; }
+@media (max-width: 720px) {
+  .toolbar { align-items: stretch; flex-direction: column; }
+  .toolbar select { width: 100%; }
+  .columns { grid-template-columns: repeat(4,minmax(230px,1fr)); max-width: 100%; overscroll-behavior-x: contain; }
+  .projectHeader { flex-wrap: wrap; }
+  .projectTitle { min-width: 180px; }
+  .details { margin-left: 37px; }
+}

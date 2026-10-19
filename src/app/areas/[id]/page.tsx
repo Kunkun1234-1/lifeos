@@ -48,6 +48,7 @@ const PROJECT_STATUS_LABEL: Record<ProjectDTO["status"], string> = {
 const TASK_STATUS_LABEL: Record<TaskDTO["status"], string> = {
   TODO: "待处理",
   IN_PROGRESS: "进行中",
+  REVIEW: "验收中",
   DONE: "完成",
   CANCELED: "取消",
 };
@@ -112,7 +113,7 @@ export default function AreaDetailPage() {
   );
   const doneProjects = areaProjects.filter((project) => project.status === "done");
   const openTasks = areaTasks.filter(
-    (task) => task.status === "TODO" || task.status === "IN_PROGRESS",
+    (task) => task.status === "TODO" || task.status === "IN_PROGRESS" || task.status === "REVIEW",
   );
   const doneTasks = areaTasks.filter((task) => task.status === "DONE");
   const overdueTasks = openTasks.filter((task) => isOverdue(task.dueDate));
@@ -547,7 +548,7 @@ function ProjectItem({ project, tasks }: { project: ProjectDTO; tasks: TaskDTO[]
   const taskProgress =
     project.taskCount > 0 ? project.taskDoneCount / project.taskCount : 0;
   const nextTasks = tasks
-    .filter((task) => task.status === "TODO" || task.status === "IN_PROGRESS")
+    .filter((task) => task.status === "TODO" || task.status === "IN_PROGRESS" || task.status === "REVIEW")
     .slice(0, 3);
 
   return (
