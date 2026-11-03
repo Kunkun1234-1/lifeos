@@ -41,6 +41,8 @@ import {
 } from "@/lib/validators";
 import { runAuditedAction } from "./audit";
 import { callLifeOsApi } from "./api-client";
+import { mcpToolAuthorizationRequired } from "./auth";
+import { mcpInputSchema } from "./input-schema";
 
 type HandlerExtra = { authInfo?: AuthInfo };
 type Args = Record<string, unknown>;
@@ -65,9 +67,9 @@ function action(schema: z.ZodTypeAny) {
 function identity(extra: HandlerExtra, scopes: string[], aliases: string[] = []) {
   const auth = extra.authInfo;
   const userId = auth?.extra?.userId;
-  if (!auth || typeof userId !== "string") throw new Error("Authentication is required");
+  if (!auth || typeof userId !== "string") return mcpToolAuthorizationRequired(scopes, false);
   if (![...scopes, ...aliases].some((scope) => auth.scopes.includes(scope))) {
-    throw new Error(`Missing required scope: ${scopes.join(" or ")}`);
+    return mcpToolAuthorizationRequired(scopes, true);
   }
   return { userId, clientId: auth.clientId };
 }
@@ -239,8 +241,9 @@ export function registerLifeOsTools(server: McpServer, apiOrigin: string) {
       {
         title: definition.title,
         description: definition.description,
-        inputSchema: definition.schema,
+        inputSchema: mcpInputSchema(definition.schema),
         outputSchema: z.object({ data: z.unknown() }),
+        _meta: { securitySchemes: [{ type: "oauth2", scopes: definition.scopes }] },
         annotations: {
           readOnlyHint: definition.scopes === READ,
           destructiveHint: definition.destructive ?? false,
@@ -249,8 +252,9 @@ export function registerLifeOsTools(server: McpServer, apiOrigin: string) {
         },
       },
       async (rawArgs, extra) => {
-        const args = definition.schema.parse(rawArgs) as Args;
         const actor = identity(extra, definition.scopes, definition.aliases);
+        if ("isError" in actor) return actor;
+        const args = definition.schema.parse(rawArgs) as Args;
         const key = typeof args.idempotencyKey === "string" ? args.idempotencyKey : undefined;
         const pathKeys = definition.pathKeys ?? [];
         const queryKeys = definition.queryKeys ?? [];
@@ -303,13 +307,15 @@ function registerUploadTool(server: McpServer, apiOrigin: string) {
     {
       title: "Upload media",
       description: "Upload an image (max 4 MB) or audio file (max 15 MB) to the configured LifeOS media backend.",
-      inputSchema: schema,
+      inputSchema: mcpInputSchema(schema),
       outputSchema: z.object({ data: z.unknown() }),
+      _meta: { securitySchemes: [{ type: "oauth2", scopes: WRITE }] },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async (rawArgs, extra) => {
-      const args = schema.parse(rawArgs);
       const actor = identity(extra, WRITE);
+      if ("isError" in actor) return actor;
+      const args = schema.parse(rawArgs);
       const bytes = Buffer.from(args.base64, "base64");
       const limit = args.mimeType.startsWith("audio/") ? 15 * 1024 * 1024 : 4 * 1024 * 1024;
       if (bytes.length > limit) throw new Error(`File exceeds the ${limit / 1024 / 1024} MB upload limit`);
