@@ -239,11 +239,16 @@ MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `A
 - Google `Error 400: redirect_uri_mismatch`：Google Cloud Authorized redirect URI 没有逐字配置为 `https://lifeos-topaz-chi.vercel.app/api/auth/callback/google`。
 - Metadata 仍显示 `http://127.0.0.1:4000/mcp`：API 项目缺少 `MCP_RESOURCE_URL` 或环境变量修改后未重新部署。
 - MCP 401：访问令牌过期、issuer/resource 不一致，或两个项目的 `MCP_OAUTH_SECRET` 不同。
+- 反复登录/同意权限：访问令牌有效期为 1 小时，客户端应使用 30 天有效的 refresh token 自动续期。续期兼容省略 `resource` 的客户端，但只使用原授权绑定的 MCP 地址；令牌轮换在同一事务中完成，失败不会提前作废旧令牌。同一登录账号、同一客户端及相同或更少权限，在原授权仍有效时会直接返回连接；新客户端、新权限、已撤销/过期授权或 `prompt=consent` 仍需确认。客户端未保存 refresh token、每次重新注册或浏览器未保留登录 cookie 时，仍可能要求登录。
+- Agent 重复确认普通操作：MCP 指令将用户明确提出的操作视为该操作的授权，不再要求每次写入重复询问。客户端自身的工具审批规则，以及未经明确授权的永久删除、消费和外发数据，仍须遵守。
 - MCP 能读不能写：旧连接没有 `lifeos:write` / `lifeos:economy` / `lifeos:ai`，断开并重新授权。
 - MCP 内部 API 401/503：两个项目的 `API_JWT_SECRET` 不同，或 secret 少于 32 字符。
 - AI 工具 503：API 项目未配置 `DEEPSEEK_API_KEY`。
 - 上传在 Vercel 失败：未连接 Vercel Blob 或缺少 `BLOB_READ_WRITE_TOKEN`。
 - ChatGPT 无法发现 MCP：API Deployment Protection 阻止公网访问，或 MCP URL 不是精确的 HTTPS `/mcp` 地址。
+
+本地 Web/API 启动后，可运行 `node --env-file=.env scripts/smoke-oauth.mjs` 验证授权复用、跨账号/客户端隔离、PKCE、令牌轮换、并发重放与过期行为；如使用 `.env.local`，替换对应文件名。测试只允许本机服务和数据库，并会清理测试账号和授权记录。
+`node --env-file=.env --import tsx scripts/test-oauth-rotation.ts` 另外模拟签名失败，验证旧 refresh token 和授权码可以在事务回滚后继续重试。
 
 ### 四层任务规划与思维导图
 

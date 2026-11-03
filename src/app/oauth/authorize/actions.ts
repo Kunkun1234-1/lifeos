@@ -67,13 +67,11 @@ function redirectWith(input: AuthorizationRequest, values: Record<string, string
   redirect(url.toString());
 }
 
-export async function approveAuthorization(form: FormData) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!userId) redirect("/login");
-
-  const input = readRequest(form);
-  const { scopes } = await validateRequest(input);
+async function completeAuthorization(
+  input: AuthorizationRequest,
+  userId: string,
+  scopes: string[],
+) {
   const code = randomOpaqueToken(48);
   await prisma.oAuthAuthorizationCode.create({
     data: {
@@ -88,6 +86,45 @@ export async function approveAuthorization(form: FormData) {
     },
   });
   redirectWith(input, { code });
+}
+
+export async function approveAuthorization(form: FormData) {
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) redirect("/login");
+
+  const input = readRequest(form);
+  const { scopes } = await validateRequest(input);
+  await completeAuthorization(input, userId, scopes);
+}
+
+export async function reuseAuthorization(form: FormData) {
+  // Any explicit prompt (including consent/account selection) keeps the consent
+  // screen. A matching display name is never sufficient to trust a new client.
+  if (field(form, "prompt").trim()) return;
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  if (!userId) return;
+
+  const input = readRequest(form);
+  const { scopes } = await validateRequest(input);
+  const grants = await prisma.oAuthRefreshToken.findMany({
+    where: {
+      userId,
+      clientId: input.clientId,
+      resource: input.resource,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { scope: true },
+  });
+  // Reuse one existing grant only; do not combine unrelated grants or silently
+  // add new permissions. Rotation preserves this evidence of prior consent.
+  const alreadyApproved = grants.some((grant) => {
+    const approved = new Set(grant.scope.split(/\s+/));
+    return scopes.every((scope) => approved.has(scope));
+  });
+  if (alreadyApproved) await completeAuthorization(input, userId, scopes);
 }
 
 export async function denyAuthorization(form: FormData) {

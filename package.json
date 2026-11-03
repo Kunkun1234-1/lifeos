@@ -32,6 +32,8 @@
     "smoke:wallet": "node scripts/smoke-wallet.mjs",
     "smoke:notes": "node scripts/smoke-notes.mjs",
     "smoke:mcp": "node scripts/smoke-mcp.mjs",
+    "smoke:oauth": "node scripts/smoke-oauth.mjs",
+    "test:oauth-rotation": "tsx scripts/test-oauth-rotation.ts",
     "test:store-wish": "tsx scripts/test-store-wish.ts",
     "test:schedule": "tsx scripts/test-schedule-model.ts",
     "test:note-trash": "tsx scripts/test-note-trash.ts",

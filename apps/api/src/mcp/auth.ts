@@ -5,13 +5,16 @@ function metadataUrl() {
   return `${new URL(getMcpResourceUrl()).origin}/.well-known/oauth-protected-resource`;
 }
 
-export function mcpUnauthorized(description = "A valid LifeOS access token is required") {
+export function mcpUnauthorized(
+  description = "A valid LifeOS access token is required",
+  invalidToken = false,
+) {
   return new Response(JSON.stringify({ error: "unauthorized", error_description: description }), {
     status: 401,
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      "WWW-Authenticate": `Bearer resource_metadata="${metadataUrl()}", scope="lifeos:read"`,
+      "WWW-Authenticate": `Bearer resource_metadata="${metadataUrl()}", scope="lifeos:read"${invalidToken ? ', error="invalid_token", error_description="The access token is invalid or expired"' : ""}`,
     },
   });
 }
@@ -33,6 +36,6 @@ export async function authenticateMcpRequest(req: Request): Promise<AuthInfo | R
       extra: { userId: verified.userId },
     };
   } catch {
-    return mcpUnauthorized("The LifeOS access token is invalid or expired");
+    return mcpUnauthorized("The LifeOS access token is invalid or expired", true);
   }
 }

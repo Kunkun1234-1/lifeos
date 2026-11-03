@@ -4,7 +4,7 @@ import {
   MCP_SCOPE_LABELS,
   parseRequestedScopes,
 } from "@/lib/mcp-auth";
-import { approveAuthorization, denyAuthorization } from "./actions";
+import { approveAuthorization, denyAuthorization, reuseAuthorization } from "./actions";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -27,6 +27,7 @@ export default async function AuthorizePage({
     code_challenge: one(params.code_challenge),
     code_challenge_method: one(params.code_challenge_method),
     resource: one(params.resource),
+    prompt: one(params.prompt),
   };
   const client = values.client_id
     ? await prisma.oAuthClient.findUnique({ where: { id: values.client_id } })
@@ -60,6 +61,10 @@ export default async function AuthorizePage({
       </main>
     );
   }
+
+  const form = new FormData();
+  for (const [key, value] of Object.entries(values)) form.set(key, value);
+  await reuseAuthorization(form);
 
   return (
     <main className="grid min-h-[100dvh] place-items-center p-6">
