@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   getMcpResourceUrl,
@@ -18,14 +19,14 @@ function oauthError(error: string, description: string, status = 400) {
   );
 }
 
-async function issueTokenPair(input: {
+async function issueTokenPair(tx: Prisma.TransactionClient, input: {
   userId: string;
   clientId: string;
   scope: string;
   resource: string;
 }) {
   const refreshToken = randomOpaqueToken(48);
-  await prisma.oAuthRefreshToken.create({
+  await tx.oAuthRefreshToken.create({
     data: {
       id: hashOpaqueToken(refreshToken),
       userId: input.userId,
@@ -48,8 +49,10 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const grantType = String(form.get("grant_type") ?? "");
   const clientId = String(form.get("client_id") ?? "");
-  const resource = String(form.get("resource") ?? "");
-  if (!clientId || resource !== getMcpResourceUrl()) {
+  // Older OAuth clients may omit resource on refresh. In that case use the
+  // resource already bound to the grant, never a new client-selected audience.
+  const resource = form.has("resource") ? String(form.get("resource")) : null;
+  if (!clientId || (resource !== null && resource !== getMcpResourceUrl())) {
     return oauthError("invalid_request", "Invalid client_id or resource");
   }
 
@@ -73,20 +76,24 @@ export async function POST(req: Request) {
       !stored ||
       stored.clientId !== clientId ||
       stored.redirectUri !== redirectUri ||
-      stored.resource !== resource ||
+      stored.resource !== getMcpResourceUrl() ||
+      (resource !== null && stored.resource !== resource) ||
       stored.expiresAt <= new Date() ||
       pkceChallenge(verifier) !== stored.codeChallenge
     ) {
       return oauthError("invalid_grant", "Invalid or expired authorization code");
     }
 
-    const consumed = await prisma.oAuthAuthorizationCode.deleteMany({
-      where: { id: stored.id, expiresAt: { gt: new Date() } },
+    const pair = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.oAuthAuthorizationCode.deleteMany({
+        where: { id: stored.id, expiresAt: { gt: new Date() } },
+      });
+      if (consumed.count !== 1) return null;
+      return issueTokenPair(tx, stored);
     });
-    if (consumed.count !== 1) {
+    if (!pair) {
       return oauthError("invalid_grant", "Authorization code was already used");
     }
-    const pair = await issueTokenPair(stored);
     return NextResponse.json(
       {
         access_token: pair.access.token,
@@ -107,21 +114,27 @@ export async function POST(req: Request) {
     if (
       !stored ||
       stored.clientId !== clientId ||
-      stored.resource !== resource ||
+      stored.resource !== getMcpResourceUrl() ||
+      (resource !== null && stored.resource !== resource) ||
       stored.revokedAt ||
       stored.expiresAt <= new Date()
     ) {
       return oauthError("invalid_grant", "Invalid or expired refresh token");
     }
 
-    const rotated = await prisma.oAuthRefreshToken.updateMany({
-      where: { id: stored.id, revokedAt: null, expiresAt: { gt: new Date() } },
-      data: { revokedAt: new Date() },
+    // Rotate atomically: a failed insert/signing operation must leave the old
+    // refresh token usable, so a transient server error doesn't force login.
+    const pair = await prisma.$transaction(async (tx) => {
+      const rotated = await tx.oAuthRefreshToken.updateMany({
+        where: { id: stored.id, revokedAt: null, expiresAt: { gt: new Date() } },
+        data: { revokedAt: new Date() },
+      });
+      if (rotated.count !== 1) return null;
+      return issueTokenPair(tx, stored);
     });
-    if (rotated.count !== 1) {
+    if (!pair) {
       return oauthError("invalid_grant", "Refresh token was already used");
     }
-    const pair = await issueTokenPair(stored);
     return NextResponse.json(
       {
         access_token: pair.access.token,
