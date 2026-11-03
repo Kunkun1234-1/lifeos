@@ -1,11 +1,17 @@
 import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify, SignJWT } from "jose";
 
-export const MCP_SCOPES = [
+// The complete LifeOS connection requests these together on first consent.
+// Explicit narrower requests and existing grants must remain narrower.
+export const MCP_DEFAULT_SCOPES = [
   "lifeos:read",
   "lifeos:write",
   "lifeos:economy",
   "lifeos:ai",
+] as const;
+
+export const MCP_SCOPES = [
+  ...MCP_DEFAULT_SCOPES,
   // Retained so already-authorized clients can keep using the original tools.
   "tasks:write",
   "goals:write",
@@ -80,7 +86,7 @@ export function pkceChallenge(verifier: string) {
 }
 
 export function parseRequestedScopes(value: string | null | undefined): McpScope[] {
-  const requested = value?.trim() ? value.trim().split(/\s+/) : [...MCP_SCOPES];
+  const requested = value?.trim() ? value.trim().split(/\s+/) : [...MCP_DEFAULT_SCOPES];
   const unique = Array.from(new Set(requested));
   if (unique.some((scope) => !MCP_SCOPES.includes(scope as McpScope))) {
     throw new Error("Unsupported OAuth scope");

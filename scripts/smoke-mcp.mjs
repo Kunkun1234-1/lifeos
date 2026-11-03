@@ -65,10 +65,12 @@ async function stopServer() {
 }
 
 async function main() {
+  if (!process.env.DATABASE_URL || !["localhost", "127.0.0.1"].includes(new URL(process.env.DATABASE_URL).hostname)) {
+    throw new Error("MCP smoke tests require a local database");
+  }
   const { PrismaClient } = await import("@prisma/client");
   prisma = new PrismaClient();
-  const user = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!user) throw new Error("MCP smoke test needs at least one local LifeOS user");
+  const user = await prisma.user.create({ data: { email: `mcp-smoke-${randomUUID()}@local.invalid` } });
   userId = user.id;
 
   serverProcess = spawn(
@@ -223,6 +225,14 @@ async function main() {
 
   await client.close();
   if (tools.tools.length < 90) throw new Error(`Expected the complete MCP catalog, found only ${tools.tools.length} tools`);
+  await new Promise((resolve, reject) => {
+    const connectionTest = spawn(process.execPath, ["scripts/smoke-mcp-connection.mjs"], {
+      stdio: "inherit",
+      env: { ...process.env, MCP_OAUTH_SECRET: secret, MCP_AUTH_ISSUER: issuer, MCP_RESOURCE_URL: resource },
+    });
+    connectionTest.on("error", reject);
+    connectionTest.on("exit", (code) => code === 0 ? resolve() : reject(new Error(`MCP connection regression exited ${code}`)));
+  });
   console.log(`MCP smoke passed: OAuth registration/code/PKCE/refresh, ${tools.tools.length} tools, read, write, and idempotency`);
 }
 
@@ -237,6 +247,7 @@ try {
     if (taskId) await prisma.task.deleteMany({ where: { id: taskId, userId } }).catch(() => {});
     await prisma.agentAction.deleteMany({ where: { userId, toolName: "create_task", idempotencyKey } }).catch(() => {});
     if (clientId) await prisma.oAuthClient.deleteMany({ where: { id: clientId } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {});
     await prisma.$disconnect();
   }
   await stopServer();

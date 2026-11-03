@@ -250,6 +250,10 @@ MCP 依赖 `OAuthClient`、`OAuthAuthorizationCode`、`OAuthRefreshToken` 和 `A
 本地 Web/API 启动后，可运行 `node --env-file=.env scripts/smoke-oauth.mjs` 验证授权复用、跨账号/客户端隔离、PKCE、令牌轮换、并发重放与过期行为；如使用 `.env.local`，替换对应文件名。测试只允许本机服务和数据库，并会清理测试账号和授权记录。
 `node --env-file=.env --import tsx scripts/test-oauth-rotation.ts` 另外模拟签名失败，验证旧 refresh token 和授权码可以在事务回滚后继续重试。
 
+完整 MCP 连接的首次授权会一次请求 `lifeos:read lifeos:write lifeos:economy lifeos:ai` 四类权限；旧版 `tasks:write` / `goals:write` 仍兼容，但不再重复出现在默认申请中。明确申请只读权限的客户端仍只获得只读令牌，刷新不会扩大权限。旧只读连接调用写入工具时会收到带 `insufficient_scope` 的 `mcp/www_authenticate` 结果，客户端应引导补充授权；若客户端缓存了旧目录或未处理此提示，需要刷新 MCP 工具目录并重新授权，确认同意页显示四类权限。
+
+工具逐项声明 OAuth scopes。`tools/list` 导出顶层对象参数，保留 `idempotencyKey`、实体 ID 和业务字段；原始组合校验仍在服务端执行。`smoke:mcp` 和 CI 会实际走发现权限 → 提交同意表单 → 检查授权令牌 → 发现 108 个工具参数 → 临时笔记增改删，并验证钱包参数、只读权限隔离及补充授权。测试使用独立本地账号，不调用外部 AI。对已运行的本地服务可单独执行 `node --env-file=.env scripts/smoke-mcp-connection.mjs`。
+
 ### 四层任务规划与思维导图
 
 目标列表采用整张可点击的卡片，进入 `/goals/[id]` 后直接显示全屏规划地图；项目卡片进入 `/projects/[id]` 采用同样的画布。React Flow + Dagre 展示“目标 → 项目 → 里程碑 → 任务”，点击节点打开详情，节点上的添加和删除按钮管理分支；分支按钮控制展开。目标、项目和任务的编辑及 KR 更新在详情抽屉完成。手机也默认进入地图，可手动切换到同数据的层级列表；任务计划页仍可以选择所属里程碑。

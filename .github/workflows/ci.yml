@@ -48,3 +48,4 @@ jobs:
       - run: npm run build:api
       - run: npm run smoke:api
       - run: npm run smoke:notes
+      - run: npm run smoke:mcp
